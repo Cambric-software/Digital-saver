@@ -3,7 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
-import 'package:digital_saver/models/health_data.dart';
+import 'package:uuid/uuid.dart';
+import 'package:digital_saver/models/health_models.dart';
 
 class StorageService extends ChangeNotifier {
   static final StorageService _instance = StorageService._internal();
@@ -19,6 +20,10 @@ class StorageService extends ChangeNotifier {
   bool _notificationsEnabled = true;
   int _heartRateThreshold = 100;
   int _systolicThreshold = 140;
+  String? _userId;
+  String? _userName;
+  int? _userAge;
+  String? _userGender;
 
   Locale get locale => _locale;
   List<EmergencyContact> get emergencyContacts => _emergencyContacts;
@@ -26,9 +31,18 @@ class StorageService extends ChangeNotifier {
   bool get notificationsEnabled => _notificationsEnabled;
   int get heartRateThreshold => _heartRateThreshold;
   int get systolicThreshold => _systolicThreshold;
+  String? get userId => _userId;
+  String? get userName => _userName;
+  int? get userAge => _userAge;
 
   Future<void> init() async {
     _prefs = await SharedPreferences.getInstance();
+    
+    // Load user data
+    _userId = _prefs.getString('userId') ?? const Uuid().v4();
+    _userName = _prefs.getString('userName');
+    _userAge = _prefs.getInt('userAge');
+    _userGender = _prefs.getString('userGender');
     
     // Load saved preferences
     final localeCode = _prefs.getString('locale') ?? 'en';
@@ -78,9 +92,49 @@ class StorageService extends ChangeNotifier {
             timestamp TEXT
           )
         ''');
+        
+        await db.execute('''
+          CREATE TABLE daily_stats (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            date TEXT,
+            steps INTEGER,
+            calories INTEGER,
+            distance REAL,
+            active_minutes INTEGER,
+            sleep_hours REAL,
+            avg_heart_rate INTEGER,
+            avg_bp_sys INTEGER,
+            avg_bp_dia INTEGER,
+            health_score INTEGER
+          )
+        ''');
       },
     );
 
+    // Save user ID
+    await _prefs.setString('userId', _userId!);
+    
+    notifyListeners();
+  }
+
+  // User profile
+  Future<void> updateUserProfile({
+    String? name,
+    int? age,
+    String? gender,
+  }) async {
+    if (name != null) {
+      _userName = name;
+      await _prefs.setString('userName', name);
+    }
+    if (age != null) {
+      _userAge = age;
+      await _prefs.setInt('userAge', age);
+    }
+    if (gender != null) {
+      _userGender = gender;
+      await _prefs.setString('userGender', gender);
+    }
     notifyListeners();
   }
 
@@ -147,59 +201,96 @@ class StorageService extends ChangeNotifier {
   }
 
   // Health data storage
-  Future<void> saveHealthRecord(HealthData data) async {
+  Future<void> saveHealthRecord(HealthMetrics data) async {
     await _db.insert('health_records', {
-      'heart_rate': data.heartRate,
-      'sp_o2': data.spO2,
-      'systolic': data.systolic,
-      'diastolic': data.diastolic,
-      'confidence': data.confidence,
-      'status': data.status.index,
+      'heart_rate': data.heartRate.currentBPM,
+      'sp_o2': data.oxygen.spO2,
+      'systolic': data.bloodPressure.systolic,
+      'diastolic': data.bloodPressure.diastolic,
+      'confidence': data.heartRate.confidence,
+      'status': data.heartRate.status.index,
       'timestamp': data.timestamp.toIso8601String(),
     });
   }
 
-  Future<List<HealthData>> getHealthHistory({int limit = 100}) async {
-    final records = await _db.query(
+  Future<List<Map<String, dynamic>>> getHealthHistory({int limit = 100}) async {
+    return await _db.query(
       'health_records',
       orderBy: 'timestamp DESC',
       limit: limit,
     );
-    
-    return records.map((r) => HealthData(
-      heartRate: r['heart_rate'] as int,
-      spO2: r['sp_o2'] as int?,
-      systolic: r['systolic'] as int?,
-      diastolic: r['diastolic'] as int?,
-      confidence: r['confidence'] as double?,
-      timestamp: DateTime.parse(r['timestamp'] as String),
-      status: HealthStatus.values[r['status'] as int],
-    )).toList();
   }
 
-  Future<void> saveAlert(AlertData alert) async {
-    await _db.insert('alerts', {
-      'alert_type': alert.type.index + 1,
-      'severity': alert.severity.index + 1,
-      'latitude': alert.latitude,
-      'longitude': alert.longitude,
-      'timestamp': alert.timestamp.toIso8601String(),
+  Future<void> saveDailyStats({
+    required DateTime date,
+    required int steps,
+    required int calories,
+    required double distance,
+    required int activeMinutes,
+    required double sleepHours,
+    required int avgHeartRate,
+    required int avgBpSys,
+    required int avgBpDia,
+    required int healthScore,
+  }) async {
+    await _db.insert('daily_stats', {
+      'date': date.toIso8601String().split('T')[0],
+      'steps': steps,
+      'calories': calories,
+      'distance': distance,
+      'active_minutes': activeMinutes,
+      'sleep_hours': sleepHours,
+      'avg_heart_rate': avgHeartRate,
+      'avg_bp_sys': avgBpSys,
+      'avg_bp_dia': avgBpDia,
+      'health_score': healthScore,
     });
   }
 
-  Future<List<AlertData>> getAlertHistory({int limit = 50}) async {
-    final records = await _db.query(
-      'alerts',
-      orderBy: 'timestamp DESC',
-      limit: limit,
+  Future<List<Map<String, dynamic>>> getWeeklyStats() async {
+    final weekAgo = DateTime.now().subtract(const Duration(days: 7));
+    return await _db.query(
+      'daily_stats',
+      where: 'date >= ?',
+      whereArgs: [weekAgo.toIso8601String().split('T')[0]],
+      orderBy: 'date ASC',
     );
+  }
+
+  Future<List<Map<String, dynamic>>> getMonthlyStats() async {
+    final monthAgo = DateTime.now().subtract(const Duration(days: 30));
+    return await _db.query(
+      'daily_stats',
+      where: 'date >= ?',
+      whereArgs: [monthAgo.toIso8601String().split('T')[0]],
+      orderBy: 'date ASC',
+    );
+  }
+
+  // Export data
+  Future<String> exportData() async {
+    final history = await getHealthHistory();
+    final weekly = await getWeeklyStats();
     
-    return records.map((r) => AlertData(
-      type: AlertType.values[(r['alert_type'] as int) - 1],
-      severity: AlertSeverity.values[(r['severity'] as int) - 1],
-      timestamp: DateTime.parse(r['timestamp'] as String),
-      latitude: r['latitude'] as double?,
-      longitude: r['longitude'] as double?,
-    )).toList();
+    return jsonEncode({
+      'userId': _userId,
+      'userName': _userName,
+      'userAge': _userAge,
+      'userGender': _userGender,
+      'emergencyContacts': _emergencyContacts.map((c) => c.toJson()).toList(),
+      'healthHistory': history,
+      'weeklyStats': weekly,
+      'exportDate': DateTime.now().toIso8601String(),
+    });
+  }
+
+  // Clear all data
+  Future<void> clearAllData() async {
+    await _db.delete('health_records');
+    await _db.delete('alerts');
+    await _db.delete('daily_stats');
+    _emergencyContacts.clear();
+    await _saveContacts();
+    notifyListeners();
   }
 }

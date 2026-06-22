@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:digital_saver/theme/app_theme.dart';
 import 'package:digital_saver/services/storage_service.dart';
 import 'package:digital_saver/i18n/app_localizations.dart';
 
@@ -8,156 +9,371 @@ class SettingsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
+    final t = AppLocalizations.of(context)!;
     final storage = Provider.of<StorageService>(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(l10n.settings),
+        title: Text(t.settings),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.pop(context),
+        ),
       ),
       body: ListView(
+        padding: const EdgeInsets.all(20),
         children: [
-          // Language Setting
-          ListTile(
-            leading: const Icon(Icons.language),
-            title: Text(l10n.language),
-            subtitle: Text(_getLanguageName(storage.locale.languageCode)),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => _showLanguageDialog(context),
+          // Profile Section
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              gradient: AppTheme.primaryGradient,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 60,
+                  height: 60,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.person, color: Colors.white, size: 32),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'User Profile',
+                        style: AppTheme.titleLarge.copyWith(color: Colors.white),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Configure your health profile',
+                        style: AppTheme.bodySmall.copyWith(color: Colors.white70),
+                      ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.edit, color: Colors.white),
+                  onPressed: () {},
+                ),
+              ],
+            ),
           ),
           
-          const Divider(),
+          const SizedBox(height: 24),
           
-          // Dark Mode
-          SwitchListTile(
-            secondary: const Icon(Icons.dark_mode),
-            title: Text(l10n.darkMode),
-            value: storage.isDarkMode,
-            onChanged: (value) => storage.setDarkMode(value),
+          // Appearance
+          _buildSectionTitle('Appearance'),
+          const SizedBox(height: 12),
+          Container(
+            decoration: BoxDecoration(
+              color: isDark ? AppTheme.cardDark : AppTheme.cardLight,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: AppTheme.softShadow,
+            ),
+            child: Column(
+              children: [
+                _buildSettingsTile(
+                  icon: Icons.dark_mode_rounded,
+                  title: t.darkMode,
+                  trailing: Switch(
+                    value: storage.isDarkMode,
+                    onChanged: (value) => storage.setDarkMode(value),
+                    activeColor: AppTheme.primaryColor,
+                  ),
+                ),
+                const Divider(height: 1),
+                _buildSettingsTile(
+                  icon: Icons.language_rounded,
+                  title: t.language,
+                  subtitle: _getLanguageName(storage.locale.languageCode),
+                  onTap: () => _showLanguageDialog(context, storage),
+                  trailing: const Icon(Icons.chevron_right),
+                ),
+              ],
+            ),
           ),
+          
+          const SizedBox(height: 24),
           
           // Notifications
-          SwitchListTile(
-            secondary: const Icon(Icons.notifications),
-            title: Text(l10n.notifications),
-            value: storage.notificationsEnabled,
-            onChanged: (value) => storage.setNotificationsEnabled(value),
-          ),
-          
-          const Divider(),
-          
-          // Heart Rate Threshold
-          ListTile(
-            leading: const Icon(Icons.favorite, color: Colors.red),
-            title: Text(l10n.heartRateThreshold),
-            subtitle: Slider(
-              value: storage.heartRateThreshold.toDouble(),
-              min: 80,
-              max: 140,
-              divisions: 12,
-              label: '${storage.heartRateThreshold} ${l10n.bpm}',
-              onChanged: (value) => storage.setHeartRateThreshold(value.toInt()),
+          _buildSectionTitle('Notifications'),
+          const SizedBox(height: 12),
+          Container(
+            decoration: BoxDecoration(
+              color: isDark ? AppTheme.cardDark : AppTheme.cardLight,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: AppTheme.softShadow,
             ),
-            trailing: Text('${storage.heartRateThreshold}'),
-          ),
-          
-          // BP Threshold
-          ListTile(
-            leading: const Icon(Icons.water_drop, color: Colors.blue),
-            title: Text(l10n.bpThreshold),
-            subtitle: Slider(
-              value: storage.systolicThreshold.toDouble(),
-              min: 120,
-              max: 180,
-              divisions: 12,
-              label: '${storage.systolicThreshold} ${l10n.mmhg}',
-              onChanged: (value) => storage.setSystolicThreshold(value.toInt()),
+            child: Column(
+              children: [
+                _buildSettingsTile(
+                  icon: Icons.notifications_rounded,
+                  title: t.notifications,
+                  trailing: Switch(
+                    value: storage.notificationsEnabled,
+                    onChanged: (value) => storage.setNotificationsEnabled(value),
+                    activeColor: AppTheme.primaryColor,
+                  ),
+                ),
+                const Divider(height: 1),
+                _buildSettingsTile(
+                  icon: Icons.favorite_rounded,
+                  title: 'Heart Rate Alerts',
+                  subtitle: 'Alert when abnormal HR detected',
+                  trailing: const Icon(Icons.chevron_right),
+                ),
+                const Divider(height: 1),
+                _buildSettingsTile(
+                  icon: Icons.water_drop_rounded,
+                  title: 'Blood Pressure Alerts',
+                  subtitle: 'Alert when BP is elevated',
+                  trailing: const Icon(Icons.chevron_right),
+                ),
+              ],
             ),
-            trailing: Text('${storage.systolicThreshold}'),
           ),
           
-          const Divider(),
+          const SizedBox(height: 24),
+          
+          // Health Thresholds
+          _buildSectionTitle('Health Thresholds'),
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: isDark ? AppTheme.cardDark : AppTheme.cardLight,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: AppTheme.softShadow,
+            ),
+            child: Column(
+              children: [
+                _buildThresholdSlider(
+                  title: t.heartRateThreshold,
+                  value: storage.heartRateThreshold.toDouble(),
+                  min: 80,
+                  max: 140,
+                  unit: t.bpm,
+                  onChanged: (value) => storage.setHeartRateThreshold(value.toInt()),
+                ),
+                const SizedBox(height: 20),
+                _buildThresholdSlider(
+                  title: t.bpThreshold,
+                  value: storage.systolicThreshold.toDouble(),
+                  min: 120,
+                  max: 180,
+                  unit: t.mmhg,
+                  onChanged: (value) => storage.setSystolicThreshold(value.toInt()),
+                ),
+              ],
+            ),
+          ),
+          
+          const SizedBox(height: 24),
           
           // Emergency Contacts
-          ListTile(
-            leading: const Icon(Icons.contacts, color: Colors.orange),
-            title: Text(l10n.emergencyContacts),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => Navigator.pushNamed(context, '/contacts'),
+          _buildSectionTitle('Emergency Contacts'),
+          const SizedBox(height: 12),
+          Container(
+            decoration: BoxDecoration(
+              color: isDark ? AppTheme.cardDark : AppTheme.cardLight,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: AppTheme.softShadow,
+            ),
+            child: Column(
+              children: [
+                _buildSettingsTile(
+                  icon: Icons.contacts_rounded,
+                  title: 'Manage Contacts',
+                  subtitle: '${storage.emergencyContacts.length} contacts saved',
+                  onTap: () => Navigator.pushNamed(context, '/contacts'),
+                  trailing: const Icon(Icons.chevron_right),
+                ),
+                const Divider(height: 1),
+                _buildSettingsTile(
+                  icon: Icons.local_hospital_rounded,
+                  title: 'Emergency Services',
+                  subtitle: 'Call 123 (Egypt)',
+                  trailing: const Icon(Icons.chevron_right),
+                ),
+              ],
+            ),
           ),
           
-          const Divider(),
+          const SizedBox(height: 24),
+          
+          // Watch
+          _buildSectionTitle('Watch'),
+          const SizedBox(height: 12),
+          Container(
+            decoration: BoxDecoration(
+              color: isDark ? AppTheme.cardDark : AppTheme.cardLight,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: AppTheme.softShadow,
+            ),
+            child: Column(
+              children: [
+                _buildSettingsTile(
+                  icon: Icons.watch_rounded,
+                  title: 'Watch Settings',
+                  subtitle: 'Configure watch preferences',
+                  trailing: const Icon(Icons.chevron_right),
+                ),
+                const Divider(height: 1),
+                _buildSettingsTile(
+                  icon: Icons.sync_rounded,
+                  title: 'Sync Data',
+                  subtitle: 'Last sync: 5 minutes ago',
+                  trailing: const Icon(Icons.chevron_right),
+                ),
+                const Divider(height: 1),
+                _buildSettingsTile(
+                  icon: Icons.firmware_rounded,
+                  title: 'Firmware Update',
+                  subtitle: 'Current: v1.0.0',
+                  trailing: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: AppTheme.healthyGreen.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      'Up to date',
+                      style: TextStyle(
+                        color: AppTheme.healthyGreen,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          
+          const SizedBox(height: 24),
           
           // About
-          ListTile(
-            leading: const Icon(Icons.info),
-            title: const Text('About'),
-            subtitle: const Text('Digital Saver v1.0.0'),
-            onTap: () => _showAboutDialog(context),
+          _buildSectionTitle('About'),
+          const SizedBox(height: 12),
+          Container(
+            decoration: BoxDecoration(
+              color: isDark ? AppTheme.cardDark : AppTheme.cardLight,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: AppTheme.softShadow,
+            ),
+            child: Column(
+              children: [
+                _buildSettingsTile(
+                  icon: Icons.info_rounded,
+                  title: 'About',
+                  subtitle: 'Version 2.0.0',
+                  onTap: () => _showAboutDialog(context),
+                ),
+                const Divider(height: 1),
+                _buildSettingsTile(
+                  icon: Icons.privacy_tip_rounded,
+                  title: 'Privacy Policy',
+                  trailing: const Icon(Icons.chevron_right),
+                ),
+                const Divider(height: 1),
+                _buildSettingsTile(
+                  icon: Icons.description_rounded,
+                  title: 'Terms of Service',
+                  trailing: const Icon(Icons.chevron_right),
+                ),
+                const Divider(height: 1),
+                _buildSettingsTile(
+                  icon: Icons.help_rounded,
+                  title: 'Help & Support',
+                  trailing: const Icon(Icons.chevron_right),
+                ),
+              ],
+            ),
           ),
+          
+          const SizedBox(height: 32),
         ],
       ),
     );
   }
 
-  void _showLanguageDialog(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    final storage = Provider.of<StorageService>(context, listen: false);
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(l10n.selectLanguage),
-        content: SizedBox(
-          width: double.maxFinite,
-          child: ListView(
-            shrinkWrap: true,
-            children: [
-              _buildLanguageTile(context, 'en', 'English', storage),
-              _buildLanguageTile(context, 'ar', 'العربية', storage),
-              _buildLanguageTile(context, 'es', 'Español', storage),
-              _buildLanguageTile(context, 'fr', 'Français', storage),
-              _buildLanguageTile(context, 'de', 'Deutsch', storage),
-              _buildLanguageTile(context, 'zh', '中文', storage),
-              _buildLanguageTile(context, 'ja', '日本語', storage),
-              _buildLanguageTile(context, 'ru', 'Русский', storage),
-              _buildLanguageTile(context, 'pt', 'Português', storage),
-              _buildLanguageTile(context, 'hi', 'हिन्दी', storage),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(l10n.cancel),
-          ),
-        ],
-      ),
-    );
+  Widget _buildSectionTitle(String title) {
+    return Text(title, style: AppTheme.titleMedium);
   }
 
-  Widget _buildLanguageTile(
-    BuildContext context,
-    String code,
-    String name,
-    StorageService storage,
-  ) {
+  Widget _buildSettingsTile({
+    required IconData icon,
+    required String title,
+    String? subtitle,
+    Widget? trailing,
+    VoidCallback? onTap,
+  }) {
     return ListTile(
-      title: Text(name),
-      leading: Radio<String>(
-        value: code,
-        groupValue: storage.locale.languageCode,
-        onChanged: (value) {
-          if (value != null) {
-            storage.setLocale(Locale(value));
-            Navigator.pop(context);
-          }
-        },
+      leading: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: AppTheme.primaryColor.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Icon(icon, color: AppTheme.primaryColor, size: 20),
       ),
-      onTap: () {
-        storage.setLocale(Locale(code));
-        Navigator.pop(context);
-      },
+      title: Text(title, style: AppTheme.titleMedium),
+      subtitle: subtitle != null ? Text(subtitle, style: AppTheme.bodySmall) : null,
+      trailing: trailing,
+      onTap: onTap,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+    );
+  }
+
+  Widget _buildThresholdSlider({
+    required String title,
+    required double value,
+    required double min,
+    required double max,
+    required String unit,
+    required ValueChanged<double> onChanged,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(title, style: AppTheme.titleMedium),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: AppTheme.primaryColor.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                '${value.toInt()} $unit',
+                style: TextStyle(
+                  color: AppTheme.primaryColor,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Slider(
+          value: value,
+          min: min,
+          max: max,
+          divisions: (max - min).toInt(),
+          onChanged: onChanged,
+          activeColor: AppTheme.primaryColor,
+        ),
+      ],
     );
   }
 
@@ -177,23 +393,77 @@ class SettingsScreen extends StatelessWidget {
     return names[code] ?? code;
   }
 
+  void _showLanguageDialog(BuildContext context, StorageService storage) {
+    final t = AppLocalizations.of(context)!;
+    
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: Theme.of(context).scaffoldBackgroundColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 24),
+            Text(t.selectLanguage, style: AppTheme.headlineSmall),
+            const SizedBox(height: 16),
+            ...['en', 'ar', 'es', 'fr', 'de', 'zh', 'ja', 'ru', 'pt', 'hi']
+                .map((code) => ListTile(
+                      title: Text(_getLanguageName(code)),
+                      leading: Radio<String>(
+                        value: code,
+                        groupValue: storage.locale.languageCode,
+                        onChanged: (value) {
+                          if (value != null) {
+                            storage.setLocale(Locale(value));
+                            Navigator.pop(context);
+                          }
+                        },
+                      ),
+                      onTap: () {
+                        storage.setLocale(Locale(code));
+                        Navigator.pop(context);
+                      },
+                    )),
+            const SizedBox(height: 16),
+          ],
+        ),
+      ),
+    );
+  }
+
   void _showAboutDialog(BuildContext context) {
     showAboutDialog(
       context: context,
       applicationName: 'Digital Saver',
-      applicationVersion: '1.0.0',
-      applicationIcon: const Icon(
-        Icons.favorite,
-        color: Colors.red,
-        size: 48,
+      applicationVersion: '2.0.0',
+      applicationIcon: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: AppTheme.primaryColor.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Icon(Icons.favorite, color: AppTheme.primaryColor, size: 48),
       ),
       children: [
-        const Text(
-          'A smartwatch health monitoring app with emergency alerts.',
+        Text(
+          'A professional health monitoring app with advanced features for heart rate, blood pressure, and emergency alerts.',
         ),
         const SizedBox(height: 16),
         Text(
-          AppLocalizations.of(context)!.medicalDisclaimer,
+          '⚠️ This app provides wellness estimates and is not a medical device.',
           style: const TextStyle(fontSize: 12, fontStyle: FontStyle.italic),
         ),
       ],

@@ -2,22 +2,43 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:digital_saver/models/health_data.dart';
-import 'package:digital_saver/services/storage_service.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:digital_saver/models/health_models.dart';
 
 class EmergencyService extends ChangeNotifier {
   static final EmergencyService _instance = EmergencyService._internal();
   factory EmergencyService() => _instance;
   EmergencyService._internal();
 
+  final FlutterLocalNotificationsPlugin _notifications = FlutterLocalNotificationsPlugin();
+  
   bool _emergencyActive = false;
   Position? _lastLocation;
   Timer? _alertTimer;
   int _alertCount = 0;
   static const int maxAlerts = 3;
+  
+  List<HealthAlert> _recentAlerts = [];
 
   bool get emergencyActive => _emergencyActive;
   Position? get lastLocation => _lastLocation;
+  List<HealthAlert> get recentAlerts => _recentAlerts;
+
+  Future<void> init() async {
+    const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+    const iosSettings = DarwinInitializationSettings(
+      requestAlertPermission: true,
+      requestBadgePermission: true,
+      requestSoundPermission: true,
+    );
+    
+    const initSettings = InitializationSettings(
+      android: androidSettings,
+      iOS: iosSettings,
+    );
+    
+    await _notifications.initialize(initSettings);
+  }
 
   Future<void> checkAndRequestPermissions() async {
     bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
@@ -45,7 +66,12 @@ class EmergencyService extends ChangeNotifier {
     return _lastLocation!;
   }
 
-  Future<void> triggerEmergency(AlertData alert, List<EmergencyContact> contacts) async {
+  Future<void> triggerEmergency({
+    required AlertType type,
+    required AlertSeverity severity,
+    required List<EmergencyContact> contacts,
+    HealthAlert? existingAlert,
+  }) async {
     if (_emergencyActive) return;
     
     _emergencyActive = true;
@@ -54,32 +80,46 @@ class EmergencyService extends ChangeNotifier {
 
     try {
       // Get location
-      final location = await getCurrentLocation();
-      final locationString = 'https://maps.google.com/?q=${location.latitude},${location.longitude}';
+      Position? location;
+      try {
+        location = await getCurrentLocation();
+      } catch (e) {
+        debugPrint('Could not get location: $e');
+      }
+      
+      final locationString = location != null 
+          ? 'https://maps.google.com/?q=${location.latitude},${location.longitude}'
+          : 'Location unavailable';
+      
+      // Build emergency message
+      final message = _buildEmergencyMessage(type, severity, locationString, existingAlert);
       
       // Send SMS to all contacts
-      final message = _buildEmergencyMessage(alert, locationString);
-      
       for (final contact in contacts) {
         await _sendSms(contact.phone, message);
       }
 
       // Call primary contact
-      final primaryContact = contacts.firstWhere(
-        (c) => c.isPrimary,
-        orElse: () => contacts.first,
-      );
-      
-      // Start auto-dial timer
-      _alertTimer = Timer.periodic(const Duration(seconds: 30), (timer) async {
-        _alertCount++;
-        if (_alertCount >= maxAlerts) {
-          await callEmergency(primaryContact.phone);
-          _emergencyActive = false;
-          timer.cancel();
-          notifyListeners();
-        }
-      });
+      if (contacts.isNotEmpty) {
+        final primaryContact = contacts.firstWhere(
+          (c) => c.isPrimary,
+          orElse: () => contacts.first,
+        );
+        
+        // Show notification
+        await _showEmergencyNotification(type, severity);
+        
+        // Start auto-dial timer
+        _alertTimer = Timer.periodic(const Duration(seconds: 30), (timer) async {
+          _alertCount++;
+          if (_alertCount >= maxAlerts) {
+            await callEmergency(primaryContact.phone);
+            _emergencyActive = false;
+            timer.cancel();
+            notifyListeners();
+          }
+        });
+      }
 
     } catch (e) {
       debugPrint('Emergency trigger error: $e');
@@ -88,32 +128,88 @@ class EmergencyService extends ChangeNotifier {
     }
   }
 
-  String _buildEmergencyMessage(AlertData alert, String location) {
-    final timestamp = DateTime.now().toString();
+  String _buildEmergencyMessage(
+    AlertType type, 
+    AlertSeverity severity, 
+    String location,
+    HealthAlert? alert,
+  ) {
+    final timestamp = DateTime.now();
+    final timeStr = '${timestamp.hour}:${timestamp.minute.toString().padLeft(2, '0')}';
     
     String condition = '';
-    switch (alert.type) {
+    switch (type) {
       case AlertType.fall:
-        condition = 'FALL DETECTED - Possible loss of consciousness';
+        condition = '🚨 FALL DETECTED - Possible loss of consciousness';
         break;
       case AlertType.arrhythmia:
-        condition = 'IRREGULAR HEARTBEAT DETECTED';
+      case AlertType.afib:
+        condition = '❤️ IRREGULAR HEARTBEAT DETECTED';
+        break;
+      case AlertType.tachycardia:
+        condition = '❤️ FAST HEART RATE DETECTED';
+        break;
+      case AlertType.bradycardia:
+        condition = '❤️ SLOW HEART RATE DETECTED';
         break;
       case AlertType.hypertension:
-        condition = 'HIGH BLOOD PRESSURE DETECTED';
+        condition = '🩸 HIGH BLOOD PRESSURE DETECTED';
+        break;
+      case AlertType.hypotension:
+        condition = '🩸 LOW BLOOD PRESSURE DETECTED';
+        break;
+      case AlertType.lowOxygen:
+        condition = '🫁 LOW OXYGEN LEVEL DETECTED';
+        break;
+      case AlertType.lowBattery:
+        condition = '⚠️ WATCH BATTERY LOW';
+        break;
+      case AlertType.disconnected:
+        condition = '⚠️ WATCH DISCONNECTED';
+        break;
+      case AlertType.manual:
+        condition = '🚨 MANUAL EMERGENCY ALERT';
         break;
     }
 
-    return '''
-🚨 DIGITAL SAVER EMERGENCY 🚨
-$condition
+    String severityText = '';
+    switch (severity) {
+      case AlertSeverity.emergency:
+        severityText = '⚠️ IMMEDIATE ACTION REQUIRED';
+        break;
+      case AlertSeverity.critical:
+        severityText = '⚠️ CRITICAL ALERT';
+        break;
+      case AlertSeverity.warning:
+        severityText = '⚡ WARNING';
+        break;
+      case AlertSeverity.info:
+        severityText = 'ℹ️ INFO';
+        break;
+    }
 
-Time: $timestamp
-Location: $location
+    final buffer = StringBuffer();
+    buffer.writeln('🚨 DIGITAL SAVER EMERGENCY 🚨');
+    buffer.writeln();
+    buffer.writeln(severityText);
+    buffer.writeln(condition);
+    buffer.writeln();
+    buffer.writeln('Time: $timeStr');
+    buffer.writeln('Location: $location');
+    buffer.writeln();
+    
+    if (alert?.value != null) {
+      buffer.writeln('Value: ${alert!.value}');
+    }
+    
+    buffer.writeln();
+    buffer.writeln('Please check on the wearer immediately.');
+    buffer.writeln();
+    buffer.writeln('Emergency services: 123 (Egypt) / 112 (EU) / 911 (US)');
+    buffer.writeln();
+    buffer.writeln('Sent by Digital Saver Health App');
 
-Please check on the wearer immediately.
-If this is a medical emergency, call 123 (Egypt Emergency).
-''';
+    return buffer.toString();
   }
 
   Future<void> _sendSms(String phone, String message) async {
@@ -141,10 +237,72 @@ If this is a medical emergency, call 123 (Egypt Emergency).
     await callEmergency(emergencyNumber);
   }
 
+  Future<void> _showEmergencyNotification(AlertType type, AlertSeverity severity) async {
+    String title;
+    String body;
+    
+    switch (type) {
+      case AlertType.fall:
+        title = 'Fall Detected!';
+        body = 'Emergency alert has been sent to your contacts.';
+        break;
+      case AlertType.arrhythmia:
+      case AlertType.afib:
+        title = 'Irregular Heartbeat!';
+        body = 'Please check on the wearer immediately.';
+        break;
+      default:
+        title = 'Emergency Alert';
+        body = 'Please check on the wearer immediately.';
+    }
+
+    final androidDetails = AndroidNotificationDetails(
+      'emergency_channel',
+      'Emergency Alerts',
+      channelDescription: 'Emergency alert notifications',
+      importance: Importance.max,
+      priority: Priority.high,
+      ongoing: true,
+      autoCancel: false,
+      playSound: true,
+      enableVibration: true,
+    );
+
+    final iosDetails = DarwinNotificationDetails(
+      presentAlert: true,
+      presentBadge: true,
+      presentSound: true,
+    );
+
+    await _notifications.show(
+      0,
+      title,
+      body,
+      NotificationDetails(
+        android: androidDetails,
+        iOS: iosDetails,
+      ),
+    );
+  }
+
   void cancelEmergency() {
     _alertTimer?.cancel();
+    _notifications.cancel(0);
     _emergencyActive = false;
     _alertCount = 0;
+    notifyListeners();
+  }
+
+  void addRecentAlert(HealthAlert alert) {
+    _recentAlerts.insert(0, alert);
+    if (_recentAlerts.length > 20) {
+      _recentAlerts.removeLast();
+    }
+    notifyListeners();
+  }
+
+  void clearRecentAlerts() {
+    _recentAlerts.clear();
     notifyListeners();
   }
 }

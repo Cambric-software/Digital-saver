@@ -1,29 +1,40 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import 'package:digital_saver/services/ble_service.dart';
-import 'package:digital_saver/services/emergency_service.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:digital_saver/theme/app_theme.dart';
+import 'package:digital_saver/services/ble_advanced_service.dart';
+import 'package:digital_saver/services/health_analysis_service.dart';
 import 'package:digital_saver/services/storage_service.dart';
-import 'package:digital_saver/screens/home_screen.dart';
-import 'package:digital_saver/screens/settings_screen.dart';
-import 'package:digital_saver/screens/history_screen.dart';
-import 'package:digital_saver/screens/emergency_contacts_screen.dart';
+import 'package:digital_saver/services/emergency_service.dart';
+import 'package:digital_saver/screens/main_screen.dart';
 import 'package:digital_saver/i18n/app_localizations.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
+  // Set system UI overlay style
+  SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
+    statusBarColor: Colors.transparent,
+    statusBarIconBrightness: Brightness.dark,
+    systemNavigationBarColor: Colors.white,
+    systemNavigationBarIconBrightness: Brightness.dark,
+  ));
+
+  // Initialize services
   final storageService = StorageService();
   await storageService.init();
   
-  final bleService = BleService();
+  final bleService = BleAdvancedService();
+  final healthAnalysis = HealthAnalysisService();
   final emergencyService = EmergencyService();
-  
+
   runApp(
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => storageService),
         ChangeNotifierProvider(create: (_) => bleService),
+        ChangeNotifierProvider(create: (_) => healthAnalysis),
         ChangeNotifierProvider(create: (_) => emergencyService),
       ],
       child: const DigitalSaverApp(),
@@ -36,12 +47,12 @@ class DigitalSaverApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final locale = context.watch<StorageService>().locale;
+    final storage = context.watch<StorageService>();
     
     return MaterialApp(
       title: 'Digital Saver',
       debugShowCheckedModeBanner: false,
-      locale: locale,
+      locale: storage.locale,
       supportedLocales: AppLocalizations.supportedLocales,
       localizationsDelegates: const [
         AppLocalizations.delegate,
@@ -49,26 +60,10 @@ class DigitalSaverApp extends StatelessWidget {
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.red,
-          brightness: Brightness.light,
-        ),
-        useMaterial3: true,
-      ),
-      darkTheme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.red,
-          brightness: Brightness.dark,
-        ),
-        useMaterial3: true,
-      ),
-      home: const HomeScreen(),
-      routes: {
-        '/settings': (_) => const SettingsScreen(),
-        '/history': (_) => const HistoryScreen(),
-        '/contacts': (_) => const EmergencyContactsScreen(),
-      },
+      theme: AppTheme.lightTheme,
+      darkTheme: AppTheme.darkTheme,
+      themeMode: storage.isDarkMode ? ThemeMode.dark : ThemeMode.light,
+      home: const MainScreen(),
     );
   }
 }
