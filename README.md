@@ -1,23 +1,20 @@
-# Digital Saver - Smartwatch Health Monitoring App
+# Digital Saver App
 
-A professional health monitoring smartwatch with emergency alerts.
+## 📁 Click folders below to see files:
 
-**⚠️ Disclaimer:** Wellness tool, NOT medical device.
+**[📱 app/](app/)** - Flutter mobile app
+**[🔧 hardware/](hardware/)** - DIY watch
+**[📖 docs/](docs/)** - Guides
 
-## Quick Links
+---
 
-| Folder | Description |
-|--------|-------------|
-| **[app/](app/)** | Flutter mobile app (20 files) |
-| **[hardware/](hardware/)** | DIY smartwatch (ESP32) |
-| **[docs/](docs/)** | Assembly & user guides |
-
-## App Files
+## 📱 App Structure ([click to open](app/))
 
 ```
 app/
-├── main.dart                    # Entry point
-├── screens/                     # 7 UI screens
+├── main.dart
+├── pubspec.yaml
+├── screens/
 │   ├── main_screen.dart
 │   ├── dashboard_screen.dart
 │   ├── heart_screen.dart
@@ -25,34 +22,15 @@ app/
 │   ├── activity_screen.dart
 │   ├── sleep_screen.dart
 │   └── settings_screen.dart
-├── services/                     # Business logic
-├── models/                       # Data models
-├── widgets/                      # UI components
-├── theme/                        # Material Design 3
-└── i18n/                        # 10 languages
+├── services/
+├── models/
+├── widgets/
+├── theme/
+└── i18n/
 ```
 
-## Features
-
-- Heart Rate + HRV + AFib Detection
-- Blood Pressure Estimation
-- Fall Detection
-- Emergency SMS/Call with GPS
-- Sleep & Activity Tracking
-- 10 Languages (Arabic RTL)
-- Health Score 0-100
-
-## Run
-
-```bash
-flutter pub get
-flutter run
-```
-
-## Budget
-
-**Total: ~2,810 EGP** (within 10,000 EGP)
+**20 Dart files** - Run: `flutter pub get && flutter run`
 
 ---
 
-**Version:** 2.0.0 | **License:** MIT
+⚠️ **Disclaimer:** Wellness tool, NOT medical device.
