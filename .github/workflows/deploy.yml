@@ -10,13 +10,12 @@ permissions:
   pages: write
   id-token: write
 
-concurrency:
-  group: "pages"
-  cancel-in-progress: true
-
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2
@@ -24,6 +23,8 @@ jobs:
           flutter-version: '3.24.0'
       - run: cd app && flutter pub get
       - run: cd app && flutter build web
-      - uses: peaceiris/actions-gh-pages@v4
+      - uses: actions/upload-pages-artifact@v3
         with:
-          publish_dir: app/build/web
+          path: app/build/web
+      - id: deployment
+        uses: actions/deploy-pages@v4
