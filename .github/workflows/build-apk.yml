@@ -1,0 +1,87 @@
+name: Build APK
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.19.0'
+          channel: 'stable'
+          cache: true
+
+      - name: Cache pub dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.pub-cache
+            ~/.gradle
+          key: ${{ runner.os }}-flutter-${{ hashFiles('**/pubspec.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-flutter-
+
+      - name: Install dependencies
+        working-directory: ./app
+        run: flutter pub get
+
+      - name: Get Flutter dependencies
+        working-directory: ./app
+        run: flutter pub cache repair
+
+      - name: Build Debug APK
+        working-directory: ./app
+        run: flutter build apk --debug
+
+      - name: Build Release APK
+        working-directory: ./app
+        run: flutter build apk --release
+
+      - name: Generate Release Notes
+        run: |
+          echo "## Digital Saver APK Build" > release-notes.md
+          echo "" >> release-notes.md
+          echo "Build Date: $(date '+%Y-%m-%d %H:%M:%S')" >> release-notes.md
+          echo "" >> release-notes.md
+          echo "### Files" >> release-notes.md
+          echo "- app/build/app/outputs/flutter-apk/app-debug.apk" >> release-notes.md
+          echo "- app/build/app/outputs/flutter-apk/app-release.apk" >> release-notes.md
+
+      - name: Upload Debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: debug-apk
+          path: app/build/app/outputs/flutter-apk/app-debug.apk
+          retention-days: 30
+
+      - name: Upload Release APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-apk
+          path: app/build/app/outputs/flutter-apk/app-release.apk
+          retention-days: 90
+
+      - name: Create Release
+        if: github.ref == 'refs/heads/main'
+        uses: softprops/action-gh-release@v1
+        with:
+          body_path: release-notes.md
+          files: |
+            app/build/app/outputs/flutter-apk/app-release.apk
+          tag_name: v${{ github.run_number }}
+          name: Release v${{ github.run_number }}
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
