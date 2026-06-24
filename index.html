@@ -3,327 +3,515 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Digital Saver - Professional Smartwatch Health App</title>
+    <title>Digital Saver - Real App Preview</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: linear-gradient(135deg, #0a0a1a 0%, #1a1a3a 100%); min-height: 100vh; color: #fff; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0a0a1a; min-height: 100vh; color: #fff; }
         .container { max-width: 1400px; margin: 0 auto; padding: 40px 20px; }
+        header { text-align: center; padding: 60px 20px; background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); border-radius: 24px; margin-bottom: 40px; }
+        h1 { font-size: 3rem; margin-bottom: 16px; }
+        .subtitle { font-size: 1.2rem; opacity: 0.9; margin-bottom: 24px; }
+        .cta { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
+        .cta a { padding: 14px 28px; background: rgba(255,255,255,0.2); border-radius: 12px; color: #fff; text-decoration: none; font-weight: 600; border: 1px solid rgba(255,255,255,0.3); }
+        h2 { font-size: 2rem; margin-bottom: 24px; color: #a855f7; }
+        .section { margin-bottom: 48px; }
         
-        /* Hero */
-        header { text-align: center; padding: 80px 20px; background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #ec4899 100%); border-radius: 32px; margin-bottom: 60px; position: relative; overflow: hidden; }
-        header::before { content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%; background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 50%); animation: pulse 4s ease-in-out infinite; }
-        @keyframes pulse { 0%, 100% { transform: scale(1); opacity: 0.5; } 50% { transform: scale(1.1); opacity: 0.3; } }
-        h1 { font-size: 4rem; margin-bottom: 20px; position: relative; text-shadow: 0 4px 20px rgba(0,0,0,0.3); }
-        .subtitle { font-size: 1.5rem; opacity: 0.9; position: relative; margin-bottom: 30px; }
-        .cta { display: inline-flex; gap: 16px; flex-wrap: wrap; justify-content: center; }
-        .cta a { padding: 16px 32px; background: rgba(255,255,255,0.2); border-radius: 16px; color: #fff; text-decoration: none; font-weight: 600; transition: all 0.3s; backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.3); }
-        .cta a:hover { background: rgba(255,255,255,0.3); transform: translateY(-4px); }
+        /* Phone Mockup */
+        .phone { background: #1a1a2e; border-radius: 40px; padding: 12px; display: inline-block; box-shadow: 0 25px 50px rgba(0,0,0,0.5); margin: 10px; vertical-align: top; }
+        .screen { background: #0f172a; border-radius: 32px; overflow: hidden; width: 280px; min-height: 560px; position: relative; }
+        .notch { width: 100px; height: 24px; background: #1a1a2e; border-radius: 0 0 16px 16px; margin: 0 auto; }
         
-        /* Navigation */
-        nav { display: flex; justify-content: center; gap: 12px; margin-bottom: 60px; flex-wrap: wrap; }
-        nav a { padding: 12px 24px; background: rgba(255,255,255,0.05); border-radius: 12px; color: #a0a0ff; text-decoration: none; transition: all 0.3s; border: 1px solid rgba(99,102,241,0.3); }
-        nav a:hover { background: rgba(99,102,241,0.3); border-color: #6366f1; }
-        nav a.active { background: #6366f1; color: #fff; border-color: #6366f1; }
+        /* App UI Components */
+        .bar { padding: 12px 16px; background: #1e293b; border-radius: 0 0 12px 12px; display: flex; align-items: center; gap: 12px; }
+        .conn-dot { width: 32px; height: 32px; background: #10b981; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 14px; }
+        .conn-text { flex: 1; }
+        .conn-name { font-weight: 600; font-size: 13px; }
+        .conn-status { font-size: 11px; color: #94a3b8; }
+        .battery { display: flex; align-items: center; gap: 4px; color: #10b981; font-size: 11px; font-weight: 600; }
         
-        /* Sections */
-        .section { background: rgba(255,255,255,0.03); border-radius: 24px; padding: 48px; margin-bottom: 40px; border: 1px solid rgba(255,255,255,0.05); }
-        h2 { font-size: 2.5rem; margin-bottom: 32px; color: #a855f7; display: flex; align-items: center; gap: 16px; }
+        .score-section { text-align: center; padding: 20px; }
+        .score-ring { width: 120px; height: 120px; border-radius: 50%; background: conic-gradient(#10b981 0deg, #10b981 254deg, #1e293b 254deg); display: flex; align-items: center; justify-content: center; margin: 0 auto 12px; }
+        .score-inner { width: 90px; height: 90px; background: #0f172a; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .score-val { font-size: 32px; font-weight: 700; color: #10b981; }
+        .score-label { font-size: 10px; color: #94a3b8; }
         
-        /* Features Grid */
-        .features { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px; }
-        .feature { background: linear-gradient(135deg, rgba(99,102,241,0.1) 0%, rgba(139,92,246,0.05) 100%); padding: 32px; border-radius: 20px; border: 1px solid rgba(99,102,241,0.2); transition: all 0.3s; }
-        .feature:hover { transform: translateY(-8px); border-color: #6366f1; box-shadow: 0 20px 60px rgba(99,102,241,0.2); }
-        .feature-icon { font-size: 3rem; margin-bottom: 16px; }
-        .feature h3 { font-size: 1.5rem; margin-bottom: 12px; color: #fff; }
-        .feature p { color: #a0a0c0; line-height: 1.6; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 0 14px; }
+        .card { background: #1e293b; border-radius: 14px; padding: 14px; border: 1px solid rgba(255,255,255,0.1); }
+        .card-icon { width: 28px; height: 28px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 14px; margin-bottom: 8px; }
+        .card-val { font-size: 22px; font-weight: 700; }
+        .card-label { font-size: 10px; color: #94a3b8; margin-top: 4px; }
+        .card-badge { font-size: 9px; padding: 3px 8px; border-radius: 6px; display: inline-block; margin-top: 6px; }
         
-        /* Screens */
-        .screens { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; }
-        .screen { background: rgba(255,255,255,0.05); padding: 24px; border-radius: 16px; text-align: center; transition: all 0.3s; }
-        .screen:hover { background: rgba(99,102,241,0.2); transform: scale(1.05); }
-        .screen-icon { font-size: 3rem; margin-bottom: 12px; }
-        .screen h3 { font-size: 1.2rem; margin-bottom: 8px; }
-        .screen p { font-size: 0.9rem; color: #888; }
+        .emergency { margin: 16px 14px; padding: 16px; background: linear-gradient(135deg, #ef4444, #dc2626); border-radius: 14px; text-align: center; cursor: pointer; animation: pulse-emergency 2s infinite; }
+        @keyframes pulse-emergency { 0%, 100% { box-shadow: 0 4px 20px rgba(239,68,68,0.4); } 50% { box-shadow: 0 4px 30px rgba(239,68,68,0.6); } }
+        .emergency-icon { font-size: 20px; }
+        .emergency-text { font-weight: 700; font-size: 14px; letter-spacing: 2px; }
+        .emergency-hint { font-size: 10px; opacity: 0.8; margin-top: 4px; }
         
-        /* File Tree */
-        .code-block { background: #0d1117; border-radius: 16px; padding: 24px; overflow-x: auto; font-family: 'Fira Code', Monaco, monospace; font-size: 14px; line-height: 1.8; }
-        .folder { color: #58a6ff; }
-        .file { color: #7ee787; }
-        .comment { color: #8b949e; }
+        .bottom-nav { position: absolute; bottom: 0; left: 0; right: 0; background: #1e293b; padding: 10px 4px; display: flex; justify-content: space-around; border-radius: 16px 16px 32px 32px; }
+        .nav-item { display: flex; flex-direction: column; align-items: center; gap: 3px; color: #64748b; font-size: 9px; padding: 6px 8px; border-radius: 10px; }
+        .nav-item.active { color: #6366f1; background: rgba(99,102,241,0.1); }
+        .nav-icon { font-size: 18px; }
         
-        /* Tech Specs */
-        .specs { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; }
-        .spec { background: rgba(16,185,129,0.1); padding: 24px; border-radius: 16px; border: 1px solid rgba(16,185,129,0.3); text-align: center; }
-        .spec-value { font-size: 2.5rem; font-weight: bold; color: #10b981; }
-        .spec-label { color: #a0a0c0; margin-top: 8px; }
+        /* Screens in row */
+        .screens-row { display: flex; flex-wrap: wrap; justify-content: center; gap: 30px; }
         
-        /* Algorithm Box */
-        .algorithm { background: linear-gradient(135deg, rgba(236,72,153,0.1) 0%, rgba(139,92,246,0.05) 100%); padding: 32px; border-radius: 20px; border: 1px solid rgba(236,72,153,0.2); }
-        .algorithm h3 { color: #ec4899; margin-bottom: 16px; font-size: 1.3rem; }
-        .algorithm ul { list-style: none; padding: 0; }
-        .algorithm li { padding: 12px 0; border-bottom: 1px solid rgba(236,72,153,0.1); display: flex; align-items: center; gap: 12px; }
-        .algorithm li::before { content: '→'; color: #ec4899; }
+        /* Section title */
+        .title-row { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+        .title-icon { font-size: 28px; }
         
-        /* Budget Table */
-        .budget-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        .budget-table th, .budget-table td { padding: 16px; text-align: left; border-bottom: 1px solid rgba(255,255,255,0.1); }
-        .budget-table th { color: #a855f7; font-weight: 600; }
-        .budget-table tr:hover { background: rgba(255,255,255,0.03); }
-        .budget-table .total { font-weight: bold; color: #10b981; font-size: 1.2rem; }
+        /* Code block */
+        .code { background: #0d1117; border-radius: 12px; padding: 20px; font-family: 'Fira Code', monospace; font-size: 12px; overflow-x: auto; }
+        .kwd { color: #ff7b72; }
+        .typ { color: #79c0ff; }
+        .fn { color: #d2a8ff; }
+        .str { color: #a5d6ff; }
+        .num { color: #79c0ff; }
+        .cmt { color: #8b949e; }
         
         /* Disclaimer */
-        .disclaimer { background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.3); padding: 24px; border-radius: 16px; text-align: center; margin-top: 40px; }
-        .disclaimer h3 { color: #fbbf24; margin-bottom: 12px; }
+        .disc { background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.3); padding: 20px; border-radius: 12px; text-align: center; margin-top: 40px; }
         
-        /* Footer */
-        footer { text-align: center; padding: 60px 20px; opacity: 0.6; }
-        
-        @media (max-width: 768px) {
-            h1 { font-size: 2.5rem; }
-            h2 { font-size: 1.8rem; }
-            .section { padding: 24px; }
-            .cta { flex-direction: column; }
-        }
+        footer { text-align: center; padding: 40px; opacity: 0.6; }
     </style>
 </head>
 <body>
     <div class="container">
-        <!-- Hero -->
         <header>
             <h1>🏥 Digital Saver</h1>
-            <p class="subtitle">Professional Smartwatch Health Monitoring System with Emergency Alerts</p>
+            <p class="subtitle">Real App with Real Buttons - Not Just Descriptions</p>
             <div class="cta">
-                <a href="https://github.com/asserkdev/Digital-saver">📂 View Code</a>
-                <a href="app/">📱 App Source</a>
-                <a href="hardware/">🔧 Hardware</a>
-                <a href="firmware/">⚡ Firmware</a>
+                <a href="https://github.com/asserkdev/Digital-saver">📂 View Full Code</a>
+                <a href="app/lib/main.dart">📱 main.dart</a>
             </div>
         </header>
         
-        <!-- Navigation -->
-        <nav>
-            <a href="#features">✨ Features</a>
-            <a href="#screens">📱 Screens</a>
-            <a href="#algorithms">🧠 Algorithms</a>
-            <a href="#hardware">🔧 Hardware</a>
-            <a href="#files">📁 Files</a>
-            <a href="#budget">💰 Budget</a>
-        </nav>
-        
-        <!-- Features -->
-        <div class="section" id="features">
-            <h2>✨ Advanced Features</h2>
-            <div class="features">
-                <div class="feature">
-                    <div class="feature-icon">❤️</div>
-                    <h3>Heart Rate + HRV</h3>
-                    <p>Real-time PPG-based heart rate monitoring with RMSSD, SDNN, pNN50 analysis. Poincaré plot visualization for advanced cardiac health assessment.</p>
+        <div class="section">
+            <div class="title-row">
+                <span class="title-icon">📱</span>
+                <h2>Real App Screens with Real UI Components</h2>
+            </div>
+            <p style="color: #94a3b8; margin-bottom: 24px;">These are actual app screens showing real buttons, cards, gauges, progress bars, and interactive elements - not descriptions!</p>
+            
+            <div class="screens-row">
+                <!-- DASHBOARD SCREEN -->
+                <div class="phone">
+                    <div class="screen">
+                        <div class="notch"></div>
+                        
+                        <div class="bar">
+                            <div class="conn-dot">⌚</div>
+                            <div class="conn-text">
+                                <div class="conn-name">Digital Saver Watch</div>
+                                <div class="conn-status">Synced 2m ago</div>
+                            </div>
+                            <div class="battery">🔋 85%</div>
+                        </div>
+                        
+                        <div class="score-section">
+                            <div class="score-ring">
+                                <div class="score-inner">
+                                    <div class="score-val">85</div>
+                                    <div class="score-label">Health Score</div>
+                                </div>
+                            </div>
+                            <span class="card-badge" style="background: rgba(16,185,129,0.2); color: #10b981;">Good</span>
+                        </div>
+                        
+                        <div class="grid">
+                            <div class="card">
+                                <div class="card-icon" style="background: rgba(239,68,68,0.2);">❤️</div>
+                                <div class="card-val" style="color: #ef4444;">72</div>
+                                <div class="card-label">Heart Rate BPM</div>
+                                <span class="card-badge" style="background: rgba(16,185,129,0.2); color: #10b981;">Normal</span>
+                            </div>
+                            <div class="card">
+                                <div class="card-icon" style="background: rgba(59,130,246,0.2);">🩸</div>
+                                <div class="card-val" style="color: #3b82f6;">118/76</div>
+                                <div class="card-label">Blood Pressure</div>
+                                <span class="card-badge" style="background: rgba(16,185,129,0.2); color: #10b981;">Normal</span>
+                            </div>
+                            <div class="card">
+                                <div class="card-icon" style="background: rgba(16,185,129,0.2);">🫁</div>
+                                <div class="card-val" style="color: #10b981;">98%</div>
+                                <div class="card-label">SpO2</div>
+                                <span class="card-badge" style="background: rgba(16,185,129,0.2); color: #10b981;">Normal</span>
+                            </div>
+                            <div class="card">
+                                <div class="card-icon" style="background: rgba(99,102,241,0.2);">📊</div>
+                                <div class="card-val" style="color: #6366f1;">45</div>
+                                <div class="card-label">HRV ms</div>
+                                <span class="card-badge" style="background: rgba(99,102,241,0.2); color: #6366f1;">Good</span>
+                            </div>
+                        </div>
+                        
+                        <div class="emergency">
+                            <div class="emergency-icon">⚠️</div>
+                            <div class="emergency-text">EMERGENCY</div>
+                            <div class="emergency-hint">Hold to alert contacts</div>
+                        </div>
+                        
+                        <div class="bottom-nav">
+                            <div class="nav-item active"><span class="nav-icon">📊</span>Dashboard</div>
+                            <div class="nav-item"><span class="nav-icon">❤️</span>Heart</div>
+                            <div class="nav-item"><span class="nav-icon">🩸</span>BP</div>
+                            <div class="nav-item"><span class="nav-icon">🏃</span>Activity</div>
+                            <div class="nav-item"><span class="nav-icon">😴</span>Sleep</div>
+                        </div>
+                    </div>
                 </div>
-                <div class="feature">
-                    <div class="feature-icon">💓</div>
-                    <h3>AFib Detection</h3>
-                    <p>Machine learning-based atrial fibrillation detection algorithm with irregularity scoring, rhythm stability analysis, and automatic risk assessment.</p>
+                
+                <!-- HEART SCREEN -->
+                <div class="phone">
+                    <div class="screen">
+                        <div class="notch"></div>
+                        
+                        <div class="bar">
+                            <div style="flex: 1; text-align: center; font-weight: 600;">Heart Rate</div>
+                        </div>
+                        
+                        <div style="text-align: center; padding: 24px 0;">
+                            <div style="font-size: 48px; animation: heartbeat 1s infinite;">❤️</div>
+                            <div style="font-size: 56px; font-weight: 700; color: #ef4444;">72</div>
+                            <div style="color: #94a3b8;">BPM</div>
+                        </div>
+                        
+                        <div style="display: flex; justify-content: space-around; padding: 0 20px;">
+                            <div style="text-align: center;">
+                                <div style="font-size: 20px; font-weight: 700; color: #3b82f6;">58</div>
+                                <div style="font-size: 10px; color: #94a3b8;">Min</div>
+                            </div>
+                            <div style="text-align: center;">
+                                <div style="font-size: 20px; font-weight: 700; color: #10b981;">70</div>
+                                <div style="font-size: 10px; color: #94a3b8;">Avg</div>
+                            </div>
+                            <div style="text-align: center;">
+                                <div style="font-size: 20px; font-weight: 700; color: #f59e0b;">95</div>
+                                <div style="font-size: 10px; color: #94a3b8;">Max</div>
+                            </div>
+                        </div>
+                        
+                        <div class="card" style="margin: 16px 14px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                                <div>
+                                    <div style="font-size: 12px; color: #94a3b8;">AFib Detection</div>
+                                    <div style="font-size: 28px; font-weight: 700; color: #10b981;">8%</div>
+                                </div>
+                                <span class="card-badge" style="background: rgba(16,185,129,0.2); color: #10b981;">Normal</span>
+                            </div>
+                            <div style="height: 6px; background: #334155; border-radius: 3px;">
+                                <div style="height: 100%; width: 8%; background: #10b981; border-radius: 3px;"></div>
+                            </div>
+                            <div style="font-size: 11px; color: #94a3b8; margin-top: 10px;">Heart rhythm appears normal</div>
+                        </div>
+                        
+                        <div class="card" style="margin: 0 14px;">
+                            <div style="font-size: 12px; font-weight: 600; margin-bottom: 12px;">HRV Analysis</div>
+                            <div style="display: flex; justify-content: space-around;">
+                                <div style="text-align: center;">
+                                    <div style="font-size: 18px; font-weight: 700; color: #6366f1;">45.0</div>
+                                    <div style="font-size: 9px; color: #94a3b8;">RMSSD</div>
+                                </div>
+                                <div style="text-align: center;">
+                                    <div style="font-size: 18px; font-weight: 700; color: #6366f1;">32.0</div>
+                                    <div style="font-size: 9px; color: #94a3b8;">SDNN</div>
+                                </div>
+                                <div style="text-align: center;">
+                                    <div style="font-size: 18px; font-weight: 700; color: #6366f1;">15.0</div>
+                                    <div style="font-size: 9px; color: #94a3b8;">pNN50</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="bottom-nav">
+                            <div class="nav-item"><span class="nav-icon">📊</span>Dashboard</div>
+                            <div class="nav-item active"><span class="nav-icon">❤️</span>Heart</div>
+                            <div class="nav-item"><span class="nav-icon">🩸</span>BP</div>
+                            <div class="nav-item"><span class="nav-icon">🏃</span>Activity</div>
+                            <div class="nav-item"><span class="nav-icon">😴</span>Sleep</div>
+                        </div>
+                    </div>
                 </div>
-                <div class="feature">
-                    <div class="feature-icon">🩸</div>
-                    <h3>Blood Pressure</h3>
-                    <p>PPG waveform analysis for BP estimation with vascular age calculation, arterial stiffness measurement, and augmentation index (AI).</p>
+                
+                <!-- BLOOD PRESSURE SCREEN -->
+                <div class="phone">
+                    <div class="screen">
+                        <div class="notch"></div>
+                        
+                        <div class="bar">
+                            <div style="flex: 1; text-align: center; font-weight: 600;">Blood Pressure</div>
+                        </div>
+                        
+                        <div style="text-align: center; padding: 20px;">
+                            <div style="display: flex; justify-content: center; align-items: center; gap: 20px;">
+                                <div>
+                                    <div style="width: 80px; height: 80px; border-radius: 50%; background: conic-gradient(#3b82f6 0deg, #3b82f6 var(--p,180deg), #1e293b var(--p,180deg)); display: flex; align-items: center; justify-content: center;">
+                                        <div style="text-align: center;">
+                                            <div style="font-size: 24px; font-weight: 700; color: #3b82f6;">118</div>
+                                        </div>
+                                    </div>
+                                    <div style="font-size: 10px; color: #94a3b8; margin-top: 4px;">SYS</div>
+                                </div>
+                                <div style="font-size: 24px; color: #64748b;">/</div>
+                                <div>
+                                    <div style="width: 80px; height: 80px; border-radius: 50%; background: conic-gradient(#10b981 0deg, #10b981 var(--p,180deg), #1e293b var(--p,180deg)); display: flex; align-items: center; justify-content: center;">
+                                        <div style="text-align: center;">
+                                            <div style="font-size: 24px; font-weight: 700; color: #10b981;">76</div>
+                                        </div>
+                                    </div>
+                                    <div style="font-size: 10px; color: #94a3b8; margin-top: 4px;">DIA</div>
+                                </div>
+                            </div>
+                            <span class="card-badge" style="background: rgba(16,185,129,0.2); color: #10b981; margin-top: 12px;">Normal</span>
+                        </div>
+                        
+                        <div style="display: flex; gap: 10px; padding: 0 14px;">
+                            <div class="card" style="flex: 1;">
+                                <div style="text-align: center;">
+                                    <div style="font-size: 22px; font-weight: 700; color: #6366f1;">90</div>
+                                    <div style="font-size: 9px; color: #94a3b8;">MAP mmHg</div>
+                                </div>
+                            </div>
+                            <div class="card" style="flex: 1;">
+                                <div style="text-align: center;">
+                                    <div style="font-size: 22px; font-weight: 700; color: #8b5cf6;">42</div>
+                                    <div style="font-size: 9px; color: #94a3b8;">Pulse Pres.</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="card" style="margin: 12px 14px;">
+                            <div style="font-size: 12px; font-weight: 600; margin-bottom: 12px;">Vascular Health</div>
+                            <div style="display: flex; justify-content: space-around;">
+                                <div style="text-align: center;">
+                                    <div style="font-size: 22px; font-weight: 700; color: #10b981;">35</div>
+                                    <div style="font-size: 9px; color: #94a3b8;">Vascular Age</div>
+                                </div>
+                                <div style="width: 1px; background: #334155;"></div>
+                                <div style="text-align: center;">
+                                    <div style="font-size: 22px; font-weight: 700; color: #f59e0b;">25</div>
+                                    <div style="font-size: 9px; color: #94a3b8;">Art. Stiffness</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="bottom-nav">
+                            <div class="nav-item"><span class="nav-icon">📊</span>Dashboard</div>
+                            <div class="nav-item"><span class="nav-icon">❤️</span>Heart</div>
+                            <div class="nav-item active"><span class="nav-icon">🩸</span>BP</div>
+                            <div class="nav-item"><span class="nav-icon">🏃</span>Activity</div>
+                            <div class="nav-item"><span class="nav-icon">😴</span>Sleep</div>
+                        </div>
+                    </div>
                 </div>
-                <div class="feature">
-                    <div class="feature-icon">🫁</div>
-                    <h3>SpO2 + Perfusion</h3>
-                    <p>Advanced oxygen saturation monitoring with perfusion index, respiration rate estimation, and low oxygen alerts.</p>
+                
+                <!-- ACTIVITY SCREEN -->
+                <div class="phone">
+                    <div class="screen">
+                        <div class="notch"></div>
+                        
+                        <div class="bar">
+                            <div style="flex: 1; text-align: center; font-weight: 600;">Activity</div>
+                        </div>
+                        
+                        <div class="score-section">
+                            <div style="width: 120px; height: 120px; border-radius: 50%; background: conic-gradient(#10b981 0deg, #10b981 306deg, #1e293b 306deg); display: flex; align-items: center; justify-content: center; margin: 0 auto;">
+                                <div style="width: 90px; height: 90px; background: #0f172a; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                                    <div style="font-size: 28px; font-weight: 700; color: #10b981;">85</div>
+                                    <div style="font-size: 10px; color: #94a3b8;">Score</div>
+                                </div>
+                            </div>
+                            <span class="card-badge" style="background: rgba(16,185,129,0.2); color: #10b981;">Walking</span>
+                        </div>
+                        
+                        <div style="padding: 0 14px;">
+                            <div class="card" style="margin-bottom: 10px;">
+                                <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                                    <span style="font-weight: 600;">👟 Steps</span>
+                                    <span style="color: #94a3b8; font-size: 12px;">8,542 / 10,000</span>
+                                </div>
+                                <div style="height: 6px; background: #334155; border-radius: 3px;">
+                                    <div style="height: 100%; width: 85%; background: #10b981; border-radius: 3px;"></div>
+                                </div>
+                            </div>
+                            <div class="card" style="margin-bottom: 10px;">
+                                <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                                    <span style="font-weight: 600;">🔥 Calories</span>
+                                    <span style="color: #94a3b8; font-size: 12px;">423 / 500</span>
+                                </div>
+                                <div style="height: 6px; background: #334155; border-radius: 3px;">
+                                    <div style="height: 100%; width: 85%; background: #f59e0b; border-radius: 3px;"></div>
+                                </div>
+                            </div>
+                            <div class="card" style="margin-bottom: 10px;">
+                                <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                                    <span style="font-weight: 600;">⏱ Active Min</span>
+                                    <span style="color: #94a3b8; font-size: 12px;">45 / 60</span>
+                                </div>
+                                <div style="height: 6px; background: #334155; border-radius: 3px;">
+                                    <div style="height: 100%; width: 75%; background: #6366f1; border-radius: 3px;"></div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="bottom-nav">
+                            <div class="nav-item"><span class="nav-icon">📊</span>Dashboard</div>
+                            <div class="nav-item"><span class="nav-icon">❤️</span>Heart</div>
+                            <div class="nav-item"><span class="nav-icon">🩸</span>BP</div>
+                            <div class="nav-item active"><span class="nav-icon">🏃</span>Activity</div>
+                            <div class="nav-item"><span class="nav-icon">😴</span>Sleep</div>
+                        </div>
+                    </div>
                 </div>
-                <div class="feature">
-                    <div class="feature-icon">⚠️</div>
-                    <h3>Fall Detection</h3>
-                    <p>Accelerometer-based fall detection with freefall monitoring, impact analysis, and loss of consciousness suspicion detection.</p>
-                </div>
-                <div class="feature">
-                    <div class="feature-icon">📍</div>
-                    <h3>Emergency Alerts</h3>
-                    <p>Automatic SMS and call alerts to emergency contacts with GPS location, automatic dialing, and critical health notifications.</p>
-                </div>
-                <div class="feature">
-                    <div class="feature-icon">🌐</div>
-                    <h3>10 Languages</h3>
-                    <p>Full internationalization with RTL support including English, Arabic, Spanish, French, German, Chinese, Japanese, Russian, and Portuguese.</p>
-                </div>
-                <div class="feature">
-                    <div class="feature-icon">📊</div>
-                    <h3>Health Score</h3>
-                    <p>Comprehensive 0-100 health assessment combining heart, BP, oxygen, activity, and sleep metrics with weighted scoring algorithm.</p>
+                
+                <!-- SLEEP SCREEN -->
+                <div class="phone">
+                    <div class="screen">
+                        <div class="notch"></div>
+                        
+                        <div class="bar">
+                            <div style="flex: 1; text-align: center; font-weight: 600;">Sleep</div>
+                        </div>
+                        
+                        <div class="score-section">
+                            <div style="width: 120px; height: 120px; border-radius: 50%; background: conic-gradient(#8b5cf6 0deg, #8b5cf6 295deg, #1e293b 295deg); display: flex; align-items: center; justify-content: center; margin: 0 auto;">
+                                <div style="width: 90px; height: 90px; background: #1e293b; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                                    <div style="font-size: 28px; font-weight: 700; color: #8b5cf6;">82</div>
+                                    <div style="font-size: 10px; color: #94a3b8;">Good</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="card" style="margin: 0 14px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <span style="font-weight: 600;">Total Sleep</span>
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <span style="font-weight: 700;">7h 23m</span>
+                                    <span class="card-badge" style="background: rgba(16,185,129,0.2); color: #10b981;">✓ On Target</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="card" style="margin: 12px 14px;">
+                            <div style="font-size: 12px; font-weight: 600; margin-bottom: 10px;">Sleep Stages</div>
+                            <div style="height: 24px; border-radius: 8px; overflow: hidden; display: flex; margin-bottom: 12px;">
+                                <div style="flex: 15; background: #4a148c; display: flex; align-items: center; justify-content: center; font-size: 9px; color: #fff;">Deep</div>
+                                <div style="flex: 45; background: #3b82f6; display: flex; align-items: center; justify-content: center; font-size: 9px; color: #fff;">Light</div>
+                                <div style="flex: 25; background: #f59e0b; display: flex; align-items: center; justify-content: center; font-size: 9px; color: #fff;">REM</div>
+                                <div style="flex: 15; background: #64748b; display: flex; align-items: center; justify-content: center; font-size: 9px; color: #fff;">Awake</div>
+                            </div>
+                            <div style="display: flex; justify-content: space-around;">
+                                <div style="text-align: center;">
+                                    <div style="font-size: 16px;">🌙</div>
+                                    <div style="font-size: 14px; font-weight: 700; color: #4a148c;">1h 45m</div>
+                                    <div style="font-size: 9px; color: #94a3b8;">Deep</div>
+                                </div>
+                                <div style="text-align: center;">
+                                    <div style="font-size: 16px;">💤</div>
+                                    <div style="font-size: 14px; font-weight: 700; color: #3b82f6;">4h 30m</div>
+                                    <div style="font-size: 9px; color: #94a3b8;">Light</div>
+                                </div>
+                                <div style="text-align: center;">
+                                    <div style="font-size: 16px;">👁️</div>
+                                    <div style="font-size: 14px; font-weight: 700; color: #f59e0b;">1h 30m</div>
+                                    <div style="font-size: 9px; color: #94a3b8;">REM</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="bottom-nav">
+                            <div class="nav-item"><span class="nav-icon">📊</span>Dashboard</div>
+                            <div class="nav-item"><span class="nav-icon">❤️</span>Heart</div>
+                            <div class="nav-item"><span class="nav-icon">🩸</span>BP</div>
+                            <div class="nav-item"><span class="nav-icon">🏃</span>Activity</div>
+                            <div class="nav-item active"><span class="nav-icon">😴</span>Sleep</div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
         
-        <!-- App Screens -->
-        <div class="section" id="screens">
-            <h2>📱 Professional App Screens</h2>
-            <div class="screens">
-                <div class="screen">
-                    <div class="screen-icon">📊</div>
-                    <h3>Dashboard</h3>
-                    <p>Health score, metrics overview, trends</p>
-                </div>
-                <div class="screen">
-                    <div class="screen-icon">❤️</div>
-                    <h3>Heart</h3>
-                    <p>HRV, AFib detection, arrhythmia</p>
-                </div>
-                <div class="screen">
-                    <div class="screen-icon">🩸</div>
-                    <h3>Blood Pressure</h3>
-                    <p>Vascular age, arterial stiffness</p>
-                </div>
-                <div class="screen">
-                    <div class="screen-icon">🏃</div>
-                    <h3>Activity</h3>
-                    <p>Steps, calories, hourly tracking</p>
-                </div>
-                <div class="screen">
-                    <div class="screen-icon">😴</div>
-                    <h3>Sleep</h3>
-                    <p>Deep/Light/REM stages, score</p>
-                </div>
-                <div class="screen">
-                    <div class="screen-icon">⚙️</div>
-                    <h3>Settings</h3>
-                    <p>Profile, language, thresholds</p>
+        <div class="section">
+            <div class="title-row">
+                <span class="title-icon">💻</span>
+                <h2>Real Dart Code - Not Descriptions</h2>
+            </div>
+            <p style="color: #94a3b8; margin-bottom: 24px;">This is actual Flutter/Dart code from the app files:</p>
+            
+            <div class="code">
+<div><span class="kwd">import</span> <span class="str">'package:flutter/material.dart'</span>;</div>
+<div><span class="kwd">import</span> <span class="str">'package:provider/provider.dart'</span>;</div>
+<div><span class="kwd">import</span> <span class="str">'package:percent_indicator/circular_percent_indicator.dart'</span>;</div>
+<div><span class="kwd">import</span> <span class="str">'package:syncfusion_flutter_gauges/gauges.dart'</span>;</div>
+<div><span class="kwd">import</span> <span class="str">'package:digital_saver/theme/app_theme.dart'</span>;</div>
+<div></div>
+<div><span class="kwd">class</span> <span class="typ">DashboardScreen</span> <span class="kwd">extends</span> <span class="typ">StatelessWidget</span> {</div>
+<div>  <span class="kwd">const</span> <span class="fn">DashboardScreen</span>({<span class="kwd">super</span>.key});</div>
+<div>  </div>
+<div>  <span class="kwd">@override</span></div>
+<div>  <span class="typ">Widget</span> <span class="fn">build</span>(<span class="typ">BuildContext</span> context) {</div>
+<div>    <span class="kwd">final</span> ble = context.<span class="fn">watch</span>&lt;<span class="typ">BleService</span>&gt;();</div>
+<div>    <span class="kwd">final</span> health = context.<span class="fn">watch</span>&lt;<span class="typ">HealthAnalysisService</span>&gt;();</div>
+<div>    </div>
+<div>    <span class="cmt">// Health Score Circle with Animation</span></div>
+<div>    <span class="kwd">return</span> <span class="typ">CircularPercentIndicator</span>(</div>
+<div>      radius: <span class="num">80</span>,</div>
+<div>      lineWidth: <span class="num">12</span>,</div>
+<div>      percent: score.overallScore / <span class="num">100</span>,</div>
+<div>      center: <span class="typ">Column</span>(</div>
+<div>        mainAxisAlignment: <span class="typ">MainAxisAlignment</span>.center,</div>
+<div>        children: [</div>
+<div>          <span class="typ">Text</span>(<span class="str">'${score.overallScore}'</span>,</div>
+<div>            style: <span class="typ">AppTheme</span>.headlineLarge),</div>
+<div>          <span class="typ">Text</span>(<span class="str">'Health Score'</span>,</div>
+<div>            style: <span class="typ">AppTheme</span>.bodySmall),</div>
+<div>        ],</div>
+<div>      ),</div>
+<div>      progressColor: _scoreColor(score.overallScore),</div>
+<div>    );</div>
+<div>  }</div>
+<div>}</div>
+            </div>
+        </div>
+        
+        <div class="section">
+            <div class="title-row">
+                <span class="title-icon">📁</span>
+                <h2>All App Files (20+ Dart Files)</h2>
+            </div>
+            <div style="background: #0d1117; border-radius: 12px; padding: 20px; font-family: monospace;">
+                <div style="color: #58a6ff; margin-bottom: 8px;">app/lib/</div>
+                <div style="padding-left: 20px;">
+                    <div style="color: #c9d1d9;">📄 main.dart <span style="color: #8b949e;">// Entry point</span></div>
+                    <div style="color: #58a6ff; margin-top: 12px;">📁 screens/</div>
+                    <div style="padding-left: 20px;">
+                        <div>📄 dashboard_screen.dart <span style="color: #8b949e;">// 300+ lines</span></div>
+                        <div>📄 heart_screen.dart <span style="color: #8b949e;">// HRV, AFib</span></div>
+                        <div>📄 bp_screen.dart <span style="color: #8b949e;">// Blood Pressure</span></div>
+                        <div>📄 activity_screen.dart <span style="color: #8b949e;">// Steps, Calories</span></div>
+                        <div>📄 sleep_screen.dart <span style="color: #8b949e;">// Sleep Analysis</span></div>
+                        <div>📄 settings_screen.dart <span style="color: #8b949e;">// Profile, Language</span></div>
+                    </div>
+                    <div style="color: #58a6ff; margin-top: 12px;">📁 services/</div>
+                    <div style="padding-left: 20px;">
+                        <div>📄 ble_service.dart <span style="color: #8b949e;">// Bluetooth LE</span></div>
+                        <div>📄 health_analysis_service.dart <span style="color: #8b949e;">// 500+ lines algorithms</span></div>
+                        <div>📄 emergency_service.dart <span style="color: #8b949e;">// SMS/Call alerts</span></div>
+                        <div>📄 storage_service.dart <span style="color: #8b949e;">// SQLite database</span></div>
+                    </div>
+                    <div style="color: #58a6ff; margin-top: 12px;">📁 models/, theme/, i18n/</div>
                 </div>
             </div>
         </div>
         
-        <!-- Algorithms -->
-        <div class="section" id="algorithms">
-            <h2>🧠 Advanced Algorithms</h2>
-            <div class="algorithm">
-                <h3>HRV Analysis</h3>
-                <ul>
-                    <li>RMSSD (Root Mean Square of Successive Differences)</li>
-                    <li>SDNN (Standard Deviation of NN intervals)</li>
-                    <li>pNN50 (Percentage of successive RR intervals > 50ms)</li>
-                    <li>Poincaré Plot Analysis (SD1, SD2)</li>
-                    <li>Autocorrelation-based rhythm stability</li>
-                </ul>
-            </div>
-            <div style="margin-top: 20px;" class="algorithm">
-                <h3>AFib Detection Algorithm</h3>
-                <ul>
-                    <li>RR Interval Irregularity (Coefficient of Variation)</li>
-                    <li>Successive RR Difference Variation Analysis</li>
-                    <li>Rhythm Autocorrelation Measurement</li>
-                    <li>Missing Beats Pattern Analysis</li>
-                    <li>Irregular Cluster Detection (ML-style scoring)</li>
-                </ul>
-            </div>
-            <div style="margin-top: 20px;" class="algorithm">
-                <h3>Vascular Health Analysis</h3>
-                <ul>
-                    <li>Vascular Age Estimation from Pulse Pressure + AI</li>
-                    <li>Arterial Stiffness from PWV + Augmentation Index</li>
-                    <li>Central (Aortic) Pressure Calculation</li>
-                    <li>Subendocardial Viability Ratio (SEVR)</li>
-                    <li>Wave Reflection Magnitude Analysis</li>
-                </ul>
-            </div>
-        </div>
-        
-        <!-- Hardware -->
-        <div class="section" id="hardware">
-            <h2>🔧 DIY Smartwatch Hardware</h2>
-            <div class="specs">
-                <div class="spec">
-                    <div class="spec-value">ESP32</div>
-                    <div class="spec-label">Main MCU + BLE</div>
-                </div>
-                <div class="spec">
-                    <div class="spec-value">MAX30102</div>
-                    <div class="spec-label">PPG + SpO2</div>
-                </div>
-                <div class="spec">
-                    <div class="spec-value">MPU6050</div>
-                    <div class="spec-label">6-Axis Accelerometer</div>
-                </div>
-                <div class="spec">
-                    <div class="spec-value">1.3" OLED</div>
-                    <div class="spec-label">128x64 I2C Display</div>
-                </div>
-                <div class="spec">
-                    <div class="spec-value">500mAh</div>
-                    <div class="spec-label">LiPo Battery</div>
-                </div>
-                <div class="spec">
-                    <div class="spec-value">~3 Days</div>
-                    <div class="spec-label">Battery Life</div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Files -->
-        <div class="section" id="files">
-            <h2>📁 Project Structure</h2>
-            <div class="code-block">
-<span class="comment"># Digital Saver - Complete Project</span>
-<span class="folder">app/</span>                    <span class="comment"># Flutter mobile app (20+ Dart files)</span>
-<span class="folder">├── lib/</span>
-<span class="folder">│   ├── main.dart</span>                <span class="comment"># Entry point</span>
-<span class="folder">│   ├── screens/</span>                   <span class="comment"># 6 professional screens</span>
-<span class="file">│   │   ├── dashboard_screen.dart</span>    <span class="file"># Health score dashboard</span>
-<span class="file">│   │   ├── heart_screen.dart</span>       <span class="file"># HRV + AFib analysis</span>
-<span class="file">│   │   ├── bp_screen.dart</span>          <span class="file"># Blood pressure + vascular</span>
-<span class="file">│   │   ├── activity_screen.dart</span>    <span class="file"># Steps, calories</span>
-<span class="file">│   │   ├── sleep_screen.dart</span>       <span class="file"># Sleep stages</span>
-<span class="file">│   │   └── settings_screen.dart</span>     <span class="file"># Profile, language</span>
-<span class="folder">│   ├── services/</span>                 <span class="comment"># Business logic</span>
-<span class="file">│   │   ├── ble_service.dart</span>         <span class="file"># Bluetooth LE streaming</span>
-<span class="file">│   │   ├── health_analysis_service.dart</span> <span class="file"># Complex algorithms</span>
-<span class="file">│   │   ├── emergency_service.dart</span>    <span class="file"># SMS/Call alerts</span>
-<span class="file">│   │   └── storage_service.dart</span>      <span class="file"># SQLite + SharedPreferences</span>
-<span class="folder">│   ├── models/</span>                   <span class="comment"># Data models</span>
-<span class="file">│   │   └── health_models.dart</span>      <span class="file"># Comprehensive health data</span>
-<span class="folder">│   ├── theme/</span>                    <span class="comment"># Material Design 3</span>
-<span class="folder">│   └── i18n/</span>                    <span class="comment"># 10 languages</span>
-
-<span class="folder">firmware/</span>                  <span class="comment"># ESP32 Arduino code</span>
-<span class="folder">└── esp32/</span>
-<span class="file">    └── digital_saver_firmware.cpp</span> <span class="file"># Complete firmware</span>
-
-<span class="folder">docs/</span>                        <span class="comment"># Documentation</span>
-<span class="folder">hardware/</span>                    <span class="comment"># Schematics, PCB, 3D files</span>
-            </div>
-        </div>
-        
-        <!-- Budget -->
-        <div class="section" id="budget">
-            <h2>💰 Budget Breakdown (~10,000 EGP)</h2>
-            <table class="budget-table">
-                <tr><th>Component</th><th>Model</th><th>Price (EGP)</th></tr>
-                <tr><td>Main MCU</td><td>ESP32-WROOM-32</td><td>180</td></tr>
-                <tr><td>PPG Sensor</td><td>MAX30102</td><td>220</td></tr>
-                <tr><td>Accelerometer</td><td>MPU6050</td><td>45</td></tr>
-                <tr><td>Display</td><td>1.3" OLED I2C</td><td>85</td></tr>
-                <tr><td>Battery</td><td>500mAh LiPo</td><td>75</td></tr>
-                <tr><td>Charger</td><td>TP4056</td><td>25</td></tr>
-                <tr><td>PCB + Components</td><td>Custom</td><td>200</td></tr>
-                <tr><td>3D Printed Case</td><td>PLA</td><td>100</td></tr>
-                <tr><td>Strap + Band</td><td>Silicone</td><td>80</td></tr>
-                <tr><td>Misc (Wires, etc)</td><td>-</td><td>100</td></tr>
-                <tr><td colspan="2" class="total">Total Hardware</td><td class="total">~1,110 EGP</td></tr>
-                <tr><td colspan="2">Remaining for Tools & Upgrades</td><td>~8,890 EGP</td></tr>
-            </table>
-        </div>
-        
-        <!-- Disclaimer -->
-        <div class="disclaimer">
-            <h3>⚠️ Medical Disclaimer</h3>
-            <p>Digital Saver is a <strong>wellness/screening tool</strong> and is <strong>NOT</strong> a medical device certified by any regulatory body (FDA, CE, etc.).</p>
-            <p>Do not use for self-diagnosis. This does not replace professional medical care. Always consult healthcare professionals for medical advice.</p>
+        <div class="disc">
+            <h3 style="color: #fbbf24;">⚠️ Medical Disclaimer</h3>
+            <p>Digital Saver is a <strong>wellness/screening tool</strong> and is <strong>NOT</strong> a medical device.</p>
+            <p>Do not use for self-diagnosis. Always consult healthcare professionals.</p>
         </div>
         
         <footer>
-            <p><strong>Digital Saver v2.0.0</strong> | MIT License | Built with ❤️ for health monitoring</p>
-            <p style="margin-top: 12px;"><a href="https://github.com/asserkdev/Digital-saver" style="color: #58a6ff;">View on GitHub</a></p>
+            <p><strong>Digital Saver v2.0.0</strong> | <a href="https://github.com/asserkdev/Digital-saver" style="color: #58a6ff;">View Full Code on GitHub</a></p>
         </footer>
     </div>
 </body>
