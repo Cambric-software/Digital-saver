@@ -197,7 +197,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                           ),
                           const SizedBox(height: 12),
                           const Text(
-                            '⚕️ Do NOT rely on this app's data to help diagnose, treat, or manage any health condition or disease.',
+                            '⚕️ Do NOT rely on this app\'s data to help diagnose, treat, or manage any health condition or disease.',
                             style: TextStyle(color: Colors.white70, fontSize: 13, height: 1.5),
                             textAlign: TextAlign.center,
                           ),
