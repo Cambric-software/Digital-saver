@@ -42,14 +42,10 @@ class _DashboardScreenState extends State<DashboardScreen>
   @override
   Widget build(BuildContext context) {
     final ble = context.watch<BleService>();
-    final parts = ble.bloodPressure.split('/');
-    final sys = parts.length == 2 ? double.tryParse(parts[0]) ?? 120 : 120.0;
-    final dia = parts.length == 2 ? double.tryParse(parts[1]) ?? 80 : 80.0;
-    final score = ble.isConnected
-        ? HealthAnalysisService.calculateHealthScore(
-            hr: ble.heartRate, spo2: ble.oxygen,
-            sysBP: sys, diaBP: dia, hrv: ble.hrv)
-        : 82;
+    final sys = ble.bloodPressure.systolic.toDouble();
+    final dia = ble.bloodPressure.diastolic.toDouble();
+    
+    final score = ble.isConnected ? ble.healthScore : 82;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -269,9 +265,6 @@ class _DeviceSelectionSheet extends StatelessWidget {
                     onPressed: () {
                       Navigator.pop(context);
                       ble.startScan();
-                      Future.delayed(const Duration(milliseconds: 500), () {
-                        if (context.mounted) _showDeviceSelectionSheet(context, ble);
-                      });
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primary,
@@ -471,21 +464,19 @@ class _VitalsGrid extends StatelessWidget {
   const _VitalsGrid({required this.ble});
 
   String get _sysVal {
-    final p = ble.bloodPressure.split('/');
-    return p.isNotEmpty ? p[0] : '--';
+    return ble.bloodPressure.systolic > 0 ? '${ble.bloodPressure.systolic}' : '--';
   }
   String get _diaUnit {
-    final p = ble.bloodPressure.split('/');
-    return p.length == 2 ? '${p[1]} mmHg' : 'mmHg';
+    return ble.bloodPressure.diastolic > 0 ? '${ble.bloodPressure.diastolic} mmHg' : 'mmHg';
   }
 
   @override
   Widget build(BuildContext context) => Column(children: [
     Row(children: [
       Expanded(child: _VitalCard(
-        label: 'Heart Rate', value: ble.isConnected && ble.heartRate > 0 ? '${ble.heartRate.round()}' : '--',
+        label: 'Heart Rate', value: ble.isConnected && ble.heartRate.bpm > 0 ? '${ble.heartRate.bpm}' : '--',
         unit: 'BPM', icon: Icons.favorite, gradient: AppColors.gradientHeart,
-        badge: _hrBadge(ble.heartRate),
+        badge: ble.heartRate.bpm > 0 ? _hrBadge(ble.heartRate.bpm.toDouble()) : null,
       )),
       const SizedBox(width: 12),
       Expanded(child: _VitalCard(
@@ -499,13 +490,13 @@ class _VitalsGrid extends StatelessWidget {
       Expanded(child: _VitalCard(
         label: 'Blood Pressure', value: ble.isConnected ? _sysVal : '--',
         unit: _diaUnit, icon: Icons.water_drop, gradient: AppColors.gradientBP,
-        badge: _bpBadge(ble.bloodPressure),
+        badge: ble.bloodPressure.systolic > 0 ? _bpBadge(ble.bloodPressure.systolic.toString() + '/' + ble.bloodPressure.diastolic.toString()) : null,
       )),
       const SizedBox(width: 12),
       Expanded(child: _VitalCard(
-        label: 'HRV Index', value: ble.isConnected && ble.hrv > 0 ? '${ble.hrv.round()}' : '--',
+        label: 'HRV Index', value: ble.isConnected && ble.heartRate.hrv > 0 ? '${ble.heartRate.hrv}' : '--',
         unit: 'ms RMSSD', icon: Icons.show_chart, gradient: AppColors.gradientPrimary,
-        badge: _hrvBadge(ble.hrv),
+        badge: _hrvBadge(ble.heartRate.hrv.toDouble()),
       )),
     ]),
   ]);
@@ -584,9 +575,9 @@ class _AlertsCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (!ble.isConnected) return const SizedBox.shrink();
-    final alerts = HealthAnalysisService.getAlerts(
-      hr: ble.heartRate, spo2: ble.oxygen, bp: ble.bloodPressure,
-      hrv: ble.hrv, fallDetected: ble.fallDetected, irregularHR: ble.irregularHeartbeat,
+    final alerts = HealthAnalysisService.healthAlerts(
+      hr: ble.heartRate, bp: ble.bloodPressure, o2: ble.oxygen,
+      fallDetected: ble.accel.fallDetected, irregularHR: ble.heartRate.afibProbability > 50,
     );
     if (alerts.isEmpty) return const SizedBox.shrink();
     return Container(

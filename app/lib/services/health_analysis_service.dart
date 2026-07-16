@@ -488,8 +488,8 @@ class HealthAnalysisService {
   /// Estimates sleep debt in hours
   static double calculateSleepDebt({
     required int actualSleepMinutes,
-    required int targetSleepMinutes = 480, // 8 hours default
-    required int daysTracked = 7,
+    int targetSleepMinutes = 480, // 8 hours default
+    int daysTracked = 7,
   }) {
     int totalSleepNeeded = targetSleepMinutes * daysTracked;
     int totalSleepActual = actualSleepMinutes;

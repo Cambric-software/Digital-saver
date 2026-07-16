@@ -208,9 +208,9 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                             textAlign: TextAlign.center,
                           ),
                           const SizedBox(height: 8),
-                          const Text(
+                          Text(
                             'Digital Saver is NOT a certified medical device. The data shown may not be 100% accurate.',
-                            style: TextStyle(color: Colors.amber.shade200, fontSize: 12, height: 1.5),
+                            style: TextStyle(color: const Color(0xFFFFD54F), fontSize: 12, height: 1.5),
                             textAlign: TextAlign.center,
                           ),
                           const SizedBox(height: 20),
@@ -284,11 +284,11 @@ class _MainNavState extends State<MainNav> {
 
   static const _items = [
     BottomNavigationBarItem(icon: Icon(Icons.dashboard_outlined), activeIcon: Icon(Icons.dashboard), label: 'Dashboard'),
-    BottomNavigationBarItem(icon: Icon(Icons.favorite_outline), activeIcon: Icon(Icons.favorite), label: 'Heart'),
-    BottomNavigationBarItem(icon: Icon(Icons.water_drop_outlined), activeIcon: Icon(Icons.water_drop), label: 'BP'),
-    BottomNavigationBarItem(icon: Icon(Icons.directions_run_outlined), activeIcon: Icon(Icons.directions_run), label: 'Activity'),
-    BottomNavigationBarItem(icon: Icon(Icons.bedtime_outlined), activeIcon: Icon(Icons.bedtime), label: 'Sleep'),
-    BottomNavigationBarItem(icon: Icon(Icons.settings_outlined), activeIcon: Icon(Icons.settings), label: 'Settings'),
+    BottomNavigationBarItem(icon: Icon(Icons.favorite_outline), selectedIcon: Icon(Icons.favorite), label: 'Heart'),
+    BottomNavigationBarItem(icon: Icon(Icons.water_drop_outlined), selectedIcon: Icon(Icons.water_drop), label: 'BP'),
+    BottomNavigationBarItem(icon: Icon(Icons.directions_run_outlined), selectedIcon: Icon(Icons.directions_run), label: 'Activity'),
+    BottomNavigationBarItem(icon: Icon(Icons.bedtime_outlined), selectedIcon: Icon(Icons.bedtime), label: 'Sleep'),
+    BottomNavigationBarItem(icon: Icon(Icons.settings_outlined), selectedIcon: Icon(Icons.settings), label: 'Settings'),
   ];
 
   @override
@@ -354,13 +354,13 @@ class _MainNavState extends State<MainNav> {
         onDestinationSelected: (i) => setState(() => _currentIndex = i),
         backgroundColor: Colors.white,
         elevation: 8,
-        destinations: const [
+        destinations: [
           NavigationDestination(icon: Icon(Icons.dashboard_outlined), selectedIcon: Icon(Icons.dashboard), label: 'Home'),
-          NavigationDestination(icon: Icon(Icons.favorite_outline), activeIcon: Icon(Icons.favorite), label: 'Heart'),
-          NavigationDestination(icon: Icon(Icons.water_drop_outlined), activeIcon: Icon(Icons.water_drop), label: 'BP'),
-          NavigationDestination(icon: Icon(Icons.directions_run_outlined), activeIcon: Icon(Icons.directions_run), label: 'Activity'),
-          NavigationDestination(icon: Icon(Icons.bedtime_outlined), activeIcon: Icon(Icons.bedtime), label: 'Sleep'),
-          NavigationDestination(icon: Icon(Icons.settings_outlined), activeIcon: Icon(Icons.settings), label: 'Settings'),
+          NavigationDestination(icon: Icon(Icons.favorite_outline), selectedIcon: Icon(Icons.favorite), label: 'Heart'),
+          NavigationDestination(icon: Icon(Icons.water_drop_outlined), selectedIcon: Icon(Icons.water_drop), label: 'BP'),
+          NavigationDestination(icon: Icon(Icons.directions_run_outlined), selectedIcon: Icon(Icons.directions_run), label: 'Activity'),
+          NavigationDestination(icon: Icon(Icons.bedtime_outlined), selectedIcon: Icon(Icons.bedtime), label: 'Sleep'),
+          NavigationDestination(icon: Icon(Icons.settings_outlined), selectedIcon: Icon(Icons.settings), label: 'Settings'),
         ],
       ),
     );

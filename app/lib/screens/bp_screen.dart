@@ -44,11 +44,11 @@ class BpScreen extends StatelessWidget {
 
 class _BPHero extends StatelessWidget {
   final double sys, dia;
-  final BPCategory? category;
+  final String? category;
   const _BPHero({required this.sys, required this.dia, this.category});
 
   Color get _catColor {
-    switch (category?.name) {
+    switch (category) {
       case 'Normal': return AppColors.success;
       case 'Elevated': return AppColors.warning;
       case 'High Stage 1': case 'High Stage 2': return AppColors.danger;
