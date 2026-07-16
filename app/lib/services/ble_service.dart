@@ -10,8 +10,47 @@ const String kBPCharUUID = 'beb5483e-36e1-4688-b7f5-ea07361b26a9';
 const String kO2CharUUID = 'beb5483e-36e1-4688-b7f5-ea07361b26aa';
 const String kAccelCharUUID = 'beb5483e-36e1-4688-b7f5-ea07361b26ab';
 const String kDeviceName = 'DigitalSaver';
+const String kBatteryCharUUID = 'beb5483e-36e1-4688-b7f5-ea07361b26ac';
+
+// Keywords that indicate a smartwatch or fitness wearable
+const List<String> kSmartwatchKeywords = [
+  'watch', 'band', 'fitness', 'tracker', 'wearable', 'smart',
+  'mi', 'huawei', 'samsung', 'garmin', 'fitbit', 'amazfit',
+  'polar', 'xiaomi', 'honor', 'oppo', 'realme', 'oneplus',
+  'digital', 'saver', 'esp32', 'health', 'heart', 'pulse',
+  'health', 'medical', 'oximeter', 'bp', 'blood'
+];
+
+// Manufacturer IDs for common smartwatch/fitness brands
+const List<int> kSmartwatchManufacturerIds = [
+  0x004C, // Apple
+  0x00E0, // Samsung
+  0x0075, // Samsung (alternative)
+  0x027A, // Xiaomi
+  0x038F, // Xiaomi (alternative)
+  0x0087, // Huawei
+  0x009E, // Huawei (alternative)
+  0x00D2, // Xiaomi (Mi Band)
+  0x02E5, // Amazfit
+  0x001D, // Garmin
+  0x0059, // fitbit
+];
 
 enum BleState { disconnected, scanning, connecting, connected, error }
+
+class DiscoveredDevice {
+  final BluetoothDevice device;
+  final String name;
+  final int? rssi;
+  final bool isSmartwatch;
+
+  DiscoveredDevice({
+    required this.device,
+    required this.name,
+    this.rssi,
+    this.isSmartwatch = false,
+  });
+}
 
 class BleService extends ChangeNotifier {
   BluetoothDevice? _device;
@@ -34,6 +73,13 @@ class BleService extends ChangeNotifier {
   bool _demoMode = false;
   Timer? _demoTimer;
 
+  // Watch battery level (0-100)
+  int _batteryLevel = 0;
+  DateTime? _lastBatteryUpdate;
+
+  // Discovered devices list
+  List<DiscoveredDevice> _discoveredDevices = [];
+
   BleState get state => _state;
   String get errorMessage => _errorMessage;
   HeartRateData get heartRate => _heartRate;
@@ -43,6 +89,8 @@ class BleService extends ChangeNotifier {
   ActivityData get activity => _activity;
   bool get isConnected => _state == BleState.connected;
   bool get demoMode => _demoMode;
+  int get batteryLevel => _batteryLevel;
+  List<DiscoveredDevice> get discoveredDevices => _discoveredDevices;
 
   int get healthScore {
     int score = 100;
@@ -61,26 +109,75 @@ class BleService extends ChangeNotifier {
     return score.clamp(0, 100);
   }
 
+  // Check if a device is likely a smartwatch based on name and manufacturer data
+  bool _isLikelySmartwatch(ScanResult result) {
+    final name = result.device.platformName.toLowerCase();
+    final manufacturerData = result.advertisementData.manufacturerData;
+
+    // Check if name contains smartwatch keywords
+    for (final keyword in kSmartwatchKeywords) {
+      if (name.contains(keyword)) {
+        return true;
+      }
+    }
+
+    // Check manufacturer data for smartwatch brands
+    for (final entry in manufacturerData.entries) {
+      if (kSmartwatchManufacturerIds.contains(entry.key)) {
+        return true;
+      }
+    }
+
+    // Check for our specific service UUID (Digital Saver custom)
+    if (result.advertisementData.serviceUuids.contains(Guid(kServiceUUID))) {
+      return true;
+    }
+
+    // Check for heart rate service (common in smartwatches)
+    if (result.advertisementData.serviceUuids.any((uuid) => 
+        uuid.toString().toLowerCase().contains('180d'))) {
+      return true;
+    }
+
+    return false;
+  }
+
   Future<void> startScan() async {
     if (_state == BleState.scanning || _state == BleState.connected) return;
+    
+    _discoveredDevices = [];
     _setState(BleState.scanning);
 
     try {
-      await FlutterBluePlus.startScan(timeout: const Duration(seconds: 15));
+      await FlutterBluePlus.startScan(timeout: const Duration(seconds: 20));
+      
       _scanSub = FlutterBluePlus.scanResults.listen((results) {
         for (final r in results) {
-          if (r.device.platformName == kDeviceName ||
-              r.advertisementData.serviceUuids
-                  .contains(Guid(kServiceUUID))) {
-            FlutterBluePlus.stopScan();
-            _connectToDevice(r.device);
-            break;
+          final name = r.device.platformName.isNotEmpty 
+              ? r.device.platformName 
+              : 'Unknown Device';
+          
+          final isSmartwatch = _isLikelySmartwatch(r);
+          
+          // Only add if not already in list and is likely a smartwatch
+          final existingIndex = _discoveredDevices.indexWhere(
+            (d) => d.device.remoteId.str == r.device.remoteId.str
+          );
+          
+          if (existingIndex == -1 && isSmartwatch) {
+            _discoveredDevices.add(DiscoveredDevice(
+              device: r.device,
+              name: name,
+              rssi: r.rssi,
+              isSmartwatch: true,
+            ));
+            notifyListeners();
           }
         }
       });
 
       // Timeout
-      await Future.delayed(const Duration(seconds: 15));
+      await Future.delayed(const Duration(seconds: 20));
       if (_state == BleState.scanning) {
         await FlutterBluePlus.stopScan();
         _setState(BleState.disconnected);
@@ -89,6 +186,19 @@ class BleService extends ChangeNotifier {
       _errorMessage = e.toString();
       _setState(BleState.error);
     }
+  }
+
+  Future<void> stopScan() async {
+    await FlutterBluePlus.stopScan();
+    _scanSub?.cancel();
+    if (_state == BleState.scanning) {
+      _setState(BleState.disconnected);
+    }
+  }
+
+  Future<void> connectToDevice(BluetoothDevice device) async {
+    await stopScan();
+    await _connectToDevice(device);
   }
 
   Future<void> _connectToDevice(BluetoothDevice device) async {
@@ -122,9 +232,22 @@ class BleService extends ChangeNotifier {
           } else if (uuid == kAccelCharUUID) {
             await char.setNotifyValue(true);
             _accelSub = char.onValueReceived.listen(_parseAccel);
+          } else if (uuid == kBatteryCharUUID) {
+            await char.setNotifyValue(true);
+            _batterySub = char.onValueReceived.listen(_parseBattery);
           }
         }
       }
+    }
+  }
+
+  StreamSubscription? _batterySub;
+
+  void _parseBattery(List<int> data) {
+    if (data.isNotEmpty) {
+      _batteryLevel = data[0].clamp(0, 100);
+      _lastBatteryUpdate = DateTime.now();
+      notifyListeners();
     }
   }
 
@@ -182,6 +305,7 @@ class BleService extends ChangeNotifier {
 
   void enableDemoMode() {
     _demoMode = true;
+    _batteryLevel = 85;
     _setState(BleState.connected);
     _startDemoData();
   }
@@ -228,11 +352,13 @@ class BleService extends ChangeNotifier {
   Future<void> disconnect() async {
     _demoTimer?.cancel();
     _demoMode = false;
+    _batteryLevel = 0;
     _scanSub?.cancel();
     _hrSub?.cancel();
     _bpSub?.cancel();
     _o2Sub?.cancel();
     _accelSub?.cancel();
+    _batterySub?.cancel();
     await _device?.disconnect();
     _device = null;
     _setState(BleState.disconnected);
@@ -251,6 +377,7 @@ class BleService extends ChangeNotifier {
     _bpSub?.cancel();
     _o2Sub?.cancel();
     _accelSub?.cancel();
+    _batterySub?.cancel();
     super.dispose();
   }
 }

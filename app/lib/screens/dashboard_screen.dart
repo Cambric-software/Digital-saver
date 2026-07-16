@@ -30,6 +30,15 @@ class _DashboardScreenState extends State<DashboardScreen>
     super.dispose();
   }
 
+  void _showDeviceSelectionSheet(BuildContext context, BleService ble) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => _DeviceSelectionSheet(ble: ble),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final ble = context.watch<BleService>();
@@ -46,15 +55,15 @@ class _DashboardScreenState extends State<DashboardScreen>
       backgroundColor: AppColors.background,
       body: CustomScrollView(
         slivers: [
-          _appBar(ble),
+          _appBar(ble, context),
           SliverPadding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             sliver: SliverList(delegate: SliverChildListDelegate([
               const SizedBox(height: 8),
-              if (!ble.isConnected) _ConnectBanner(ble: ble),
+              if (!ble.isConnected) _ConnectBanner(ble: ble, onScan: () => _showDeviceSelectionSheet(context, ble)),
               if (ble.isConnected && ble.demoMode) _DemoBanner(),
               const SizedBox(height: 16),
-              _ScoreCard(animation: _ring, score: score),
+              _ScoreCard(animation: _ring, score: score, batteryLevel: ble.batteryLevel, isConnected: ble.isConnected),
               const SizedBox(height: 16),
               _VitalsGrid(ble: ble),
               const SizedBox(height: 16),
@@ -69,7 +78,7 @@ class _DashboardScreenState extends State<DashboardScreen>
     );
   }
 
-  SliverAppBar _appBar(BleService ble) => SliverAppBar(
+  SliverAppBar _appBar(BleService ble, BuildContext context) => SliverAppBar(
     backgroundColor: AppColors.background,
     surfaceTintColor: Colors.transparent,
     pinned: true,
@@ -83,14 +92,16 @@ class _DashboardScreenState extends State<DashboardScreen>
         child: const Icon(Icons.favorite, color: Colors.white, size: 20),
       ),
       const SizedBox(width: 10),
-      const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text('Digital Saver', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17, color: AppColors.textPrimary)),
-        Text('Health Monitor', style: TextStyle(fontSize: 11, color: AppColors.textSecondary, fontWeight: FontWeight.normal)),
+      Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        const Text('Digital Saver', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17, color: AppColors.textPrimary)),
+        const Text('Health Monitor', style: TextStyle(fontSize: 11, color: AppColors.textSecondary, fontWeight: FontWeight.normal)),
+        const SizedBox(height: 2),
+        const Text('Made by Cambric', style: TextStyle(fontSize: 9, color: AppColors.textMuted, fontWeight: FontWeight.w400)),
       ]),
     ]),
     actions: [
       GestureDetector(
-        onTap: ble.isConnected ? ble.disconnect : ble.startScan,
+        onTap: ble.isConnected ? ble.disconnect : () => _showDeviceSelectionSheet(context, ble),
         child: Container(
           margin: const EdgeInsets.only(right: 12),
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -116,9 +127,172 @@ class _DashboardScreenState extends State<DashboardScreen>
   );
 }
 
+class _DeviceSelectionSheet extends StatelessWidget {
+  final BleService ble;
+  const _DeviceSelectionSheet({required this.ble});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: MediaQuery.of(context).size.height * 0.7,
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      child: Column(
+        children: [
+          const SizedBox(height: 12),
+          Container(
+            width: 40, height: 4,
+            decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2)),
+          ),
+          const SizedBox(height: 16),
+          const Text('Select Smartwatch', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 8),
+          const Text('Scanning for nearby smartwatches...', style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+          const SizedBox(height: 16),
+          if (ble.state == BleState.scanning)
+            const Padding(
+              padding: EdgeInsets.all(20),
+              child: CircularProgressIndicator(),
+            )
+          else if (ble.discoveredDevices.isEmpty)
+            Padding(
+              padding: const EdgeInsets.all(40),
+              child: Column(
+                children: [
+                  Icon(Icons.watch_off, size: 64, color: Colors.grey.shade400),
+                  const SizedBox(height: 16),
+                  const Text('No smartwatches found', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500)),
+                  const SizedBox(height: 8),
+                  const Text('Make sure your watch is turned on and nearby', style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+                  const SizedBox(height: 20),
+                  ElevatedButton.icon(
+                    onPressed: ble.startScan,
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('Scan Again'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    ),
+                  ),
+                ],
+              ),
+            )
+          else
+            Expanded(
+              child: ListView.builder(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                itemCount: ble.discoveredDevices.length + 1,
+                itemBuilder: (ctx, index) {
+                  if (index == ble.discoveredDevices.length) {
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      child: OutlinedButton.icon(
+                        onPressed: ble.startScan,
+                        icon: const Icon(Icons.refresh),
+                        label: const Text('Scan for More'),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                      ),
+                    );
+                  }
+                  final device = ble.discoveredDevices[index];
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    child: Material(
+                      color: Colors.grey.shade50,
+                      borderRadius: BorderRadius.circular(16),
+                      child: InkWell(
+                        onTap: () {
+                          Navigator.pop(context);
+                          ble.connectToDevice(device.device);
+                        },
+                        borderRadius: BorderRadius.circular(16),
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: AppColors.primary.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: const Icon(Icons.watch, color: AppColors.primary),
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(device.name, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
+                                    if (device.rssi != null)
+                                      Text('Signal: ${device.rssi} dBm', style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
+                                  ],
+                                ),
+                              ),
+                              const Icon(Icons.chevron_right, color: Colors.grey),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          Padding(
+            padding: EdgeInsets.only(
+              left: 16, right: 16, bottom: MediaQuery.of(context).padding.bottom + 16, top: 8,
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      ble.enableDemoMode();
+                    },
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      side: const BorderSide(color: AppColors.primary),
+                    ),
+                    child: const Text('Try Demo Mode'),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      ble.startScan();
+                      Future.delayed(const Duration(milliseconds: 500), () {
+                        if (context.mounted) _showDeviceSelectionSheet(context, ble);
+                      });
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                    ),
+                    child: const Text('Scan', style: TextStyle(color: Colors.white)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _ConnectBanner extends StatelessWidget {
   final BleService ble;
-  const _ConnectBanner({required this.ble});
+  final VoidCallback onScan;
+  const _ConnectBanner({required this.ble, required this.onScan});
   @override
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.all(18),
@@ -146,7 +320,7 @@ class _ConnectBanner extends StatelessWidget {
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             padding: const EdgeInsets.symmetric(vertical: 12),
           ),
-          onPressed: ble.startScan,
+          onPressed: onScan,
           icon: const Icon(Icons.bluetooth_searching, size: 16),
           label: const Text('Scan & Connect', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
         )),
@@ -189,11 +363,19 @@ class _DemoBanner extends StatelessWidget {
 class _ScoreCard extends StatelessWidget {
   final Animation<double> animation;
   final int score;
-  const _ScoreCard({required this.animation, required this.score});
+  final int batteryLevel;
+  final bool isConnected;
+  const _ScoreCard({required this.animation, required this.score, required this.batteryLevel, required this.isConnected});
 
   Color get _c => score >= 80 ? AppColors.success : score >= 60 ? AppColors.primary : score >= 40 ? AppColors.warning : AppColors.danger;
   String get _label => score >= 80 ? 'Excellent' : score >= 60 ? 'Good' : score >= 40 ? 'Fair' : 'Needs Care';
   String get _msg => score >= 80 ? 'All vitals looking great! Keep up the good work.' : score >= 60 ? 'Most vitals are within healthy range.' : 'Some readings need your attention.';
+
+  Color get _batteryColor {
+    if (batteryLevel >= 60) return AppColors.success;
+    if (batteryLevel >= 30) return AppColors.warning;
+    return AppColors.danger;
+  }
 
   @override
   Widget build(BuildContext context) => Container(
@@ -204,23 +386,25 @@ class _ScoreCard extends StatelessWidget {
       boxShadow: AppShadows.card,
     ),
     child: Column(children: [
-      const Text('Health Score', style: TextStyle(color: AppColors.textSecondary, fontSize: 13, fontWeight: FontWeight.w600, letterSpacing: 0.3)),
+      const Text('Watch Battery', style: TextStyle(color: AppColors.textSecondary, fontSize: 13, fontWeight: FontWeight.w600, letterSpacing: 0.3)),
       const SizedBox(height: 20),
       AnimatedBuilder(
         animation: animation,
         builder: (_, __) => SizedBox(
-          width: 170, height: 170,
+          width: 200, height: 200, // Increased from 170 to accommodate larger numbers
           child: Stack(alignment: Alignment.center, children: [
             CustomPaint(
-              size: const Size(170, 170),
-              painter: _RingPainter(progress: animation.value * (score / 100), color: _c),
+              size: const Size(200, 200),
+              painter: _RingPainter(progress: animation.value * (batteryLevel / 100), color: _batteryColor),
             ),
             Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+              Icon(Icons.battery_charging_full, color: _batteryColor, size: 28),
+              const SizedBox(height: 4),
               Text(
-                '${(animation.value * score).round()}',
-                style: const TextStyle(fontSize: 52, fontWeight: FontWeight.bold, color: AppColors.textPrimary, height: 1),
+                isConnected ? '$batteryLevel' : '--',
+                style: const TextStyle(fontSize: 48, fontWeight: FontWeight.bold, color: AppColors.textPrimary, height: 1),
               ),
-              Text('/100', style: TextStyle(color: AppColors.textMuted, fontSize: 14)),
+              Text('%', style: TextStyle(color: _batteryColor, fontSize: 18, fontWeight: FontWeight.w500)),
             ]),
           ]),
         ),
@@ -228,11 +412,32 @@ class _ScoreCard extends StatelessWidget {
       const SizedBox(height: 16),
       Container(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-        decoration: BoxDecoration(color: _c.withOpacity(0.1), borderRadius: BorderRadius.circular(20)),
-        child: Text(_label, style: TextStyle(color: _c, fontWeight: FontWeight.bold, fontSize: 15)),
+        decoration: BoxDecoration(
+          color: _batteryColor.withOpacity(0.1), 
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.watch, color: _batteryColor, size: 16),
+            const SizedBox(width: 6),
+            Text(
+              isConnected 
+                ? (batteryLevel >= 60 ? 'Battery Good' : batteryLevel >= 30 ? 'Battery Medium' : 'Charge Soon')
+                : 'No Watch Connected',
+              style: TextStyle(color: _batteryColor, fontWeight: FontWeight.bold, fontSize: 14),
+            ),
+          ],
+        ),
       ),
       const SizedBox(height: 10),
-      Text(_msg, style: const TextStyle(color: AppColors.textSecondary, fontSize: 12), textAlign: TextAlign.center),
+      Text(
+        isConnected 
+          ? 'Watch battery level: $batteryLevel%'
+          : 'Connect your smartwatch to see battery',
+        style: const TextStyle(color: AppColors.textSecondary, fontSize: 12), 
+        textAlign: TextAlign.center
+      ),
     ]),
   );
 }
