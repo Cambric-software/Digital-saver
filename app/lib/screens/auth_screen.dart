@@ -117,9 +117,12 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
                   
                   const SizedBox(height: 50),
                   
-                  // Big White Box
+                  // Big White Box - Tall and wide
                   Container(
                     width: double.infinity,
+                    constraints: BoxConstraints(
+                      minHeight: MediaQuery.of(context).size.height * 0.75,
+                    ),
                     padding: const EdgeInsets.all(24),
                     decoration: BoxDecoration(
                       color: Colors.white,
@@ -134,6 +137,7 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
+                      mainAxisSize: MainAxisSize.min,
                       children: [
                         // Tab Bar
                         Container(
@@ -175,11 +179,12 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
                         
                         const SizedBox(height: 24),
                         
-                        // Tab Content
+                        // Tab Content - Tall
                         SizedBox(
-                          height: 420,
+                          height: 600,
                           child: TabBarView(
                             controller: _tabController,
+                            physics: const BouncingScrollPhysics(),
                             children: [
                               _buildSignInForm(),
                               _buildSignUpForm(),
