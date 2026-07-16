@@ -283,12 +283,12 @@ class _MainNavState extends State<MainNav> {
   ];
 
   static const _items = [
-    BottomNavigationBarItem(icon: Icon(Icons.dashboard_outlined), activeIcon: Icon(Icons.dashboard), label: 'Dashboard'),
-    BottomNavigationBarItem(icon: Icon(Icons.favorite_outline), selectedIcon: Icon(Icons.favorite), label: 'Heart'),
-    BottomNavigationBarItem(icon: Icon(Icons.water_drop_outlined), selectedIcon: Icon(Icons.water_drop), label: 'BP'),
-    BottomNavigationBarItem(icon: Icon(Icons.directions_run_outlined), selectedIcon: Icon(Icons.directions_run), label: 'Activity'),
-    BottomNavigationBarItem(icon: Icon(Icons.bedtime_outlined), selectedIcon: Icon(Icons.bedtime), label: 'Sleep'),
-    BottomNavigationBarItem(icon: Icon(Icons.settings_outlined), selectedIcon: Icon(Icons.settings), label: 'Settings'),
+    BottomNavigationBarItem(icon: Icon(Icons.dashboard_outlined), label: 'Dashboard'),
+    BottomNavigationBarItem(icon: Icon(Icons.favorite_outline), label: 'Heart'),
+    BottomNavigationBarItem(icon: Icon(Icons.water_drop_outlined), label: 'BP'),
+    BottomNavigationBarItem(icon: Icon(Icons.directions_run_outlined), label: 'Activity'),
+    BottomNavigationBarItem(icon: Icon(Icons.bedtime_outlined), label: 'Sleep'),
+    BottomNavigationBarItem(icon: Icon(Icons.settings_outlined), label: 'Settings'),
   ];
 
   @override
@@ -356,11 +356,11 @@ class _MainNavState extends State<MainNav> {
         elevation: 8,
         destinations: [
           NavigationDestination(icon: Icon(Icons.dashboard_outlined), selectedIcon: Icon(Icons.dashboard), label: 'Home'),
-          NavigationDestination(icon: Icon(Icons.favorite_outline), selectedIcon: Icon(Icons.favorite), label: 'Heart'),
-          NavigationDestination(icon: Icon(Icons.water_drop_outlined), selectedIcon: Icon(Icons.water_drop), label: 'BP'),
-          NavigationDestination(icon: Icon(Icons.directions_run_outlined), selectedIcon: Icon(Icons.directions_run), label: 'Activity'),
-          NavigationDestination(icon: Icon(Icons.bedtime_outlined), selectedIcon: Icon(Icons.bedtime), label: 'Sleep'),
-          NavigationDestination(icon: Icon(Icons.settings_outlined), selectedIcon: Icon(Icons.settings), label: 'Settings'),
+          NavigationDestination(icon: Icon(Icons.favorite_outline), label: 'Heart'),
+          NavigationDestination(icon: Icon(Icons.water_drop_outlined), label: 'BP'),
+          NavigationDestination(icon: Icon(Icons.directions_run_outlined), label: 'Activity'),
+          NavigationDestination(icon: Icon(Icons.bedtime_outlined), label: 'Sleep'),
+          NavigationDestination(icon: Icon(Icons.settings_outlined), label: 'Settings'),
         ],
       ),
     );
