@@ -10,9 +10,8 @@ class BpScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ble = context.watch<BleService>();
-    final parts = ble.bloodPressure.split('/');
-    final sys = parts.length == 2 ? double.tryParse(parts[0]) ?? 0 : 0.0;
-    final dia = parts.length == 2 ? double.tryParse(parts[1]) ?? 0 : 0.0;
+    final sys = ble.bloodPressure.systolic.toDouble();
+    final dia = ble.bloodPressure.diastolic.toDouble();
     final bpCategory = ble.isConnected ? HealthAnalysisService.getBPCategory(sys, dia) : null;
     final vasAge = ble.isConnected && sys > 0 ? HealthAnalysisService.estimateVascularAge(sys, dia) : null;
 

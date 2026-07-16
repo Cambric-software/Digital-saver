@@ -11,8 +11,8 @@ class HeartScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ble = context.watch<BleService>();
-    final zone = ble.heartRate > 0 ? HealthAnalysisService.getHeartRateZone(ble.heartRate) : null;
-    final zone2 = ble.heartRate > 0 ? HealthAnalysisService.getHeartRateZone2(ble.heartRate) : null;
+    final zone = ble.heartRate.bpm > 0 ? HealthAnalysisService.heartRateZone(ble.heartRate.bpm) : null;
+    final zone2 = ble.heartRate.bpm > 0 ? HealthAnalysisService.heartRateZone2(ble.heartRate.bpm) : null;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -32,7 +32,7 @@ class HeartScreen extends StatelessWidget {
           const SizedBox(height: 16),
           _AFibPanel(ble: ble),
           const SizedBox(height: 16),
-          _ZoneGuide(currentHR: ble.heartRate),
+          _ZoneGuide(currentHR: ble.heartRate.bpm.toDouble()),
           const SizedBox(height: 100),
         ]),
       ),
@@ -61,7 +61,7 @@ class _HeroBPM extends StatelessWidget {
         const Text('Heart Rate', style: TextStyle(color: Colors.white70, fontSize: 14, letterSpacing: 0.5)),
         const SizedBox(height: 8),
         Text(
-          ble.isConnected && ble.heartRate > 0 ? '${ble.heartRate.round()}' : '--',
+          ble.isConnected && ble.heartRate.bpm > 0 ? '${ble.heartRate.bpm}' : '--',
           style: const TextStyle(color: Colors.white, fontSize: 72, fontWeight: FontWeight.bold, height: 1),
         ),
         const Text('BPM', style: TextStyle(color: Colors.white70, fontSize: 16)),
@@ -75,11 +75,11 @@ class _HeroBPM extends StatelessWidget {
         ],
         const SizedBox(height: 16),
         Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [
-          _HeroStat('Min', '${ble.heartRate > 0 ? (ble.heartRate * 0.92).round() : "--"}'),
+          _HeroStat('Min', '${ble.heartRate.bpm > 0 ? (ble.heartRate.bpm.toDouble() * 0.92).round() : "--"}'),
           Container(width: 1, height: 28, color: Colors.white30),
-          _HeroStat('Current', ble.heartRate > 0 ? '${ble.heartRate.round()}' : '--'),
+          _HeroStat('Current', ble.heartRate.bpm > 0 ? '${ble.heartRate.bpm}' : '--'),
           Container(width: 1, height: 28, color: Colors.white30),
-          _HeroStat('Max', '${ble.heartRate > 0 ? (ble.heartRate * 1.08).round() : "--"}'),
+          _HeroStat('Max', '${ble.heartRate.bpm > 0 ? (ble.heartRate.bpm.toDouble() * 1.08).round() : "--"}'),
         ]),
       ]),
     );
