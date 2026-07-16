@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'services/ble_service.dart';
+import 'services/cambric_auth_service.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/heart_screen.dart';
 import 'screens/bp_screen.dart';
@@ -8,10 +11,29 @@ import 'screens/activity_screen.dart';
 import 'screens/sleep_screen.dart';
 import 'screens/settings_screen.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  // Initialize Supabase
+  await Supabase.initialize(
+    url: 'https://cambric-systems.supabase.co',
+    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNhbWJyaWMiLCJyb2xlIjoiYW5vbiIsImlhdCI6MTY0MjU0NjcwMCwiZXhwIjoxOTU4MTIyNzAwfQ.xsldjFOFKiQLM5A7G8X9qM1VZ1V1R5e4tYvK9tT9t0c',
+  );
+  
+  // Set system UI overlay style
+  SystemChrome.setSystemUIOverlayStyle(
+    const SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: Brightness.dark,
+    ),
+  );
+  
   runApp(
-    ChangeNotifierProvider(
-      create: (_) => BleService(),
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => BleService()),
+        ChangeNotifierProvider(create: (_) => AuthProvider()),
+      ],
       child: const DigitalSaverApp(),
     ),
   );
@@ -31,7 +53,7 @@ class DigitalSaverApp extends StatelessWidget {
           seedColor: const Color(0xFF2563eb),
           brightness: Brightness.light,
         ),
-        fontFamily: 'SF Pro Display',
+        fontFamily: 'Inter',
       ),
       darkTheme: ThemeData(
         useMaterial3: true,

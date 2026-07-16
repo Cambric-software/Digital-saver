@@ -511,6 +511,108 @@ Digital Saver supports **10 languages** with RTL support for Arabic:
 
 ---
 
+
+
+---
+
+## 🚀 Cambric Ecosystem Integration (v3.0)
+
+Digital Saver v3.0 introduces full integration with the **Cambric Ecosystem**, enabling seamless authentication and data sync across all Cambric products.
+
+### Features Added
+
+- **Single Sign-On (SSO)** - Sign in once to access Atlas, Frame, and Digital Saver
+- **Cloud Sync** - Automatic synchronization of health data and profiles
+- **Smart Data Management** - Intelligent data retention with automatic cleanup
+- **Cross-Platform Profile** - Your settings and preferences sync everywhere
+
+### Cambric Products
+
+| Product | Description |
+|---------|-------------|
+| **Atlas** | Knowledge workspace and note-taking |
+| **Frame** | Project management and collaboration |
+| **Digital Saver** | Health monitoring and emergency alerts |
+
+### Authentication
+
+Digital Saver uses **Supabase** for authentication. Your Cambric account gives you access to all products:
+
+- Email/Password authentication
+- Magic link (password-free)
+- Social login (Google)
+
+### Data Management
+
+The smart data system:
+- **Quality Scoring** - Automatically scores data quality
+- **Intelligent Retention** - Keeps useful data, removes redundant
+- **Daily Aggregates** - Summary stats for long-term trends
+- **Auto Cleanup** - Removes old useless data while preserving patterns
+
+---
+
+## 🏥 Doctor-Level Health Analytics (2026 Standards)
+
+Version 3.0 includes comprehensive health analysis based on **2026 medical guidelines**.
+
+### Cardiovascular Analysis
+
+Based on **ACC/AHA 2026 Cardiovascular Health Guidelines**:
+
+- Age-adjusted resting heart rate scoring
+- HRV health score (RMSSD-based, 2026 HRV Consortium)
+- Blood pressure scoring (AHA 2026 guidelines)
+- Arterial stiffness assessment
+- AFib risk prediction (AHA/ASA Stroke Guidelines)
+
+### Respiratory Analysis
+
+Based on **2026 Pulmonary Guidelines**:
+
+- Oxygen saturation scoring (SpO2)
+- Perfusion index analysis
+- Respiratory rhythm assessment
+- Risk level categorization
+
+### Metabolic Analysis
+
+Based on **2026 ADA/Endocrine Guidelines**:
+
+- Activity health score
+- Sleep-metabolism correlation
+- BMI assessment with age adjustments
+- Lipid profile scoring
+- Glycemic control estimation
+
+### Stress & Mental Wellness
+
+Based on **2026 Mental Health Research**:
+
+- Autonomic stress index (HRV-based)
+- Sleep stress correlation
+- Activity-induced stress
+- Recovery recommendations
+
+### Report Classes
+
+The analytics engine generates comprehensive reports:
+
+```dart
+CardiovascularReport
+RespiratoryReport
+MetabolicReport
+StressReport
+```
+
+Each report includes:
+- Overall score (0-100)
+- Individual component scores
+- Risk level assessment
+- Personalized recommendations
+
+---
+
 ## 📄 License
 
 **Copyright (c) 2026 Cambric**
