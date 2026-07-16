@@ -66,7 +66,7 @@ class SmartDataService {
     final count = prefs.getInt(key) ?? 0;
     return StorageStats(
       totalRecords: count,
-      recordsByType: {dataType: count},
+      recordsByType: {'health_data': count},
       estimatedStorageMB: count * 0.001,
     );
   }
