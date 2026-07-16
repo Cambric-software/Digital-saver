@@ -241,7 +241,7 @@ class _FallDetector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final fall = ble.isConnected && ble.fallDetected;
+    final fall = ble.isConnected && ble.accel.fallDetected;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(

@@ -128,7 +128,7 @@ class _HRVPanel extends StatelessWidget {
           const SizedBox(height: 14),
           const Divider(height: 1),
           const SizedBox(height: 12),
-          _StressBar(hrv: ble.heartRate.hrv),
+          _StressBar(hrv: ble.heartRate.hrv.toDouble()),
         ],
       ]),
     );
@@ -201,7 +201,7 @@ class _RRChart extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final spots = ble.heartRate.rrIntervals.asMap().entries
-        .map((e) => FlSpot(e.key.toDouble(), e.value))
+        .map((e) => FlSpot(e.key.toDouble(), e.value.toDouble()))
         .toList();
 
     return Container(
