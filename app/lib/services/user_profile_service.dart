@@ -239,7 +239,7 @@ class UserProfileService {
     for (var pair in pairs) {
       final colonIndex = pair.indexOf(':');
       if (colonIndex > 0) {
-        final key = pair.substring(0, colonIndex).trim().trim('"');
+        final key = pair.substring(0, colonIndex).trim().replaceAll('"', '');
         var value = pair.substring(colonIndex + 1).trim();
         if (value.startsWith('"') && value.endsWith('"')) {
           value = value.substring(1, value.length - 1);

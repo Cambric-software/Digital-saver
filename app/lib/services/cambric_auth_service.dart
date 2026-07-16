@@ -53,7 +53,7 @@ class CambricUserProfile {
       email: user.email,
       displayName: user.userMetadata?['display_name'] as String?,
       avatarUrl: user.userMetadata?['avatar_url'] as String?,
-      createdAt: user.createdAt,
+      createdAt: user.createdAt.isNotEmpty ? DateTime.tryParse(user.createdAt) : null,
       lastLogin: DateTime.now(),
       metadata: user.userMetadata,
     );
@@ -224,7 +224,7 @@ class AuthProvider extends ChangeNotifier {
           email: _user!.email,
           displayName: displayName ?? _profile?.displayName,
           avatarUrl: avatarUrl ?? _profile?.avatarUrl,
-          createdAt: _user!.createdAt,
+          createdAt: _user!.createdAt.isNotEmpty ? DateTime.tryParse(_user!.createdAt) : null,
           lastLogin: DateTime.now(),
         );
         notifyListeners();
