@@ -32,7 +32,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _load() async {
     final auth = context.read<AuthProvider>();
-    final p = await _profileService.loadProfile(auth.user?.id);
+    final p = await _profileService.loadProfile(auth.profile?.id);
     final c = await StorageService.loadContacts();
     setState(() {
       _profile = p;
