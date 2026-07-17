@@ -357,12 +357,73 @@ class _ProfileCard extends StatelessWidget {
   }
 }
 
-class _DeviceCard extends StatelessWidget {
+class _DeviceCard extends StatefulWidget {
   final BleService ble;
   const _DeviceCard({required this.ble});
 
   @override
+  State<_DeviceCard> createState() => _DeviceCardState();
+}
+
+class _DeviceCardState extends State<_DeviceCard> {
+  void _showDevicePicker() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        padding: const EdgeInsets.all(20),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Select Device', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 16),
+            if (widget.ble.discoveredDevices.isEmpty)
+              Center(
+                child: Column(
+                  children: [
+                    if (widget.ble.state == BleState.scanning)
+                      const CircularProgressIndicator()
+                    else
+                      const Text('No devices found. Make sure your watch is nearby and Bluetooth is on.'),
+                    const SizedBox(height: 12),
+                    if (widget.ble.state == BleState.scanning)
+                      TextButton(
+                        onPressed: widget.ble.stopScan,
+                        child: const Text('Stop Scanning'),
+                      )
+                    else
+                      ElevatedButton(
+                        onPressed: widget.ble.startScan,
+                        child: const Text('Scan Again'),
+                      ),
+                  ],
+                ),
+              )
+            else
+              ...widget.ble.discoveredDevices.map((d) => ListTile(
+                leading: const Icon(Icons.watch, color: Color(0xFF2563eb)),
+                title: Text(d.name),
+                subtitle: d.rssi != null ? Text('Signal: ${d.rssi} dBm') : null,
+                onTap: () {
+                  Navigator.pop(ctx);
+                  widget.ble.connectToDevice(d.device);
+                },
+              )),
+            const SizedBox(height: 20),
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final ble = widget.ble;
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
@@ -373,7 +434,17 @@ class _DeviceCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Device', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text('Device', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+              if (ble.state == BleState.scanning)
+                const SizedBox(
+                  width: 16, height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+            ],
+          ),
           const SizedBox(height: 14),
           Row(
             children: [
@@ -386,7 +457,7 @@ class _DeviceCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(
-                  Icons.watch,
+                  ble.demoMode ? Icons.science : Icons.watch,
                   color: ble.isConnected ? const Color(0xFF22C55E) : Colors.grey,
                   size: 28,
                 ),
@@ -397,12 +468,16 @@ class _DeviceCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      ble.isConnected ? 'Digital Saver Watch' : 'No Device Connected',
+                      ble.isConnected 
+                          ? (ble.demoMode ? 'Demo Mode' : 'Connected')
+                          : 'No Device Connected',
                       style: const TextStyle(fontWeight: FontWeight.w600),
                     ),
                     Text(
                       ble.isConnected
-                          ? (ble.demoMode ? 'Demo Mode active' : 'Connected via Bluetooth')
+                          ? (ble.demoMode 
+                              ? 'Simulated data active' 
+                              : 'Reading from your watch')
                           : 'Tap to scan for your watch',
                       style: TextStyle(color: Colors.grey[500], fontSize: 12),
                     ),
@@ -417,8 +492,8 @@ class _DeviceCard extends StatelessWidget {
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                   ),
-                  onPressed: ble.startScan,
-                  child: const Text('Scan', style: TextStyle(fontSize: 13)),
+                  onPressed: ble.state == BleState.scanning ? null : _showDevicePicker,
+                  child: Text(ble.state == BleState.scanning ? '...' : 'Scan'),
                 )
               else
                 TextButton(
