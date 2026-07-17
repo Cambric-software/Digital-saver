@@ -253,7 +253,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (ctx) => AuthScreen(
-          onAuthSuccess: () {
+          onSignedIn: () {
             Navigator.of(ctx).pop();
             _load();
           },
