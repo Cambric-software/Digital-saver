@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_animate/flutter_animate.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class AuthScreen extends StatefulWidget {
@@ -13,25 +11,21 @@ class AuthScreen extends StatefulWidget {
 }
 
 class _AuthScreenState extends State<AuthScreen> {
-  // Tab: 0 = sign in, 1 = sign up
   int _tabIndex = 0;
 
-  // Stable controllers - instance variables
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _nameController = TextEditingController();
   final _confirmController = TextEditingController();
 
-  // Local UI state only
   bool _isLoading = false;
   String _errorMessage = '';
-  bool _obscurePassword = true;
-  bool _obscureConfirm = true;
+  bool _showPassword = true;
+  bool _showConfirm = true;
 
   @override
   void initState() {
     super.initState();
-    // Initialize controllers with empty text to avoid issues
     _emailController.text = '';
     _passwordController.text = '';
     _nameController.text = '';
@@ -69,21 +63,17 @@ class _AuthScreenState extends State<AuthScreen> {
         password: password,
       );
 
-      if (response.user != null) {
-        if (mounted) {
-          widget.onSignedIn?.call();
-          Navigator.of(context).pop();
-        }
+      if (response.user != null && mounted) {
+        widget.onSignedIn?.call();
+        Navigator.of(context).pop();
       }
     } on AuthException catch (e) {
-      setState(() => _errorMessage = _mapError(e.message));
+      if (mounted) setState(() => _errorMessage = _mapError(e.message));
     } catch (e) {
-      setState(() => _errorMessage = 'Connection error. Please try again.');
+      if (mounted) setState(() => _errorMessage = 'Connection error. Please try again.');
     }
 
-    if (mounted) {
-      setState(() => _isLoading = false);
-    }
+    if (mounted) setState(() => _isLoading = false);
   }
 
   Future<void> _handleSignUp() async {
@@ -124,7 +114,6 @@ class _AuthScreenState extends State<AuthScreen> {
       );
 
       if (response.user != null) {
-        // Create profile
         try {
           await Supabase.instance.client.from('digital_saver_user_profiles').insert({
             'id': response.user!.id,
@@ -134,9 +123,7 @@ class _AuthScreenState extends State<AuthScreen> {
           await Supabase.instance.client.from('digital_saver_storage_stats').insert({
             'user_id': response.user!.id,
           });
-        } catch (_) {
-          // Profile creation might fail if trigger already created it
-        }
+        } catch (_) {}
       }
 
       if (mounted) {
@@ -150,29 +137,19 @@ class _AuthScreenState extends State<AuthScreen> {
         Navigator.of(context).pop();
       }
     } on AuthException catch (e) {
-      setState(() => _errorMessage = _mapError(e.message));
+      if (mounted) setState(() => _errorMessage = _mapError(e.message));
     } catch (e) {
-      setState(() => _errorMessage = 'Connection error. Please try again.');
+      if (mounted) setState(() => _errorMessage = 'Connection error. Please try again.');
     }
 
-    if (mounted) {
-      setState(() => _isLoading = false);
-    }
+    if (mounted) setState(() => _isLoading = false);
   }
 
   String _mapError(String message) {
-    if (message.contains('Invalid login credentials')) {
-      return 'Invalid email or password';
-    }
-    if (message.contains('Email not confirmed')) {
-      return 'Please check your email to confirm your account';
-    }
-    if (message.contains('User already registered')) {
-      return 'This email is already registered';
-    }
-    if (message.contains('Password should be at least')) {
-      return 'Password must be at least 6 characters';
-    }
+    if (message.contains('Invalid login credentials')) return 'Invalid email or password';
+    if (message.contains('Email not confirmed')) return 'Please check your email to confirm';
+    if (message.contains('User already registered')) return 'This email is already registered';
+    if (message.contains('Password should be at least')) return 'Password must be at least 6 characters';
     return message;
   }
 
@@ -203,7 +180,7 @@ class _AuthScreenState extends State<AuthScreen> {
               const SizedBox(height: 30),
               _buildTitle(),
               const SizedBox(height: 50),
-              Expanded(child: _buildWhiteCard()),
+              Expanded(child: _buildCard()),
               const SizedBox(height: 40),
             ],
           ),
@@ -224,7 +201,7 @@ class _AuthScreenState extends State<AuthScreen> {
         ],
       ),
       child: const Icon(Icons.favorite, color: Color(0xFF2563EB), size: 50),
-    ).animate().fadeIn(duration: 600.ms).scale(begin: const Offset(0.8, 0.8));
+    );
   }
 
   Widget _buildTitle() {
@@ -232,35 +209,35 @@ class _AuthScreenState extends State<AuthScreen> {
       children: [
         Text(
           'CAMBRIC',
-          style: GoogleFonts.inter(
+          style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w600,
             color: Colors.white.withOpacity(0.6),
             letterSpacing: 4,
           ),
-        ).animate().fadeIn(delay: 200.ms),
+        ),
         const SizedBox(height: 8),
-        Text(
+        const Text(
           'Digital Saver',
-          style: GoogleFonts.inter(
+          style: TextStyle(
             fontSize: 32,
             fontWeight: FontWeight.bold,
             color: Colors.white,
           ),
-        ).animate().fadeIn(delay: 300.ms),
+        ),
         const SizedBox(height: 8),
         Text(
           'Health Monitoring System',
-          style: GoogleFonts.inter(
+          style: TextStyle(
             fontSize: 16,
             color: Colors.white.withOpacity(0.7),
           ),
-        ).animate().fadeIn(delay: 400.ms),
+        ),
       ],
     );
   }
 
-  Widget _buildWhiteCard() {
+  Widget _buildCard() {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 24),
       decoration: BoxDecoration(
@@ -276,12 +253,12 @@ class _AuthScreenState extends State<AuthScreen> {
           Expanded(
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(24),
-              child: _tabIndex == 0 ? _buildSignInForm() : _buildSignUpForm(),
+              child: _tabIndex == 0 ? _buildSignIn() : _buildSignUp(),
             ),
           ),
         ],
       ),
-    ).animate().fadeIn(delay: 500.ms);
+    );
   }
 
   Widget _buildTabBar() {
@@ -294,19 +271,18 @@ class _AuthScreenState extends State<AuthScreen> {
       ),
       child: Row(
         children: [
-          Expanded(child: _buildTabButton('Sign In', 0)),
-          Expanded(child: _buildTabButton('Sign Up', 1)),
+          Expanded(child: _tabButton('Sign In', 0)),
+          Expanded(child: _tabButton('Sign Up', 1)),
         ],
       ),
     );
   }
 
-  Widget _buildTabButton(String label, int index) {
+  Widget _tabButton(String label, int index) {
     final isSelected = _tabIndex == index;
     return GestureDetector(
       onTap: () => _switchTab(index),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
+      child: Container(
         padding: const EdgeInsets.symmetric(vertical: 14),
         decoration: BoxDecoration(
           color: isSelected ? Colors.white : Colors.transparent,
@@ -316,7 +292,7 @@ class _AuthScreenState extends State<AuthScreen> {
         child: Text(
           label,
           textAlign: TextAlign.center,
-          style: GoogleFonts.inter(
+          style: TextStyle(
             fontSize: 15,
             fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
             color: isSelected ? const Color(0xFF2563EB) : const Color(0xFF94A3B8),
@@ -326,102 +302,88 @@ class _AuthScreenState extends State<AuthScreen> {
     );
   }
 
-  Widget _buildSignInForm() {
+  Widget _buildSignIn() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(
+        const Text(
           'Welcome back',
-          style: GoogleFonts.inter(fontSize: 26, fontWeight: FontWeight.bold, color: const Color(0xFF1E3A5F)),
+          style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Color(0xFF1E3A5F)),
         ),
         const SizedBox(height: 8),
-        Text(
+        const Text(
           'Sign in to continue',
-          style: GoogleFonts.inter(fontSize: 14, color: const Color(0xFF64748B)),
+          style: TextStyle(fontSize: 14, color: Color(0xFF64748B)),
         ),
         const SizedBox(height: 32),
-        _buildTextField(_emailController, 'Email', Icons.email_outlined, TextInputType.emailAddress),
+        _inputField(_emailController, 'Email', Icons.email_outlined, TextInputType.emailAddress),
         const SizedBox(height: 20),
-        _buildPasswordField(_passwordController, 'Password', _obscurePassword, (v) => setState(() => _obscurePassword = v)),
+        _passwordField(_passwordController, 'Password'),
         const SizedBox(height: 16),
-        if (_errorMessage.isNotEmpty) ...[
-          _buildErrorBox(_errorMessage),
-          const SizedBox(height: 16),
-        ],
-        const SizedBox(height: 8),
-        _buildPrimaryButton('Sign In', _handleSignIn),
-        const SizedBox(height: 28),
-        _buildDivider(),
+        if (_errorMessage.isNotEmpty && _tabIndex == 0) _errorBox(),
         const SizedBox(height: 24),
-        _buildGoogleButton('Continue with Google'),
+        _submitButton('Sign In', _handleSignIn),
+        const SizedBox(height: 28),
+        _divider(),
+        const SizedBox(height: 24),
+        _googleButton(),
       ],
     );
   }
 
-  Widget _buildSignUpForm() {
+  Widget _buildSignUp() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(
+        const Text(
           'Create account',
-          style: GoogleFonts.inter(fontSize: 26, fontWeight: FontWeight.bold, color: const Color(0xFF1E3A5F)),
+          style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Color(0xFF1E3A5F)),
         ),
         const SizedBox(height: 8),
-        Text(
+        const Text(
           'Join Cambric ecosystem',
-          style: GoogleFonts.inter(fontSize: 14, color: const Color(0xFF64748B)),
+          style: TextStyle(fontSize: 14, color: Color(0xFF64748B)),
         ),
         const SizedBox(height: 32),
-        _buildTextField(_nameController, 'Full Name', Icons.person_outlined, TextInputType.name),
+        _inputField(_nameController, 'Full Name', Icons.person_outlined, TextInputType.name),
         const SizedBox(height: 20),
-        _buildTextField(_emailController, 'Email', Icons.email_outlined, TextInputType.emailAddress),
+        _inputField(_emailController, 'Email', Icons.email_outlined, TextInputType.emailAddress),
         const SizedBox(height: 20),
-        _buildPasswordField(_passwordController, 'Password', _obscurePassword, (v) => setState(() => _obscurePassword = v)),
+        _passwordField(_passwordController, 'Password'),
         const SizedBox(height: 20),
-        _buildTextField(_confirmController, 'Confirm Password', Icons.lock_outlined, TextInputType.visiblePassword, obscure: _obscureConfirm, onSuffixTap: () => setState(() => _obscureConfirm = !_obscureConfirm)),
+        _inputField(_confirmController, 'Confirm Password', Icons.lock_outlined, TextInputType.visiblePassword, obscure: !_showConfirm, toggleObscure: () => setState(() => _showConfirm = !_showConfirm)),
         const SizedBox(height: 16),
-        if (_errorMessage.isNotEmpty) ...[
-          _buildErrorBox(_errorMessage),
-          const SizedBox(height: 16),
-        ],
-        Padding(
-          padding: const EdgeInsets.only(bottom: 16),
-          child: Text(
-            'By continuing, you agree to our Terms & Privacy Policy',
-            style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF94A3B8)),
-            textAlign: TextAlign.center,
-          ),
+        if (_errorMessage.isNotEmpty && _tabIndex == 1) _errorBox(),
+        const SizedBox(height: 16),
+        const Text(
+          'By continuing, you agree to our Terms & Privacy Policy',
+          style: TextStyle(fontSize: 12, color: Color(0xFF94A3B8)),
+          textAlign: TextAlign.center,
         ),
-        _buildPrimaryButton('Create Account', _handleSignUp),
+        const SizedBox(height: 16),
+        _submitButton('Create Account', _handleSignUp),
         const SizedBox(height: 28),
-        _buildDivider(),
+        _divider(),
         const SizedBox(height: 24),
-        _buildGoogleButton('Sign up with Google'),
+        _googleButton(),
       ],
     );
   }
 
-  Widget _buildTextField(
-    TextEditingController controller,
-    String label,
-    IconData icon,
-    TextInputType keyboardType, {
-    bool obscure = false,
-    VoidCallback? onSuffixTap,
-  }) {
+  Widget _inputField(TextEditingController controller, String label, IconData icon, TextInputType keyboardType, {bool obscure = false, VoidCallback? toggleObscure}) {
     return TextField(
       controller: controller,
       obscureText: obscure,
       keyboardType: keyboardType,
-      style: GoogleFonts.inter(fontSize: 15, color: const Color(0xFF1E3A5F)),
+      style: const TextStyle(fontSize: 15, color: Color(0xFF1E3A5F)),
       decoration: InputDecoration(
         labelText: label,
-        labelStyle: GoogleFonts.inter(color: const Color(0xFF94A3B8), fontSize: 14),
+        labelStyle: const TextStyle(color: Color(0xFF94A3B8), fontSize: 14),
         prefixIcon: Icon(icon, color: const Color(0xFF2563EB), size: 20),
-        suffixIcon: onSuffixTap != null
+        suffixIcon: toggleObscure != null
             ? IconButton(
                 icon: Icon(obscure ? Icons.visibility_off : Icons.visibility, color: const Color(0xFF94A3B8)),
-                onPressed: onSuffixTap,
+                onPressed: toggleObscure,
               )
             : null,
         filled: true,
@@ -434,23 +396,18 @@ class _AuthScreenState extends State<AuthScreen> {
     );
   }
 
-  Widget _buildPasswordField(
-    TextEditingController controller,
-    String label,
-    bool obscured,
-    void Function(bool) onToggle,
-  ) {
+  Widget _passwordField(TextEditingController controller, String label) {
     return TextField(
       controller: controller,
-      obscureText: obscured,
-      style: GoogleFonts.inter(fontSize: 15, color: const Color(0xFF1E3A5F)),
+      obscureText: !_showPassword,
+      style: const TextStyle(fontSize: 15, color: Color(0xFF1E3A5F)),
       decoration: InputDecoration(
         labelText: label,
-        labelStyle: GoogleFonts.inter(color: const Color(0xFF94A3B8), fontSize: 14),
+        labelStyle: const TextStyle(color: Color(0xFF94A3B8), fontSize: 14),
         prefixIcon: const Icon(Icons.lock_outlined, color: Color(0xFF2563EB), size: 20),
         suffixIcon: IconButton(
-          icon: Icon(obscured ? Icons.visibility_off : Icons.visibility, color: const Color(0xFF94A3B8)),
-          onPressed: () => onToggle(!obscured),
+          icon: Icon(_showPassword ? Icons.visibility_off : Icons.visibility, color: const Color(0xFF94A3B8)),
+          onPressed: () => setState(() => _showPassword = !_showPassword),
         ),
         filled: true,
         fillColor: const Color(0xFFF8FAFC),
@@ -462,7 +419,7 @@ class _AuthScreenState extends State<AuthScreen> {
     );
   }
 
-  Widget _buildErrorBox(String message) {
+  Widget _errorBox() {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -475,8 +432,8 @@ class _AuthScreenState extends State<AuthScreen> {
           const SizedBox(width: 10),
           Expanded(
             child: Text(
-              message,
-              style: GoogleFonts.inter(color: const Color(0xFFDC2626), fontSize: 14),
+              _errorMessage,
+              style: const TextStyle(color: Color(0xFFDC2626), fontSize: 14),
             ),
           ),
         ],
@@ -484,7 +441,7 @@ class _AuthScreenState extends State<AuthScreen> {
     );
   }
 
-  Widget _buildPrimaryButton(String label, VoidCallback onPressed) {
+  Widget _submitButton(String label, VoidCallback onPressed) {
     return SizedBox(
       height: 56,
       child: ElevatedButton(
@@ -499,33 +456,27 @@ class _AuthScreenState extends State<AuthScreen> {
             ? const SizedBox(
                 width: 24,
                 height: 24,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                ),
+                child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation<Color>(Colors.white)),
               )
-            : Text(
-                label,
-                style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w600),
-              ),
+            : Text(label, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
       ),
     );
   }
 
-  Widget _buildDivider() {
+  Widget _divider() {
     return Row(
       children: [
         const Expanded(child: Divider()),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Text('or', style: GoogleFonts.inter(color: const Color(0xFF94A3B8), fontSize: 13)),
+          child: Text('or', style: TextStyle(color: const Color(0xFF94A3B8), fontSize: 13)),
         ),
         const Expanded(child: Divider()),
       ],
     );
   }
 
-  Widget _buildGoogleButton(String label) {
+  Widget _googleButton() {
     return SizedBox(
       height: 56,
       child: OutlinedButton.icon(
@@ -533,11 +484,11 @@ class _AuthScreenState extends State<AuthScreen> {
           try {
             await Supabase.instance.client.auth.signInWithOAuth(OAuthProvider.google);
           } catch (e) {
-            setState(() => _errorMessage = 'Google sign in failed');
+            if (mounted) setState(() => _errorMessage = 'Google sign in failed');
           }
         },
         icon: const Icon(Icons.g_mobiledata, size: 28, color: Color(0xFFDB4437)),
-        label: Text(label, style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w500)),
+        label: Text(_tabIndex == 0 ? 'Sign in with Google' : 'Sign up with Google', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500)),
         style: OutlinedButton.styleFrom(
           foregroundColor: const Color(0xFFDB4437),
           side: BorderSide(color: const Color(0xFFDB4437).withOpacity(0.3)),
