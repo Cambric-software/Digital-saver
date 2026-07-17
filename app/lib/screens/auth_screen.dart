@@ -18,6 +18,11 @@ class _AuthScreenState extends State<AuthScreen> {
   final _nameController = TextEditingController();
   final _confirmController = TextEditingController();
 
+  final _emailFocus = FocusNode();
+  final _passwordFocus = FocusNode();
+  final _nameFocus = FocusNode();
+  final _confirmFocus = FocusNode();
+
   bool _isLoading = false;
   String _errorMessage = '';
   bool _showPassword = true;
@@ -38,7 +43,17 @@ class _AuthScreenState extends State<AuthScreen> {
     _passwordController.dispose();
     _nameController.dispose();
     _confirmController.dispose();
+    _emailFocus.dispose();
+    _passwordFocus.dispose();
+    _nameFocus.dispose();
+    _confirmFocus.dispose();
     super.dispose();
+  }
+
+  void _requestFocus(FocusNode node) {
+    Future.delayed(const Duration(milliseconds: 100), () {
+      if (mounted) node.requestFocus();
+    });
   }
 
   Future<void> _handleSignIn() async {
@@ -86,18 +101,22 @@ class _AuthScreenState extends State<AuthScreen> {
 
     if (name.isEmpty) {
       setState(() => _errorMessage = 'Please enter your name');
+      _requestFocus(_nameFocus);
       return;
     }
     if (email.isEmpty || !email.contains('@')) {
       setState(() => _errorMessage = 'Please enter a valid email');
+      _requestFocus(_emailFocus);
       return;
     }
     if (password.length < 6) {
       setState(() => _errorMessage = 'Password must be at least 6 characters');
+      _requestFocus(_passwordFocus);
       return;
     }
     if (password != confirm) {
       setState(() => _errorMessage = 'Passwords do not match');
+      _requestFocus(_confirmFocus);
       return;
     }
 
@@ -159,11 +178,20 @@ class _AuthScreenState extends State<AuthScreen> {
       _tabIndex = index;
       _errorMessage = '';
     });
+    Future.delayed(const Duration(milliseconds: 200), () {
+      if (!mounted) return;
+      if (index == 0) {
+        _emailFocus.requestFocus();
+      } else {
+        _nameFocus.requestFocus();
+      }
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      resizeToAvoidBottomInset: true,
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
@@ -316,9 +344,9 @@ class _AuthScreenState extends State<AuthScreen> {
           style: TextStyle(fontSize: 14, color: Color(0xFF64748B)),
         ),
         const SizedBox(height: 32),
-        _inputField(_emailController, 'Email', Icons.email_outlined, TextInputType.emailAddress),
+        _inputField(_emailController, _emailFocus, 'Email', Icons.email_outlined, TextInputType.emailAddress),
         const SizedBox(height: 20),
-        _passwordField(_passwordController, 'Password'),
+        _passwordField(_passwordController, _passwordFocus, 'Password'),
         const SizedBox(height: 16),
         if (_errorMessage.isNotEmpty && _tabIndex == 0) _errorBox(),
         const SizedBox(height: 24),
@@ -345,13 +373,13 @@ class _AuthScreenState extends State<AuthScreen> {
           style: TextStyle(fontSize: 14, color: Color(0xFF64748B)),
         ),
         const SizedBox(height: 32),
-        _inputField(_nameController, 'Full Name', Icons.person_outlined, TextInputType.name),
+        _inputField(_nameController, _nameFocus, 'Full Name', Icons.person_outlined, TextInputType.name),
         const SizedBox(height: 20),
-        _inputField(_emailController, 'Email', Icons.email_outlined, TextInputType.emailAddress),
+        _inputField(_emailController, _emailFocus, 'Email', Icons.email_outlined, TextInputType.emailAddress),
         const SizedBox(height: 20),
-        _passwordField(_passwordController, 'Password'),
+        _passwordField(_passwordController, _passwordFocus, 'Password'),
         const SizedBox(height: 20),
-        _inputField(_confirmController, 'Confirm Password', Icons.lock_outlined, TextInputType.visiblePassword, obscure: !_showConfirm, toggleObscure: () => setState(() => _showConfirm = !_showConfirm)),
+        _inputField(_confirmController, _confirmFocus, 'Confirm Password', Icons.lock_outlined, TextInputType.visiblePassword, obscure: !_showConfirm, toggleObscure: () => setState(() => _showConfirm = !_showConfirm)),
         const SizedBox(height: 16),
         if (_errorMessage.isNotEmpty && _tabIndex == 1) _errorBox(),
         const SizedBox(height: 16),
@@ -370,9 +398,10 @@ class _AuthScreenState extends State<AuthScreen> {
     );
   }
 
-  Widget _inputField(TextEditingController controller, String label, IconData icon, TextInputType keyboardType, {bool obscure = false, VoidCallback? toggleObscure}) {
+  Widget _inputField(TextEditingController controller, FocusNode focusNode, String label, IconData icon, TextInputType keyboardType, {bool obscure = false, VoidCallback? toggleObscure}) {
     return TextField(
       controller: controller,
+      focusNode: focusNode,
       obscureText: obscure,
       keyboardType: keyboardType,
       style: const TextStyle(fontSize: 15, color: Color(0xFF1E3A5F)),
@@ -396,9 +425,10 @@ class _AuthScreenState extends State<AuthScreen> {
     );
   }
 
-  Widget _passwordField(TextEditingController controller, String label) {
+  Widget _passwordField(TextEditingController controller, FocusNode focusNode, String label) {
     return TextField(
       controller: controller,
+      focusNode: focusNode,
       obscureText: !_showPassword,
       style: const TextStyle(fontSize: 15, color: Color(0xFF1E3A5F)),
       decoration: InputDecoration(
