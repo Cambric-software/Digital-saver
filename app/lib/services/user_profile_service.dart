@@ -71,7 +71,7 @@ class UserProfileService {
     final result = await _client
         .from('digital_saver_user_profiles')
         .select()
-        .eq('user_id', userId)
+        .eq('id', userId)
         .maybeSingle();
 
     if (result == null) return null;
@@ -86,7 +86,7 @@ class UserProfileService {
     final existing = await _client
         .from('digital_saver_user_profiles')
         .select('id')
-        .eq('user_id', userId)
+        .eq('id', userId)
         .maybeSingle();
 
     if (existing != null) {
@@ -97,7 +97,7 @@ class UserProfileService {
             ...cloudProfile,
             'updated_at': DateTime.now().toIso8601String(),
           })
-          .eq('user_id', userId);
+          .eq('id', userId);
     } else {
       // Insert new
       await _client
@@ -187,7 +187,7 @@ class UserProfileService {
 
   Map<String, dynamic> _userProfileToCloudProfile(UserProfile profile, String userId) {
     return {
-      'user_id': userId,
+      'id': userId,
       'display_name': profile.name,
       'height_cm': profile.heightCm.round(),
       'weight_kg': profile.weightKg,
@@ -317,7 +317,7 @@ class UserProfileService {
         final result = await _client
             .from('digital_saver_user_profiles')
             .select('id')
-            .eq('user_id', userId)
+            .eq('id', userId)
             .maybeSingle();
         cloudExists = result != null;
       } catch (e) {

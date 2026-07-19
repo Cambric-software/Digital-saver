@@ -121,7 +121,7 @@ class _AuthScreenState extends State<AuthScreen> {
             'display_name': name,
           });
           await Supabase.instance.client.from('digital_saver_storage_stats').insert({
-            'user_id': response.user!.id,
+            'id': response.user!.id,
           });
         } catch (_) {}
       }
