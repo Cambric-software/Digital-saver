@@ -17,11 +17,13 @@ const String kHRCharUUID = 'beb5483e-36e1-4688-b7f5-ea07361b26a8';
 const String kBPCharUUID = 'beb5483e-36e1-4688-b7f5-ea07361b26a9';
 const String kO2CharUUID = 'beb5483e-36e1-4688-b7f5-ea07361b26aa';
 
-// Keywords for smartwatch detection
+// Keywords for smartwatch detection - more inclusive
 const List<String> kSmartwatchKeywords = [
-  'watch', 'band', 'fitness', 'tracker', 'wearable', 'smart',
+  'watch', 'band', 'fitness', 'tracker', 'wearable', 'smart', 'aktivita',
   'mi', 'xiaomi', 'redmi', 'huawei', 'samsung', 'garmin', 'fitbit', 'amazfit',
-  'polar', 'honor', 'oppo', 'realme', 'oneplus', 'haylou', 'zebl',
+  'polar', 'honor', 'oppo', 'realme', 'oneplus', 'haylou', 'zebl', 'hawiwi',
+  'apple', 'watch', 'stratos', 'tread', 'pace', 'ignite', 'charge', 'versa',
+  'galaxy', 'gear', 'vivo', 'lite', 'pro', 'ultra', 'max', 'plus',
 ];
 
 enum BleState { disconnected, scanning, connecting, connected, error }
@@ -126,7 +128,7 @@ class BleService extends ChangeNotifier {
         await FlutterBluePlus.adapterState.where((s) => s == BluetoothAdapterState.on).first;
       }
 
-      await FlutterBluePlus.startScan(timeout: const Duration(seconds: 15));
+      await FlutterBluePlus.startScan(timeout: const Duration(seconds: 30));
 
       _scanSub = FlutterBluePlus.scanResults.listen((results) {
         for (final r in results) {
@@ -141,7 +143,7 @@ class BleService extends ChangeNotifier {
             (d) => d.device.remoteId.str == r.device.remoteId.str
           );
           
-          if (existingIndex == -1 && isSw) {
+          if (existingIndex == -1) {
             _discoveredDevices.add(DiscoveredDevice(
               device: r.device,
               name: name,
