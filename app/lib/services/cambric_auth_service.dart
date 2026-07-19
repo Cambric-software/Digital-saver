@@ -95,42 +95,46 @@ class AuthProvider extends ChangeNotifier {
   AuthProvider() {
     _init();
   }
-
   Future<void> _init() async {
     _loading = true;
     notifyListeners();
 
-    // Check existing session
-    final session = _client.auth.currentSession;
-    if (session != null) {
-      _user = session.user;
-      _profile = CambricUserProfile.fromUser(_user!);
-      await _syncProfile();
-    }
-
-    // Listen for auth changes
-    _authSubscription = _client.auth.onAuthStateChange.listen((data) async {
-      final AuthChangeEvent event = data.event;
-      final Session? session = data.session;
-
-      if (event == AuthChangeEvent.signedIn) {
-        _user = session?.user;
-        _profile = _user != null ? CambricUserProfile.fromUser(_user!) : null;
-        await _syncProfile();
-      } else if (event == AuthChangeEvent.signedOut) {
-        _user = null;
-        _profile = null;
-      } else if (event == AuthChangeEvent.tokenRefreshed) {
-        _user = session?.user;
-        _profile = _user != null ? CambricUserProfile.fromUser(_user!) : null;
-      }
+    try {
+      final session = await Future.delayed(Duration.zero, () => _client.auth.currentSession).timeout(
+        const Duration(seconds: 5),
+        onTimeout: () => null,
+      );
       
-      _loading = false;
-      _error = null;
-      notifyListeners();
-    });
+      if (session != null) {
+        _user = session.user;
+        _profile = CambricUserProfile.fromUser(_user!);
+        await _syncProfile().timeout(const Duration(seconds: 5));
+      }
+
+      _authSubscription = _client.auth.onAuthStateChange.listen((data) async {
+        final AuthChangeEvent event = data.event;
+        final Session? session = data.session;
+
+        if (event == AuthChangeEvent.signedIn) {
+          _user = session?.user;
+          _profile = _user != null ? CambricUserProfile.fromUser(_user!) : null;
+          await _syncProfile().timeout(const Duration(seconds: 5));
+        } else if (event == AuthChangeEvent.signedOut) {
+          _user = null;
+          _profile = null;
+        } else if (event == AuthChangeEvent.tokenRefreshed) {
+          _user = session?.user;
+          _profile = _user != null ? CambricUserProfile.fromUser(_user!) : null;
+        }
+
+        _loading = false;
+        _error = null;
+        notifyListeners();
+      });
+    } catch (e) {}
 
     _loading = false;
+    _error = null;
     notifyListeners();
   }
 

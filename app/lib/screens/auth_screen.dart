@@ -58,9 +58,13 @@ class _AuthScreenState extends State<AuthScreen> {
     });
 
     try {
+      // Add timeout to prevent infinite loading
       final response = await Supabase.instance.client.auth.signInWithPassword(
         email: email,
         password: password,
+      ).timeout(
+        const Duration(seconds: 15),
+        onTimeout: () => throw Exception('timeout'),
       );
 
       if (response.user != null && mounted) {
@@ -70,7 +74,13 @@ class _AuthScreenState extends State<AuthScreen> {
     } on AuthException catch (e) {
       if (mounted) setState(() => _errorMessage = _mapError(e.message));
     } catch (e) {
-      if (mounted) setState(() => _errorMessage = 'Connection error. Check your internet.');
+      if (mounted) {
+        if (e.toString().contains('timeout')) {
+          setState(() => _errorMessage = 'Connection timed out. Check your internet.');
+        } else {
+          setState(() => _errorMessage = 'Connection error. Please try again.');
+        }
+      }
     }
 
     if (mounted) setState(() => _isLoading = false);
@@ -107,10 +117,14 @@ class _AuthScreenState extends State<AuthScreen> {
     });
 
     try {
+      // Add timeout to prevent infinite loading
       final response = await Supabase.instance.client.auth.signUp(
         email: email,
         password: password,
         data: {'display_name': name},
+      ).timeout(
+        const Duration(seconds: 15),
+        onTimeout: () => throw Exception('timeout'),
       );
 
       if (response.user != null) {
@@ -121,7 +135,7 @@ class _AuthScreenState extends State<AuthScreen> {
             'display_name': name,
           });
           await Supabase.instance.client.from('digital_saver_storage_stats').insert({
-            'id': response.user!.id,
+            'user_id': response.user!.id,
           });
         } catch (_) {}
       }
@@ -129,7 +143,7 @@ class _AuthScreenState extends State<AuthScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Account created! Check email to confirm.'),
+            content: Text('Account created successfully!'),
             backgroundColor: Color(0xFF22C55E),
           ),
         );
@@ -139,7 +153,13 @@ class _AuthScreenState extends State<AuthScreen> {
     } on AuthException catch (e) {
       if (mounted) setState(() => _errorMessage = _mapError(e.message));
     } catch (e) {
-      if (mounted) setState(() => _errorMessage = 'Connection error. Check your internet.');
+      if (mounted) {
+        if (e.toString().contains('timeout')) {
+          setState(() => _errorMessage = 'Connection timed out. Check your internet.');
+        } else {
+          setState(() => _errorMessage = 'Connection error. Please try again.');
+        }
+      }
     }
 
     if (mounted) setState(() => _isLoading = false);
