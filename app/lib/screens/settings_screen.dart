@@ -254,7 +254,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
       MaterialPageRoute(
         builder: (ctx) => AuthScreen(
           onSignedIn: () {
-            Navigator.of(ctx).pop();
             _load();
           },
         ),

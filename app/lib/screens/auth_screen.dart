@@ -87,8 +87,8 @@ class _AuthScreenState extends State<AuthScreen> {
       _loadingTimer?.cancel();
 
       if (response.user != null && mounted) {
-        widget.onSignedIn?.call();
         Navigator.of(context).pop();
+        widget.onSignedIn?.call();
       }
     } on AuthException catch (e) {
       _loadingTimer?.cancel();
@@ -164,8 +164,8 @@ class _AuthScreenState extends State<AuthScreen> {
             backgroundColor: Color(0xFF22C55E),
           ),
         );
-        widget.onSignedIn?.call();
         Navigator.of(context).pop();
+        widget.onSignedIn?.call();
       }
     } on AuthException catch (e) {
       _loadingTimer?.cancel();
