@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -22,6 +23,7 @@ class _AuthScreenState extends State<AuthScreen> {
   String _errorMessage = '';
   bool _showPassword = true;
   bool _showConfirm = true;
+  Timer? _loadingTimer;
 
   @override
   void initState() {
@@ -34,11 +36,28 @@ class _AuthScreenState extends State<AuthScreen> {
 
   @override
   void dispose() {
+    _loadingTimer?.cancel();
     _emailController.dispose();
     _passwordController.dispose();
     _nameController.dispose();
     _confirmController.dispose();
     super.dispose();
+  }
+
+  void _resetLoading() {
+    if (mounted) {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  void _startLoadingTimer() {
+    _loadingTimer?.cancel();
+    _loadingTimer = Timer(const Duration(seconds: 15), () {
+      _resetLoading();
+      if (mounted) {
+        setState(() => _errorMessage = 'Connection timed out. Please try again.');
+      }
+    });
   }
 
   Future<void> _handleSignIn() async {
@@ -57,33 +76,29 @@ class _AuthScreenState extends State<AuthScreen> {
       _errorMessage = '';
     });
 
+    _startLoadingTimer();
+
     try {
-      // Add timeout to prevent infinite loading
       final response = await Supabase.instance.client.auth.signInWithPassword(
         email: email,
         password: password,
-      ).timeout(
-        const Duration(seconds: 15),
-        onTimeout: () => throw Exception('timeout'),
       );
+
+      _loadingTimer?.cancel();
 
       if (response.user != null && mounted) {
         widget.onSignedIn?.call();
         Navigator.of(context).pop();
       }
     } on AuthException catch (e) {
+      _loadingTimer?.cancel();
       if (mounted) setState(() => _errorMessage = _mapError(e.message));
     } catch (e) {
-      if (mounted) {
-        if (e.toString().contains('timeout')) {
-          setState(() => _errorMessage = 'Connection timed out. Check your internet.');
-        } else {
-          setState(() => _errorMessage = 'Connection error. Please try again.');
-        }
-      }
+      _loadingTimer?.cancel();
+      if (mounted) setState(() => _errorMessage = 'Connection error. Please try again.');
     }
 
-    if (mounted) setState(() => _isLoading = false);
+    _resetLoading();
   }
 
   Future<void> _handleSignUp() async {
@@ -116,16 +131,16 @@ class _AuthScreenState extends State<AuthScreen> {
       _errorMessage = '';
     });
 
+    _startLoadingTimer();
+
     try {
-      // Add timeout to prevent infinite loading
       final response = await Supabase.instance.client.auth.signUp(
         email: email,
         password: password,
         data: {'display_name': name},
-      ).timeout(
-        const Duration(seconds: 15),
-        onTimeout: () => throw Exception('timeout'),
       );
+
+      _loadingTimer?.cancel();
 
       if (response.user != null) {
         try {
@@ -134,6 +149,8 @@ class _AuthScreenState extends State<AuthScreen> {
             'email': email,
             'display_name': name,
           });
+        } catch (_) {}
+        try {
           await Supabase.instance.client.from('digital_saver_storage_stats').insert({
             'user_id': response.user!.id,
           });
@@ -151,18 +168,14 @@ class _AuthScreenState extends State<AuthScreen> {
         Navigator.of(context).pop();
       }
     } on AuthException catch (e) {
+      _loadingTimer?.cancel();
       if (mounted) setState(() => _errorMessage = _mapError(e.message));
     } catch (e) {
-      if (mounted) {
-        if (e.toString().contains('timeout')) {
-          setState(() => _errorMessage = 'Connection timed out. Check your internet.');
-        } else {
-          setState(() => _errorMessage = 'Connection error. Please try again.');
-        }
-      }
+      _loadingTimer?.cancel();
+      if (mounted) setState(() => _errorMessage = 'Connection error. Please try again.');
     }
 
-    if (mounted) setState(() => _isLoading = false);
+    _resetLoading();
   }
 
   String _mapError(String message) {
