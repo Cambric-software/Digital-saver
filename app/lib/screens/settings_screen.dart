@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:flutter_animate/flutter_animate.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../services/ble_service.dart';
 import '../services/emergency_service.dart';
 import '../services/storage_service.dart';
@@ -32,13 +32,34 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _load() async {
     final auth = context.read<AuthProvider>();
-    final p = await _profileService.loadProfile(auth.profile?.id);
-    final c = await StorageService.loadContacts();
-    setState(() {
-      _profile = p;
-      _contacts = c;
-      _loading = false;
-    });
+    
+    // Try to load from Supabase if authenticated
+    if (auth.profile != null) {
+      // Use auth profile data as base
+      final p = UserProfile(
+        name: auth.profile!.displayName ?? '',
+        age: 30,
+        weightKg: 70,
+        heightCm: 170,
+        gender: 'Male',
+        language: 'en',
+      );
+      final c = await StorageService.loadContacts();
+      setState(() {
+        _profile = p;
+        _contacts = c;
+        _loading = false;
+      });
+    } else {
+      // Load from local storage only
+      final p = await _profileService.loadProfile(null);
+      final c = await StorageService.loadContacts();
+      setState(() {
+        _profile = p;
+        _contacts = c;
+        _loading = false;
+      });
+    }
   }
 
   @override
@@ -83,6 +104,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           const SizedBox(height: 16),
           _LanguageCard(current: _profile.language, onChanged: _changeLanguage),
+          const SizedBox(height: 16),
+          _DownloadCard(),
           const SizedBox(height: 16),
           _AboutCard(),
           const SizedBox(height: 100),
@@ -159,7 +182,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       gender: gender,
                       language: _profile.language,
                     );
+                    
+                    // Save locally
                     await StorageService.saveProfile(updated);
+                    
+                    // Save to Supabase if authenticated (syncs name with account)
+                    final auth = context.read<AuthProvider>();
+                    if (auth.isAuthenticated) {
+                      await auth.updateProfile(
+                        displayName: nameCtrl.text,
+                        additionalData: {
+                          'age': int.tryParse(ageCtrl.text) ?? _profile.age,
+                          'weight_kg': double.tryParse(weightCtrl.text) ?? _profile.weightKg,
+                          'height_cm': double.tryParse(heightCtrl.text) ?? _profile.heightCm,
+                          'gender': gender,
+                        },
+                      );
+                    }
+                    
                     setState(() => _profile = updated);
                     if (ctx.mounted) Navigator.pop(ctx);
                   },
@@ -903,6 +943,150 @@ class _CambricAccountCard extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+// ===========================================================================
+// DOWNLOAD CARD - App downloads for all platforms
+// ===========================================================================
+class _DownloadCard extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(Icons.download_for_offline_outlined, color: Color(0xFF2563eb), size: 20),
+              SizedBox(width: 8),
+              Text('Download App', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF1E3A5F), fontSize: 15)),
+            ],
+          ),
+          const SizedBox(height: 6),
+          const Text(
+            'Download the native app for full Bluetooth support',
+            style: TextStyle(color: Color(0xFF64748B), fontSize: 12),
+          ),
+          const SizedBox(height: 16),
+          
+          // Android
+          _DownloadButton(
+            icon: Icons.android,
+            label: 'Android (APK)',
+            color: const Color(0xFF3DDC84),
+            onTap: () => _openUrl('https://github.com/Cambric-software/Digital-saver/releases/latest'),
+          ),
+          const SizedBox(height: 10),
+          
+          // iOS
+          _DownloadButton(
+            icon: Icons.apple,
+            label: 'iOS (Coming Soon)',
+            color: const Color(0xFF000000),
+            onTap: () => _showComingSoon(context, 'iOS'),
+          ),
+          const SizedBox(height: 10),
+          
+          // Windows
+          _DownloadButton(
+            icon: Icons.desktop_windows,
+            label: 'Windows (Coming Soon)',
+            color: const Color(0xFF0078D4),
+            onTap: () => _showComingSoon(context, 'Windows'),
+          ),
+          const SizedBox(height: 10),
+          
+          // Linux
+          _DownloadButton(
+            icon: Icons.computer,
+            label: 'Linux (Coming Soon)',
+            color: const Color(0xFFE95420),
+            onTap: () => _showComingSoon(context, 'Linux'),
+          ),
+        ],
+      ),
+    );
+  }
+  
+  void _openUrl(String url) async {
+    final uri = Uri.parse(url);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
+  }
+  
+  void _showComingSoon(BuildContext context, String platform) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('$platform app is coming soon!'),
+        backgroundColor: const Color(0xFF2563EB),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ),
+    );
+  }
+}
+
+class _DownloadButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
+  
+  const _DownloadButton({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.onTap,
+  });
+  
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: color.withOpacity(0.3)),
+          ),
+          child: Row(
+            children: [
+              Icon(icon, color: color, size: 24),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    color: color,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
+                  ),
+                ),
+              ),
+              Icon(Icons.arrow_forward_ios, color: color.withOpacity(0.5), size: 16),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

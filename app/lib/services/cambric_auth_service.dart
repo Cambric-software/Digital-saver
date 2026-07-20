@@ -95,15 +95,19 @@ class AuthProvider extends ChangeNotifier {
     if (session != null) {
       _user = session.user;
       _profile = CambricUserProfile.fromUser(_user!);
+      // Load full profile from Supabase
+      await _loadFullProfile();
     }
 
-    _authSubscription = _client.auth.onAuthStateChange.listen((data) {
+    _authSubscription = _client.auth.onAuthStateChange.listen((data) async {
       final AuthChangeEvent event = data.event;
       final Session? session = data.session;
 
       if (event == AuthChangeEvent.signedIn || event == AuthChangeEvent.tokenRefreshed) {
         _user = session?.user;
         _profile = _user != null ? CambricUserProfile.fromUser(_user!) : null;
+        // Load full profile from Supabase
+        await _loadFullProfile();
       } else if (event == AuthChangeEvent.signedOut) {
         _user = null;
         _profile = null;
@@ -113,6 +117,25 @@ class AuthProvider extends ChangeNotifier {
       _error = null;
       notifyListeners();
     });
+  }
+
+  Future<void> _loadFullProfile() async {
+    if (_user == null) return;
+    
+    try {
+      final result = await _client
+          .from('digital_saver_user_profiles')
+          .select()
+          .eq('id', _user!.id)
+          .maybeSingle();
+      
+      if (result != null) {
+        _profile = CambricUserProfile.fromProfile(result);
+        notifyListeners();
+      }
+    } catch (e) {
+      // Use basic profile from auth
+    }
   }
 
   Future<bool> signInWithEmail(String email, String password) async {
@@ -128,6 +151,9 @@ class AuthProvider extends ChangeNotifier {
 
       _user = response.user;
       _profile = _user != null ? CambricUserProfile.fromUser(_user!) : null;
+      
+      // Load full profile after sign in
+      await _loadFullProfile();
       
       _loading = false;
       notifyListeners();
@@ -174,6 +200,9 @@ class AuthProvider extends ChangeNotifier {
             'user_id': _user!.id,
           });
         } catch (_) {}
+        
+        // Load full profile after sign up
+        await _loadFullProfile();
       }
       
       _loading = false;
@@ -189,6 +218,42 @@ class AuthProvider extends ChangeNotifier {
       _loading = false;
       notifyListeners();
       return false;
+    }
+  }
+
+  // Update profile in Supabase and sync with auth metadata
+  Future<void> updateProfile({
+    String? displayName,
+    Map<String, dynamic>? additionalData,
+  }) async {
+    if (_user == null) return;
+    
+    final updates = <String, dynamic>{
+      'updated_at': DateTime.now().toIso8601String(),
+    };
+    
+    if (displayName != null) {
+      updates['display_name'] = displayName;
+      // Also update auth metadata
+      await _client.auth.updateUser(
+        UserAttributes(data: {'display_name': displayName}),
+      );
+    }
+    
+    if (additionalData != null) {
+      updates.addAll(additionalData);
+    }
+    
+    try {
+      await _client
+          .from('digital_saver_user_profiles')
+          .update(updates)
+          .eq('id', _user!.id);
+      
+      // Reload profile
+      await _loadFullProfile();
+    } catch (e) {
+      // Handle error
     }
   }
 
