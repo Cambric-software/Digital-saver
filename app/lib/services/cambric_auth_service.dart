@@ -89,35 +89,21 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<void> _init() async {
-    _loading = true;
-    notifyListeners();
-    
-    // Wait for session to be restored (important for web refresh)
-    await Future.delayed(const Duration(milliseconds: 500));
-    
-    // Check existing session after waiting
-    try {
-      final session = _client.auth.currentSession;
-      if (session != null) {
-        _user = session.user;
-        _profile = CambricUserProfile.fromUser(_user!);
-        // Load full profile from Supabase
-        await _loadFullProfile();
-      }
-    } catch (e) {
-      // Session check failed, user not logged in
-    }
-
-    // Listen for auth changes
+    // Start listening to auth state changes FIRST
+    // This is critical for web where session restores asynchronously
     _authSubscription = _client.auth.onAuthStateChange.listen((data) async {
       final AuthChangeEvent event = data.event;
       final Session? session = data.session;
 
-      if (event == AuthChangeEvent.signedIn || event == AuthChangeEvent.tokenRefreshed) {
-        _user = session?.user;
-        _profile = _user != null ? CambricUserProfile.fromUser(_user!) : null;
-        // Load full profile from Supabase
-        await _loadFullProfile();
+      // Handle initial session restore (web refresh)
+      if (event == AuthChangeEvent.initialSession || 
+          event == AuthChangeEvent.signedIn || 
+          event == AuthChangeEvent.tokenRefreshed) {
+        if (session?.user != null) {
+          _user = session!.user;
+          _profile = CambricUserProfile.fromUser(_user!);
+          await _loadFullProfile();
+        }
       } else if (event == AuthChangeEvent.signedOut) {
         _user = null;
         _profile = null;
@@ -128,8 +114,18 @@ class AuthProvider extends ChangeNotifier {
       notifyListeners();
     });
     
-    _loading = false;
-    notifyListeners();
+    // Check if we already have a session
+    final existingSession = _client.auth.currentSession;
+    if (existingSession != null) {
+      _user = existingSession.user;
+      _profile = CambricUserProfile.fromUser(_user!);
+      await _loadFullProfile();
+      _loading = false;
+      notifyListeners();
+    } else {
+      _loading = false;
+      notifyListeners();
+    }
   }
 
   Future<void> _loadFullProfile() async {

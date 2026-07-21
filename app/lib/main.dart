@@ -13,21 +13,19 @@ import 'screens/settings_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
-  // Initialize Supabase
+
   await Supabase.initialize(
     url: 'https://dafgzzkerytjuvxzymnq.supabase.co',
     anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRhZmd6emtlcnl0anV2eHp5bW5xIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM3MTE1MDUsImV4cCI6MjA5OTI4NzUwNX0.bZdxqNuy1ZyHMGzBieq7BzUd6IUEhfHEZxL-YTka3DQ',
   );
-  
-  // Set system UI overlay style
+
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
       statusBarIconBrightness: Brightness.dark,
     ),
   );
-  
+
   runApp(
     MultiProvider(
       providers: [
@@ -93,8 +91,8 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
       CurvedAnimation(parent: _controller, curve: const Interval(0.0, 0.5, curve: Curves.easeOut)),
     );
     _controller.forward();
-    
-    Future.delayed(const Duration(milliseconds: 2000), () {
+
+    Future.delayed(const Duration(milliseconds: 1500), () {
       if (mounted) {
         setState(() {
           _showDisclaimer = true;
@@ -124,6 +122,8 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
 
   @override
   Widget build(BuildContext context) {
+    final auth = context.watch<AuthProvider>();
+    
     return Scaffold(
       body: Container(
         width: double.infinity,
@@ -192,6 +192,23 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                       fontSize: 12,
                     ),
                   ),
+                  const SizedBox(height: 16),
+                  if (auth.isAuthenticated)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Colors.green.withOpacity(0.3),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.check_circle, color: Colors.white, size: 16),
+                          SizedBox(width: 6),
+                          Text('Session restored', style: TextStyle(color: Colors.white, fontSize: 12)),
+                        ],
+                      ),
+                    ),
                   const Spacer(),
                   if (_showDisclaimer && !_accepted)
                     Container(
@@ -208,7 +225,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                               Icon(Icons.warning_amber_rounded, color: Colors.amber, size: 24),
                               SizedBox(width: 10),
                               Text(
-                                '⚠️ Important Disclaimer',
+                                'Important Disclaimer',
                                 style: TextStyle(
                                   color: Colors.white,
                                   fontSize: 16,
@@ -219,7 +236,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                           ),
                           const SizedBox(height: 12),
                           const Text(
-                            '⚕️ Do NOT rely on this app\'s data to help diagnose, treat, or manage any health condition or disease.',
+                            'Do NOT rely on this app data to help diagnose, treat, or manage any health condition or disease.',
                             style: TextStyle(color: Colors.white70, fontSize: 13, height: 1.5),
                             textAlign: TextAlign.center,
                           ),
@@ -230,9 +247,9 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                             textAlign: TextAlign.center,
                           ),
                           const SizedBox(height: 8),
-                          Text(
+                          const Text(
                             'Digital Saver is NOT a certified medical device. The data shown may not be 100% accurate.',
-                            style: TextStyle(color: const Color(0xFFFFD54F), fontSize: 12, height: 1.5),
+                            style: TextStyle(color: Color(0xFFFFD54F), fontSize: 12, height: 1.5),
                             textAlign: TextAlign.center,
                           ),
                           const SizedBox(height: 20),
@@ -304,15 +321,6 @@ class _MainNavState extends State<MainNav> {
     SettingsScreen(),
   ];
 
-  static const _items = [
-    BottomNavigationBarItem(icon: Icon(Icons.dashboard_outlined), label: 'Dashboard'),
-    BottomNavigationBarItem(icon: Icon(Icons.favorite_outline), label: 'Heart'),
-    BottomNavigationBarItem(icon: Icon(Icons.water_drop_outlined), label: 'BP'),
-    BottomNavigationBarItem(icon: Icon(Icons.directions_run_outlined), label: 'Activity'),
-    BottomNavigationBarItem(icon: Icon(Icons.bedtime_outlined), label: 'Sleep'),
-    BottomNavigationBarItem(icon: Icon(Icons.settings_outlined), label: 'Settings'),
-  ];
-
   @override
   Widget build(BuildContext context) {
     final ble = context.watch<BleService>();
@@ -376,7 +384,7 @@ class _MainNavState extends State<MainNav> {
         onDestinationSelected: (i) => setState(() => _currentIndex = i),
         backgroundColor: Colors.white,
         elevation: 8,
-        destinations: [
+        destinations: const [
           NavigationDestination(icon: Icon(Icons.dashboard_outlined), selectedIcon: Icon(Icons.dashboard), label: 'Home'),
           NavigationDestination(icon: Icon(Icons.favorite_outline), label: 'Heart'),
           NavigationDestination(icon: Icon(Icons.water_drop_outlined), label: 'BP'),
