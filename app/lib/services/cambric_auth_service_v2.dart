@@ -278,34 +278,30 @@ class AuthProvider extends ChangeNotifier {
     _error = null;
     notifyListeners();
 
-    // Safety timeout - ensure loading is set to false after 10 seconds
-    final timeoutFuture = Future.delayed(const Duration(seconds: 10), () {
-      if (_loading) {
-        _loading = false;
-        _error = 'Sign in timed out';
-        notifyListeners();
-      }
-      return false;
-    });
-
     try {
-      final response = await _client.auth.signInWithPassword(
+      // Race between sign in and 8 second timeout
+      final result = await _client.auth.signInWithPassword(
         email: email,
         password: password,
-      );
+      ).timeout(const Duration(seconds: 8));
 
-      if (response.user != null) {
-        _user = response.user;
+      if (result.user != null) {
+        _user = result.user;
         _profile = CambricUserProfile.fromUser(_user!);
         _loadFullProfile(); // fire and forget
         _loading = false;
-        _initialCheckDone = true; // Mark as done after sign in
+        _initialCheckDone = true;
         notifyListeners();
         return true;
       }
 
       _loading = false;
       _error = 'Sign in failed';
+      notifyListeners();
+      return false;
+    } on TimeoutException {
+      _loading = false;
+      _error = 'Connection timed out. Please check your internet.';
       notifyListeners();
       return false;
     } catch (e) {
