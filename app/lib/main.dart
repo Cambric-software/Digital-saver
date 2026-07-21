@@ -101,6 +101,15 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
         });
       }
     });
+
+    // FALLBACK: Show disclaimer after 3 seconds if not shown
+    Future.delayed(const Duration(seconds: 3), () {
+      if (mounted && !_showDisclaimer) {
+        setState(() {
+          _showDisclaimer = true;
+        });
+      }
+    });
   }
 
   @override
