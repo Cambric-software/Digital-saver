@@ -251,6 +251,7 @@ class AuthProvider extends ChangeNotifier {
         _profile = CambricUserProfile.fromUser(_user!);
         await _createUserProfile();
         _loading = false;
+        _initialCheckDone = true;
         notifyListeners();
         return true;
       }
