@@ -263,7 +263,7 @@ class AuthProvider extends ChangeNotifier {
       return false;
     } catch (e) {
       _loading = false;
-      _error = _parseError(e);
+      _error = _parseError(e); _initialCheckDone = true; // Mark done even on failure
       notifyListeners();
       return false;
     }
@@ -296,17 +296,18 @@ class AuthProvider extends ChangeNotifier {
       }
 
       _loading = false;
-      _error = 'Sign in failed';
+      _error = "Sign in failed"; _initialCheckDone = true; // Mark done even on failure
       notifyListeners();
       return false;
     } on TimeoutException {
       _loading = false;
+      _initialCheckDone = true; // Mark done even on timeout
       _error = 'Connection timed out. Please check your internet.';
       notifyListeners();
       return false;
     } catch (e) {
       _loading = false;
-      _error = _parseError(e);
+      _error = _parseError(e); _initialCheckDone = true; // Mark done even on failure
       notifyListeners();
       return false;
     }
@@ -327,7 +328,7 @@ class AuthProvider extends ChangeNotifier {
       return true;
     } catch (e) {
       _loading = false;
-      _error = _parseError(e);
+      _error = _parseError(e); _initialCheckDone = true; // Mark done even on failure
       notifyListeners();
       return false;
     }
@@ -418,7 +419,7 @@ class AuthProvider extends ChangeNotifier {
       return true;
     } catch (e) {
       _loading = false;
-      _error = _parseError(e);
+      _error = _parseError(e); _initialCheckDone = true; // Mark done even on failure
       notifyListeners();
       return false;
     }
