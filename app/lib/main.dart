@@ -117,10 +117,16 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     
     // Wait for auth to finish loading before navigating
     Future.delayed(const Duration(milliseconds: 300), () async {
-      // If still loading, wait for it
+      // If still loading, wait for it (max 5 seconds to prevent infinite loop)
+      final startTime = DateTime.now();
       if (auth.loading) {
         await Future.doWhile(() async {
           await Future.delayed(const Duration(milliseconds: 100));
+          final elapsed = DateTime.now().difference(startTime).inSeconds;
+          if (elapsed > 5) {
+            debugPrint('Auth loading timeout after 5s, proceeding...');
+            return false;
+          }
           return context.mounted && auth.loading;
         });
       }
