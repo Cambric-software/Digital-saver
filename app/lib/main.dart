@@ -78,7 +78,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
   late AnimationController _controller;
   late Animation<double> _fadeAnimation;
   late Animation<double> _scaleAnimation;
-  bool _showDisclaimer = false;
+  bool _showDisclaimer = true; // FORCE SHOW IMMEDIATELY
   bool _accepted = false;
 
   @override
