@@ -74,10 +74,11 @@ class AuthProvider extends ChangeNotifier {
   SupabaseClient get _client => CambricAuth.client;
   User? _user;
   CambricUserProfile? _profile;
-  bool _loading = false;
+  bool _loading = true;  // Start as true to prevent premature redirects
   String? _error;
   StreamSubscription<AuthState>? _authSubscription;
   bool _sessionRestored = false;
+  bool _initialCheckDone = false;
 
   User? get user => _user;
   CambricUserProfile? get profile => _profile;
@@ -97,6 +98,7 @@ class AuthProvider extends ChangeNotifier {
       onError: (error) {
         _error = error.toString();
         _loading = false;
+        _initialCheckDone = true;
         notifyListeners();
       },
     );
@@ -107,7 +109,7 @@ class AuthProvider extends ChangeNotifier {
   }
 
   void _checkExistingSessionSync() {
-    if (_sessionRestored) return;
+    if (_initialCheckDone) return;
     
     try {
       final existingSession = _client.auth.currentSession;
@@ -116,20 +118,34 @@ class AuthProvider extends ChangeNotifier {
         _profile = CambricUserProfile.fromUser(_user!);
         _sessionRestored = true;
         _loading = false;
+        _initialCheckDone = true;
         // Load full profile in background
         _loadFullProfile();
         notifyListeners();
       } else {
-        _loading = false;
-        notifyListeners();
+        // No session found yet, wait for stream
+        // Set a timeout to prevent infinite loading
+        Future.delayed(const Duration(seconds: 3), () {
+          if (!_initialCheckDone && _user == null) {
+            _loading = false;
+            _initialCheckDone = true;
+            notifyListeners();
+          }
+        });
       }
     } catch (e) {
       _loading = false;
+      _initialCheckDone = true;
       notifyListeners();
     }
   }
 
   Future<void> _handleAuthChange(AuthState data) async {
+    if (_initialCheckDone && _user != null && data.event != AuthChangeEvent.signedOut) {
+      // Already have a user, ignore redundant events (except signedOut)
+      return;
+    }
+
     final AuthChangeEvent event = data.event;
     final Session? session = data.session;
 
@@ -143,6 +159,7 @@ class AuthProvider extends ChangeNotifier {
           await _loadFullProfile();
         }
         _loading = false;
+        _initialCheckDone = true;
         _error = null;
         notifyListeners();
         break;
@@ -155,6 +172,7 @@ class AuthProvider extends ChangeNotifier {
           await _loadFullProfile();
         }
         _loading = false;
+        _initialCheckDone = true;
         _error = null;
         notifyListeners();
         break;
@@ -173,6 +191,7 @@ class AuthProvider extends ChangeNotifier {
         _profile = null;
         _sessionRestored = false;
         _loading = false;
+        _initialCheckDone = true;
         notifyListeners();
         break;
 
@@ -315,8 +334,13 @@ class AuthProvider extends ChangeNotifier {
       _user = null;
       _profile = null;
       _sessionRestored = false;
+      _initialCheckDone = true;
     } catch (e) {
       // Sign out failed but still clear local state
+      _user = null;
+      _profile = null;
+      _sessionRestored = false;
+      _initialCheckDone = true;
     }
 
     _loading = false;

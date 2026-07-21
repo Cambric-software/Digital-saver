@@ -1021,7 +1021,7 @@ class _DownloadCard extends StatelessWidget {
             icon: Icons.android,
             label: 'Build Android APK',
             color: const Color(0xFF3DDC84),
-            onTap: () => _openUrl('https://github.com/Cambric-software/Digital-saver#building'),
+            onTap: () => _openUrl('https://github.com/Cambric-software/Digital-saver/blob/main/README.md#building'),
           ),
           const SizedBox(height: 10),
           _DownloadButton(

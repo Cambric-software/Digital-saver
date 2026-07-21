@@ -228,6 +228,10 @@ pio run --target upload
 
 ### Part 2: Mobile App Setup
 
+#### Building {#building}
+
+This section covers how to build and install the Digital Saver mobile app.
+
 #### Step 1: Install Flutter
 ```bash
 # Download Flutter SDK from https://flutter.dev
