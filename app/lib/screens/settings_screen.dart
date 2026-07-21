@@ -7,7 +7,7 @@ import '../services/ble_service.dart';
 import '../services/emergency_service.dart';
 import '../services/storage_service.dart';
 import '../services/user_profile_service.dart';
-import '../services/cambric_auth_service.dart';
+import '../services/cambric_auth_service_v2.dart';
 import '../services/smart_data_service.dart';
 import '../models/health_models.dart';
 import 'auth_screen.dart';

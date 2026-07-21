@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'services/ble_service.dart';
-import 'services/cambric_auth_service.dart';
+import 'services/cambric_auth_service_v2.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/heart_screen.dart';
 import 'screens/bp_screen.dart';
