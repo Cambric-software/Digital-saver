@@ -1013,64 +1013,73 @@ class _DownloadCard extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           const Text(
-            'Download the native app for full Bluetooth support',
+            'Native apps with full Bluetooth support',
             style: TextStyle(color: Color(0xFF64748B), fontSize: 12),
           ),
           const SizedBox(height: 16),
-          
-          // Android
           _DownloadButton(
             icon: Icons.android,
-            label: 'Android (APK)',
+            label: 'Build Android APK',
             color: const Color(0xFF3DDC84),
-            onTap: () => _openUrl('https://github.com/Cambric-software/Digital-saver/releases/latest'),
+            onTap: () => _openUrl('https://github.com/Cambric-software/Digital-saver#building'),
           ),
           const SizedBox(height: 10),
-          
-          // iOS
           _DownloadButton(
             icon: Icons.apple,
-            label: 'iOS (Coming Soon)',
+            label: 'Build iOS App',
             color: const Color(0xFF000000),
             onTap: () => _showComingSoon(context, 'iOS'),
           ),
           const SizedBox(height: 10),
-          
-          // Windows
           _DownloadButton(
             icon: Icons.desktop_windows,
-            label: 'Windows (Coming Soon)',
+            label: 'Build Windows App',
             color: const Color(0xFF0078D4),
             onTap: () => _showComingSoon(context, 'Windows'),
           ),
           const SizedBox(height: 10),
-          
-          // Linux
           _DownloadButton(
             icon: Icons.computer,
-            label: 'Linux (Coming Soon)',
+            label: 'Build Linux App',
             color: const Color(0xFFE95420),
             onTap: () => _showComingSoon(context, 'Linux'),
+          ),
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFF3E0),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: const Color(0xFFFFB74D)),
+            ),
+            child: const Row(
+              children: [
+                Icon(Icons.info_outline, color: Color(0xFFE65100), size: 18),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Native apps are built locally. See README for build instructions.',
+                    style: TextStyle(color: Color(0xFFE65100), fontSize: 11),
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
     );
   }
-  
   void _openUrl(String url) async {
     final uri = Uri.parse(url);
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     }
   }
-  
   void _showComingSoon(BuildContext context, String platform) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('$platform app is coming soon!'),
-        backgroundColor: const Color(0xFF2563EB),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        content: Text('$platform build is coming soon!'),
+        backgroundColor: const Color(0xFF2563eb),
       ),
     );
   }
