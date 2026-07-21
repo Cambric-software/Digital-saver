@@ -133,7 +133,13 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
           );
         } else {
           Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (_) => const AuthScreen()),
+            MaterialPageRoute(builder: (_) => AuthScreen(
+              onSignedIn: () {
+                Navigator.of(context).pushReplacement(
+                  MaterialPageRoute(builder: (_) => const MainNav()),
+                );
+              },
+            )),
           );
         }
       }
