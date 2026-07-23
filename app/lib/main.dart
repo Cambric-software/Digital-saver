@@ -418,11 +418,20 @@ class _MainNavState extends State<MainNav> {
     final ble = context.watch<BleService>();
     final auth = context.watch<AuthProvider>();
 
-    // Redirect if not authenticated
-    if (!auth.isAuthenticated && !auth.loading) {
+    // Show loading ONLY when actively loading
+    if (auth.loading) {
       return const Scaffold(
         body: Center(
           child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
+    // Not authenticated AND not loading = show auth screen
+    if (!auth.isAuthenticated) {
+      return const Scaffold(
+        body: Center(
+          child: Text('Not authenticated'),
         ),
       );
     }
