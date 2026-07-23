@@ -1,8 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../services/cambric_auth_service_v2.dart';
 
 class AuthScreen extends StatefulWidget {
   final VoidCallback? onSignedIn;
@@ -81,20 +79,25 @@ class _AuthScreenState extends State<AuthScreen> {
     _startLoadingTimer();
 
     try {
-      // Use AuthProvider for consistent state management
-      final auth = context.read<AuthProvider>();
-      final success = await auth.signIn(email: email, password: password);
+      // Use Supabase directly to avoid triggering AuthProvider loading state
+      final response = await Supabase.instance.client.auth.signInWithPassword(
+        email: email,
+        password: password,
+      ).timeout(const Duration(seconds: 10));
 
       _loadingTimer?.cancel();
 
-      if (success && mounted) {
+      if (response.user != null && mounted) {
         Navigator.of(context).pop();
         widget.onSignedIn?.call();
       } else if (mounted) {
         setState(() {
-          _errorMessage = auth.error ?? 'Sign in failed';
+          _errorMessage = 'Sign in failed. Please check your credentials.';
         });
       }
+    } on TimeoutException {
+      _loadingTimer?.cancel();
+      if (mounted) setState(() => _errorMessage = 'Connection timed out. Please try again.');
     } on AuthException catch (e) {
       _loadingTimer?.cancel();
       if (mounted) setState(() => _errorMessage = _mapError(e.message));
@@ -139,17 +142,15 @@ class _AuthScreenState extends State<AuthScreen> {
     _startLoadingTimer();
 
     try {
-      // Use AuthProvider for consistent state management
-      final auth = context.read<AuthProvider>();
-      final success = await auth.signUp(
+      // Use Supabase directly to avoid triggering AuthProvider loading state
+      final response = await Supabase.instance.client.auth.signUp(
         email: email,
         password: password,
-        displayName: name,
-      );
+      ).timeout(const Duration(seconds: 10));
 
       _loadingTimer?.cancel();
 
-      if (success && mounted) {
+      if (response.user != null && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Account created successfully!'),
@@ -160,9 +161,12 @@ class _AuthScreenState extends State<AuthScreen> {
         widget.onSignedIn?.call();
       } else if (mounted) {
         setState(() {
-          _errorMessage = auth.error ?? 'Sign up failed';
+          _errorMessage = 'Sign up pending. Please check your email to confirm.';
         });
       }
+    } on TimeoutException {
+      _loadingTimer?.cancel();
+      if (mounted) setState(() => _errorMessage = 'Connection timed out. Please try again.');
     } on AuthException catch (e) {
       _loadingTimer?.cancel();
       if (mounted) setState(() => _errorMessage = _mapError(e.message));
