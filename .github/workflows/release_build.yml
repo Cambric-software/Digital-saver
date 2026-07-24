@@ -55,11 +55,16 @@ jobs:
 
   build-windows:
     name: Build Windows App
-    runs-on: windows-2019
+    runs-on: windows-latest
     
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Install Visual Studio Build Tools
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
