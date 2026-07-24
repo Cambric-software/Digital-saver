@@ -84,15 +84,49 @@ jobs:
 
       - name: Build Windows (Release)
         run: |
-          # Replace VS bundled CMake with wrapper
+          # Replace VS bundled CMake with C# wrapper
           $vsCmakeDir = "C:\Program Files\Microsoft Visual Studio\18\Enterprise\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin"
           $vsCmakePath = Join-Path $vsCmakeDir "cmake.exe"
           $vsCmakeRealPath = Join-Path $vsCmakeDir "cmake-real.exe"
           
-          # Backup original and copy wrapper
+          # Backup original cmake
           if (Test-Path $vsCmakePath) {
             Copy-Item $vsCmakePath $vsCmakeRealPath -Force
-            Copy-Item "app/windows/cmake-wrapper.bat" (Join-Path $vsCmakeDir "cmake.exe") -Force
+            
+            # Create C# wrapper
+            $wrapperCode = @'
+using System;
+using System.Diagnostics;
+
+class Program {
+    static int Main(string[] args) {
+        var newArgs = new System.Collections.Generic.List<string> { "-G", "Visual Studio 17 2022", "-A", "x64" };
+        bool skipNext = false;
+        foreach (var arg in args) {
+            if (skipNext) { skipNext = false; continue; }
+            if (arg == "-G" || arg == "Visual Studio 16 2019") continue;
+            if (arg == "-A") { skipNext = true; continue; }
+            newArgs.Add(arg);
+        }
+        var scriptDir = System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
+        var realCmake = System.IO.Path.Combine(scriptDir, "cmake-real.exe");
+        Console.WriteLine("Running: " + realCmake + " " + string.Join(" ", newArgs));
+        var psi = new ProcessStartInfo(realCmake, string.Join(" ", newArgs)) { UseShellExecute = false };
+        var proc = Process.Start(psi);
+        proc.WaitForExit();
+        return proc.ExitCode;
+    }
+}
+'@
+            $wrapperPath = Join-Path $vsCmakeDir "cmake-wrapper.cs"
+            Set-Content -Path $wrapperPath -Value $wrapperCode -Encoding UTF8
+            
+            # Compile C# wrapper
+            $cscPath = "C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe"
+            if (!(Test-Path $cscPath)) {
+                $cscPath = (Get-ChildItem "C:\Windows\Microsoft.NET\Framework64\v4.0*" -Filter csc.exe | Select-Object -First 1).FullName
+            }
+            & $cscPath /nologo /out:"$vsCmakePath" $wrapperPath
           }
           
           cd app

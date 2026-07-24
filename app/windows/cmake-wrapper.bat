@@ -12,7 +12,7 @@ set NEW_ARGS=
 if "%~1"=="" goto run_cmake
 if "%~1"=="-G" goto skip_generator
 if "%~2"=="Visual Studio 16 2019" goto skip_value
-set NEW_ARGS=!NEW_ARGS! %1
+set NEW_ARGS=%NEW_ARGS% %1
 shift
 goto parse_args
 
@@ -29,8 +29,8 @@ goto parse_args
 
 :run_cmake
 REM Add our generator
-set NEW_ARGS=-G "Visual Studio 17 2022" -A x64 !NEW_ARGS!
-echo Running: "%SCRIPT_DIR%cmake-real.exe" !NEW_ARGS!
-"%SCRIPT_DIR%cmake-real.exe" !NEW_ARGS!
+set NEW_ARGS=-G "Visual Studio 17 2022" -A x64 %NEW_ARGS%
+echo Running: "%SCRIPT_DIR%cmake-real.exe" %NEW_ARGS%
+"%SCRIPT_DIR%cmake-real.exe" %NEW_ARGS%
 
 exit /b %ERRORLEVEL%
