@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:provider/provider.dart';
+import '../services/cambric_auth_service_v2.dart';
 
 class AuthScreen extends StatefulWidget {
   final VoidCallback? onSignedIn;
@@ -79,28 +80,27 @@ class _AuthScreenState extends State<AuthScreen> {
     _startLoadingTimer();
 
     try {
-      // Use Supabase directly to avoid triggering AuthProvider loading state
-      final response = await Supabase.instance.client.auth.signInWithPassword(
+      // Use AuthProvider to handle sign in properly
+      final auth = context.read<AuthProvider>();
+      final success = await auth.signIn(
         email: email,
         password: password,
       ).timeout(const Duration(seconds: 10));
 
       _loadingTimer?.cancel();
 
-      if (response.user != null && mounted) {
-        Navigator.of(context).pop();
+      if (success) {
         widget.onSignedIn?.call();
-      } else if (mounted) {
-        setState(() {
-          _errorMessage = 'Sign in failed. Please check your credentials.';
-        });
+      } else {
+        if (mounted) {
+          setState(() {
+            _errorMessage = auth.error ?? 'Sign in failed. Please check your credentials.';
+          });
+        }
       }
     } on TimeoutException {
       _loadingTimer?.cancel();
       if (mounted) setState(() => _errorMessage = 'Connection timed out. Please try again.');
-    } on AuthException catch (e) {
-      _loadingTimer?.cancel();
-      if (mounted) setState(() => _errorMessage = _mapError(e.message));
     } catch (e) {
       _loadingTimer?.cancel();
       if (mounted) setState(() => _errorMessage = 'Connection error. Please try again.');
@@ -142,49 +142,40 @@ class _AuthScreenState extends State<AuthScreen> {
     _startLoadingTimer();
 
     try {
-      // Use Supabase directly to avoid triggering AuthProvider loading state
-      final response = await Supabase.instance.client.auth.signUp(
+      // Use AuthProvider to handle sign up properly
+      final auth = context.read<AuthProvider>();
+      final success = await auth.signUp(
         email: email,
         password: password,
+        displayName: name,
       ).timeout(const Duration(seconds: 10));
 
       _loadingTimer?.cancel();
 
-      if (response.user != null && mounted) {
+      if (success) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Account created successfully!'),
             backgroundColor: Color(0xFF22C55E),
           ),
         );
-        Navigator.of(context).pop();
         widget.onSignedIn?.call();
-      } else if (mounted) {
-        setState(() {
-          _errorMessage = 'Sign up pending. Please check your email to confirm.';
-        });
+      } else {
+        if (mounted) {
+          setState(() {
+            _errorMessage = auth.error ?? 'Sign up pending. Please check your email to confirm.';
+          });
+        }
       }
     } on TimeoutException {
       _loadingTimer?.cancel();
       if (mounted) setState(() => _errorMessage = 'Connection timed out. Please try again.');
-    } on AuthException catch (e) {
-      _loadingTimer?.cancel();
-      if (mounted) setState(() => _errorMessage = _mapError(e.message));
     } catch (e) {
       _loadingTimer?.cancel();
       if (mounted) setState(() => _errorMessage = 'Connection error. Please try again.');
     }
 
     _resetLoading();
-  }
-
-  String _mapError(String message) {
-    if (message.contains('Invalid login credentials')) return 'Invalid email or password';
-    if (message.contains('Email not confirmed')) return 'Please check your email to confirm';
-    if (message.contains('User already registered')) return 'This email is already registered';
-    if (message.contains('Password should be at least')) return 'Password must be at least 6 characters';
-    if (message.contains('weak')) return 'Password is too weak';
-    return message;
   }
 
   void _switchTab(int index) {

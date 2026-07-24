@@ -76,9 +76,10 @@ class AuthProvider extends ChangeNotifier {
   SupabaseClient get _client => CambricAuth.client;
   User? _user;
   CambricUserProfile? _profile;
-  bool _loading = false;
+  bool _loading = true; // Start true for initial check
   String? _error;
   StreamSubscription<AuthState>? _authSubscription;
+  bool _initialized = false;
 
   User? get user => _user;
   CambricUserProfile? get profile => _profile;
@@ -96,6 +97,15 @@ class AuthProvider extends ChangeNotifier {
     
     // Then listen for auth changes
     _authSubscription = _client.auth.onAuthStateChange.listen(_handleAuthChange);
+    
+    // Fallback: mark as initialized after 3 seconds
+    Future.delayed(const Duration(seconds: 3), () {
+      if (!_initialized) {
+        _initialized = true;
+        _loading = false;
+        notifyListeners();
+      }
+    });
   }
 
   void _checkExistingSession() {
@@ -105,10 +115,15 @@ class AuthProvider extends ChangeNotifier {
         _user = session.user;
         _profile = CambricUserProfile.fromUser(_user!);
         _loadFullProfile();
+        _initialized = true;
+        _loading = false;
         notifyListeners();
       }
     } catch (e) {
       // Session check failed, that's OK
+      _initialized = true;
+      _loading = false;
+      notifyListeners();
     }
   }
 
@@ -123,6 +138,8 @@ class AuthProvider extends ChangeNotifier {
           _user = session!.user;
           _profile = CambricUserProfile.fromUser(_user!);
           _error = null;
+          _initialized = true;
+          _loading = false;
           _loadFullProfile();
         }
         break;
