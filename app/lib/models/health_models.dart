@@ -220,7 +220,7 @@ class UserProfile {
     this.language = 'en',
   });
 
-  double get bmi => weightKg / ((heightCm / 100) * (heightCm / 100));
+  double get bmi => heightCm > 0 && heightCm != 0 ? weightKg / ((heightCm / 100) * (heightCm / 100)) : 0;
 
   String get bmiCategory {
     if (bmi < 18.5) return 'Underweight';

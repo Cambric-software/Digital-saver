@@ -90,8 +90,10 @@ class _AuthScreenState extends State<AuthScreen> {
       _loadingTimer?.cancel();
 
       if (success) {
+        _resetLoading();
         widget.onSignedIn?.call();
       } else {
+        _resetLoading();
         if (mounted) {
           setState(() {
             _errorMessage = auth.error ?? 'Sign in failed. Please check your credentials.';
@@ -151,6 +153,7 @@ class _AuthScreenState extends State<AuthScreen> {
       _loadingTimer?.cancel();
 
       if (success) {
+        _resetLoading();
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Account created successfully!'),
@@ -159,6 +162,7 @@ class _AuthScreenState extends State<AuthScreen> {
         );
         widget.onSignedIn?.call();
       } else {
+        _resetLoading();
         if (mounted) {
           setState(() {
             _errorMessage = auth.error ?? 'Sign up pending. Please check your email to confirm.';
