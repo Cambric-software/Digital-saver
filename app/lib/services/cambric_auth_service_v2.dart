@@ -189,7 +189,7 @@ class AuthProvider extends ChangeNotifier {
     if (_user == null) return;
 
     try {
-      final result = await _client
+      final result = await _client!
           .from('digital_saver_user_profiles')
           .select()
           .eq('id', _user!.id)
