@@ -82,6 +82,11 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<void> _init() async {
+    // Mark as initialized immediately to avoid infinite loading
+    // Auth state will be handled asynchronously
+    _initialized = true;
+    _loading = false;
+    
     try {
       // Set up listener for auth state changes
       _authSubscription = _client.auth.onAuthStateChange.listen((data) async {
@@ -101,7 +106,6 @@ class AuthProvider extends ChangeNotifier {
           _profile = null;
         }
 
-        _initialized = true;
         _loading = false;
         _error = null;
         notifyListeners();
@@ -118,8 +122,6 @@ class AuthProvider extends ChangeNotifier {
       // Initialization error, continue anyway
     }
 
-    _initialized = true;
-    _loading = false;
     notifyListeners();
   }
 
