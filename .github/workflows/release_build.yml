@@ -86,6 +86,7 @@ jobs:
         run: |
           $env:CMAKE_GENERATOR = "Visual Studio 17 2022"
           $env:CMAKE_GENERATOR_PLATFORM = "x64"
+          cd app
           flutter build windows --release
 
       - name: Create ZIP
