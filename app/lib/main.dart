@@ -381,11 +381,22 @@ class _MainNavState extends State<MainNav> {
       );
     }
 
-    // Not authenticated AND not loading = show auth screen
+    // Not authenticated AND not loading = redirect to auth screen
     if (!auth.isAuthenticated) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => AuthScreen(
+            onSignedIn: () {
+              Navigator.of(context).pushReplacement(
+                MaterialPageRoute(builder: (_) => const MainNav()),
+              );
+            },
+          )),
+        );
+      });
       return const Scaffold(
         body: Center(
-          child: Text('Not authenticated'),
+          child: CircularProgressIndicator(),
         ),
       );
     }
