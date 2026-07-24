@@ -78,8 +78,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
   late AnimationController _controller;
   late Animation<double> _fadeAnimation;
   late Animation<double> _scaleAnimation;
-  bool _showDisclaimer = true; // FORCE SHOW IMMEDIATELY
-  bool _accepted = false;
+  bool _showDisclaimer = false;
 
   @override
   void initState() {
@@ -93,18 +92,9 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     );
     _controller.forward();
 
-    // Show disclaimer after a short delay
+    // Show disclaimer after animation
     Future.delayed(const Duration(milliseconds: 1500), () {
       if (mounted) {
-        setState(() {
-          _showDisclaimer = true;
-        });
-      }
-    });
-
-    // FALLBACK: Show disclaimer after 3 seconds if not shown
-    Future.delayed(const Duration(seconds: 3), () {
-      if (mounted && !_showDisclaimer) {
         setState(() {
           _showDisclaimer = true;
         });
@@ -119,60 +109,24 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
   }
 
   void _acceptAndContinue() {
-    // Skip auth entirely, go directly to sign in
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (_) => AuthScreen(
-        onSignedIn: () {
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (_) => const MainNav()),
-          );
-        },
-      )),
-    );
-    return;
-  }
-
-  void _OLD_acceptAndContinue() {
     final auth = context.read<AuthProvider>();
-    setState(() {
-      _accepted = true;
-    });
     
-    // Wait for auth to finish loading before navigating
-    Future.delayed(const Duration(milliseconds: 300), () async {
-      // If still loading, wait for it (max 5 seconds to prevent infinite loop)
-      final startTime = DateTime.now();
-      if (auth.loading) {
-        await Future.doWhile(() async {
-          await Future.delayed(const Duration(milliseconds: 100));
-          final elapsed = DateTime.now().difference(startTime).inSeconds;
-          if (elapsed > 5) {
-            debugPrint('Auth loading timeout after 5s, proceeding...');
-            return false;
-          }
-          return context.mounted && auth.loading;
-        });
-      }
-      
-      if (mounted) {
-        // Navigate based on auth status
-        if (auth.isAuthenticated) {
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (_) => const MainNav()),
-          );
-        } else {
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (_) => AuthScreen(
-              onSignedIn: () {
-                Navigator.of(context).pushReplacement(
-                  MaterialPageRoute(builder: (_) => const MainNav()),
-                );
-              },
-            )),
-          );
-        }
-      }
-    });
+    // Navigate based on current auth state
+    if (auth.isAuthenticated) {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => const MainNav()),
+      );
+    } else {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => AuthScreen(
+          onSignedIn: () {
+            Navigator.of(context).pushReplacement(
+              MaterialPageRoute(builder: (_) => const MainNav()),
+            );
+          },
+        )),
+      );
+    }
   }
 
   @override
@@ -283,7 +237,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                       ),
                     ),
                   const Spacer(),
-                  if (_showDisclaimer && !_accepted)
+                  if (_showDisclaimer)
                     Container(
                       padding: const EdgeInsets.all(20),
                       decoration: BoxDecoration(

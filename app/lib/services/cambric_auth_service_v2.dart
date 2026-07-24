@@ -70,15 +70,15 @@ class CambricUserProfile {
   };
 }
 
+/// Simplified AuthProvider with reliable session handling
+/// Uses standard Supabase Auth session management
 class AuthProvider extends ChangeNotifier {
   SupabaseClient get _client => CambricAuth.client;
   User? _user;
   CambricUserProfile? _profile;
-  bool _loading = true;  // Start as true to prevent premature redirects
+  bool _loading = false;
   String? _error;
   StreamSubscription<AuthState>? _authSubscription;
-  bool _sessionRestored = false;
-  bool _initialCheckDone = false;
 
   User? get user => _user;
   CambricUserProfile? get profile => _profile;
@@ -91,90 +91,40 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<void> _init() async {
-    // FIRST: Set up stream listener BEFORE anything else
-    // This ensures we catch initialSession even if it fires immediately
-    _authSubscription = _client.auth.onAuthStateChange.listen(
-      _handleAuthChange,
-      onError: (error) {
-        _error = error.toString();
-        _loading = false;
-        _initialCheckDone = true;
-        notifyListeners();
-      },
-    );
-
-    // THEN: Check for existing session synchronously
-    // This is a fallback for sessions already in memory
-    _checkExistingSessionSync();
+    // Check for existing session first
+    _checkExistingSession();
+    
+    // Then listen for auth changes
+    _authSubscription = _client.auth.onAuthStateChange.listen(_handleAuthChange);
   }
 
-  void _checkExistingSessionSync() {
-    if (_initialCheckDone) return;
-    
+  void _checkExistingSession() {
     try {
-      final existingSession = _client.auth.currentSession;
-      if (existingSession != null && existingSession.user != null) {
-        _user = existingSession.user;
+      final session = _client.auth.currentSession;
+      if (session != null && session.user != null) {
+        _user = session.user;
         _profile = CambricUserProfile.fromUser(_user!);
-        _sessionRestored = true;
-        _loading = false;
-        _initialCheckDone = true;
-        // Load full profile in background
         _loadFullProfile();
         notifyListeners();
-      } else {
-        // No session found yet, wait for stream
-        // Set a timeout to prevent infinite loading
-        Future.delayed(const Duration(seconds: 3), () {
-          if (!_initialCheckDone && _user == null) {
-            _loading = false;
-            _initialCheckDone = true;
-            notifyListeners();
-          }
-        });
       }
     } catch (e) {
-      _loading = false;
-      _initialCheckDone = true;
-      notifyListeners();
+      // Session check failed, that's OK
     }
   }
 
-  Future<void> _handleAuthChange(AuthState data) async {
-    if (_initialCheckDone && _user != null && data.event != AuthChangeEvent.signedOut) {
-      // Already have a user, ignore redundant events (except signedOut)
-      return;
-    }
-
+  void _handleAuthChange(AuthState data) {
     final AuthChangeEvent event = data.event;
     final Session? session = data.session;
 
     switch (event) {
       case AuthChangeEvent.initialSession:
-        // This fires when session is restored from storage (web refresh)
-        if (session?.user != null) {
-          _user = session!.user;
-          _profile = CambricUserProfile.fromUser(_user!);
-          _sessionRestored = true;
-          _loadFullProfile(); // fire and forget
-        }
-        _loading = false;
-        _initialCheckDone = true;
-        _error = null;
-        notifyListeners();
-        break;
-
       case AuthChangeEvent.signedIn:
         if (session?.user != null) {
           _user = session!.user;
           _profile = CambricUserProfile.fromUser(_user!);
-          _sessionRestored = true;
-          _loadFullProfile(); // fire and forget
+          _error = null;
+          _loadFullProfile();
         }
-        _loading = false;
-        _initialCheckDone = true;
-        _error = null;
-        notifyListeners();
         break;
 
       case AuthChangeEvent.tokenRefreshed:
@@ -182,32 +132,23 @@ class AuthProvider extends ChangeNotifier {
           _user = session!.user;
           _profile = CambricUserProfile.fromUser(_user!);
         }
-        _loading = false;
-        notifyListeners();
         break;
 
       case AuthChangeEvent.signedOut:
         _user = null;
         _profile = null;
-        _sessionRestored = false;
-        _loading = false;
-        _initialCheckDone = true;
-        notifyListeners();
         break;
 
       case AuthChangeEvent.userUpdated:
         if (session?.user != null) {
           _user = session!.user;
           _profile = CambricUserProfile.fromUser(_user!);
-          _loadFullProfile(); // fire and forget
+          _loadFullProfile();
         }
-        _loading = false;
-        notifyListeners();
-        break;
-
-      default:
         break;
     }
+    
+    notifyListeners();
   }
 
   Future<void> _loadFullProfile() async {
@@ -218,8 +159,7 @@ class AuthProvider extends ChangeNotifier {
           .from('digital_saver_user_profiles')
           .select()
           .eq('id', _user!.id)
-          .maybeSingle()
-          .timeout(const Duration(seconds: 5));
+          .maybeSingle();
 
       if (result != null) {
         _profile = CambricUserProfile.fromProfile(result);
@@ -230,7 +170,6 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-  // Sign up with email and password
   Future<bool> signUp({
     required String email,
     required String password,
@@ -251,25 +190,23 @@ class AuthProvider extends ChangeNotifier {
         _user = response.user;
         _profile = CambricUserProfile.fromUser(_user!);
         await _createUserProfile();
-        _loading = false;
-        _initialCheckDone = true;
         notifyListeners();
         return true;
       }
 
-      _loading = false;
-      _error = 'Sign up failed';
+      _error = 'Sign up pending. Please check your email to confirm.';
       notifyListeners();
       return false;
     } catch (e) {
-      _loading = false;
-      _error = _parseError(e); _initialCheckDone = true; // Mark done even on failure
+      _error = _parseError(e);
       notifyListeners();
       return false;
+    } finally {
+      _loading = false;
+      notifyListeners();
     }
   }
 
-  // Sign in with email and password
   Future<bool> signIn({
     required String email,
     required String password,
@@ -279,41 +216,36 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // Race between sign in and 8 second timeout
       final result = await _client.auth.signInWithPassword(
         email: email,
         password: password,
-      ).timeout(const Duration(seconds: 8));
+      ).timeout(const Duration(seconds: 10));
 
       if (result.user != null) {
         _user = result.user;
         _profile = CambricUserProfile.fromUser(_user!);
-        _loadFullProfile(); // fire and forget
-        _loading = false;
-        _initialCheckDone = true;
+        _loadFullProfile();
         notifyListeners();
         return true;
       }
 
-      _loading = false;
-      _error = "Sign in failed"; _initialCheckDone = true; // Mark done even on failure
+      _error = 'Sign in failed';
       notifyListeners();
       return false;
     } on TimeoutException {
-      _loading = false;
-      _initialCheckDone = true; // Mark done even on timeout
       _error = 'Connection timed out. Please check your internet.';
       notifyListeners();
       return false;
     } catch (e) {
-      _loading = false;
-      _error = _parseError(e); _initialCheckDone = true; // Mark done even on failure
+      _error = _parseError(e);
       notifyListeners();
       return false;
+    } finally {
+      _loading = false;
+      notifyListeners();
     }
   }
 
-  // Sign in with Google
   Future<bool> signInWithGoogle() async {
     _loading = true;
     _error = null;
@@ -324,40 +256,33 @@ class AuthProvider extends ChangeNotifier {
         OAuthProvider.google,
         redirectTo: 'https://cambric-software.github.io/Digital-saver/',
       );
-      // OAuth redirects, session will be restored via onAuthStateChange
       return true;
     } catch (e) {
-      _loading = false;
-      _error = _parseError(e); _initialCheckDone = true; // Mark done even on failure
+      _error = _parseError(e);
       notifyListeners();
       return false;
+    } finally {
+      _loading = false;
+      notifyListeners();
     }
   }
 
-  // Sign out
   Future<void> signOut() async {
     _loading = true;
     notifyListeners();
 
     try {
       await _client.auth.signOut();
-      _user = null;
-      _profile = null;
-      _sessionRestored = false;
-      _initialCheckDone = true;
     } catch (e) {
-      // Sign out failed but still clear local state
-      _user = null;
-      _profile = null;
-      _sessionRestored = false;
-      _initialCheckDone = true;
+      // Continue with local sign out
     }
-
+    
+    _user = null;
+    _profile = null;
     _loading = false;
     notifyListeners();
   }
 
-  // Update user profile
   Future<bool> updateProfile({
     String? displayName,
     Map<String, dynamic>? additionalData,
@@ -366,13 +291,12 @@ class AuthProvider extends ChangeNotifier {
 
     try {
       final updates = <String, dynamic>{
-        'id': _user!.id,  // Required for upsert
+        'id': _user!.id,
         'updated_at': DateTime.now().toIso8601String(),
       };
 
       if (displayName != null) {
         updates['display_name'] = displayName;
-        // Also update auth metadata
         await _client.auth.updateUser(
           UserAttributes(data: {'display_name': displayName}),
         );
@@ -403,7 +327,6 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-  // Reset password
   Future<bool> resetPassword(String email) async {
     _loading = true;
     _error = null;
@@ -418,14 +341,15 @@ class AuthProvider extends ChangeNotifier {
       notifyListeners();
       return true;
     } catch (e) {
-      _loading = false;
-      _error = _parseError(e); _initialCheckDone = true; // Mark done even on failure
+      _error = _parseError(e);
       notifyListeners();
       return false;
+    } finally {
+      _loading = false;
+      notifyListeners();
     }
   }
 
-  // Create user profile in database
   Future<void> _createUserProfile() async {
     if (_user == null) return;
 
@@ -442,7 +366,6 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-  // Parse error messages
   String _parseError(dynamic e) {
     if (e is AuthException) {
       return e.message;

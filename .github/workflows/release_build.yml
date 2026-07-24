@@ -1,0 +1,125 @@
+name: Build Release (Android & Windows)
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      release_version:
+        description: 'Release version (e.g., v1.0.0-beta)'
+        required: false
+        type: string
+
+jobs:
+  build-android:
+    name: Build Android APK
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.0'
+          channel: 'stable'
+
+      - name: Install dependencies
+        run: cd app && flutter pub get
+
+      - name: Build Android APK (Release)
+        run: cd app && flutter build apk --release
+
+      - name: Rename APK
+        run: |
+          cd app/build/app/outputs/flutter-apk
+          # Get version from tag or input
+          VERSION=${GITHUB_REF#refs/tags/}
+          if [ -z "$VERSION" ]; then
+            VERSION=${{ inputs.release_version || 'dev' }}
+          fi
+          mv app-release.apk "digital_saver_android_${VERSION}.apk"
+          ls -la
+
+      - name: Upload Android APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-apk
+          path: app/build/app/outputs/flutter-apk/digital_saver_android_*.apk
+          retention-days: 30
+
+  build-windows:
+    name: Build Windows App
+    runs-on: windows-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.0'
+          channel: 'stable'
+          windows-cache: true
+
+      - name: Install dependencies
+        run: cd app; flutter pub get
+
+      - name: Enable Windows desktop support
+        run: flutter config --enable-windows-desktop
+
+      - name: Build Windows App (Release)
+        run: cd app; flutter build windows --release
+
+      - name: Package Windows App
+        shell: pwsh
+        run: |
+          $VERSION = if ($env:GITHUB_REF) { $env:GITHUB_REF -replace 'refs/tags/', '' } else { '${{ inputs.release_version || 'dev' }}' }
+          Compress-Archive -Path "app/build/windows/runner/Release/*" -DestinationPath "digital_saver_windows_${VERSION}.zip" -Force
+          Get-ChildItem -Path . -Filter "*.zip"
+
+      - name: Upload Windows ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-app
+          path: digital_saver_windows_*.zip
+          retention-days: 30
+
+  create-release:
+    name: Create GitHub Release
+    needs: [build-android, build-windows]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download Android APK
+        uses: actions/download-artifact@v4
+        with:
+          name: android-apk
+          path: artifacts
+
+      - name: Download Windows ZIP
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-app
+          path: artifacts
+
+      - name: List artifacts
+        run: ls -la artifacts/
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          draft: false
+          prerelease: true
+          files: artifacts/*
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

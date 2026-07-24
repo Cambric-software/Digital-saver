@@ -1,11 +1,25 @@
 # 🏥 Digital Saver - Smartwatch Health Monitoring System
 
+> **Version:** 3.0.0 | **Company:** Cambric | **License:** MIT
+
 ## ©️ Copyright 2026 Cambric
 
 **Developed by Cambric**  
 **Project Type:** Smartwatch Health Monitoring System with Emergency Response  
 **Target:** Elderly and at-risk populations  
-**Licensed under MIT License**
+
+---
+
+## 📚 Complete Documentation
+
+| Document | Description |
+|---------|-------------|
+| **[SECURITY.md](SECURITY.md)** | Security architecture, authentication, data protection, privacy compliance |
+| **[docs/APP_ARCHITECTURE.md](docs/APP_ARCHITECTURE.md)** | Flutter app architecture, services, state management, screens |
+| **[docs/WATCH_FIRMWARE.md](docs/WATCH_FIRMWARE.md)** | Onyx watch firmware, ESP32 development, BLE protocol, sensors |
+| **[docs/DATABASE_SCHEMA.md](docs/DATABASE_SCHEMA.md)** | Supabase schema, RLS policies, indexes, queries |
+| **[docs/API_INTEGRATION.md](docs/API_INTEGRATION.md)** | API endpoints, authentication, CRUD operations |
+| **[docs/DEVELOPMENT_GUIDE.md](docs/DEVELOPMENT_GUIDE.md)** | Setup, testing, deployment, contributing |
 
 ---
 

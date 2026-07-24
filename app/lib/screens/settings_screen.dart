@@ -986,6 +986,10 @@ class _CambricAccountCard extends StatelessWidget {
 // DOWNLOAD CARD - App downloads for all platforms
 // ===========================================================================
 class _DownloadCard extends StatelessWidget {
+  // Release download URLs - will be updated when releases are created
+  static const String _latestReleaseUrl = 'https://github.com/Cambric-software/Digital-saver/releases';
+  static const String _releasesApiUrl = 'https://api.github.com/repos/Cambric-software/Digital-saver/releases/latest';
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -1017,49 +1021,52 @@ class _DownloadCard extends StatelessWidget {
             style: TextStyle(color: Color(0xFF64748B), fontSize: 12),
           ),
           const SizedBox(height: 16),
+          
+          // Android - Real download
           _DownloadButton(
             icon: Icons.android,
-            label: 'Build Android APK',
+            label: 'Download Android APK',
             color: const Color(0xFF3DDC84),
-            onTap: () => _openUrl('https://github.com/Cambric-software/Digital-saver/blob/main/README.md#building'),
+            subtitle: 'Recommended',
+            onTap: () => _openUrl(_latestReleaseUrl),
           ),
           const SizedBox(height: 10),
-          _DownloadButton(
-            icon: Icons.apple,
-            label: 'Build iOS App',
-            color: const Color(0xFF000000),
-            onTap: () => _showComingSoon(context, 'iOS'),
-          ),
-          const SizedBox(height: 10),
+          
+          // Windows - Real download
           _DownloadButton(
             icon: Icons.desktop_windows,
-            label: 'Build Windows App',
+            label: 'Download Windows App',
             color: const Color(0xFF0078D4),
-            onTap: () => _showComingSoon(context, 'Windows'),
+            subtitle: 'Windows 10+',
+            onTap: () => _openUrl(_latestReleaseUrl),
           ),
           const SizedBox(height: 10),
-          _DownloadButton(
-            icon: Icons.computer,
-            label: 'Build Linux App',
-            color: const Color(0xFFE95420),
-            onTap: () => _showComingSoon(context, 'Linux'),
+          
+          // iOS - Coming Soon
+          _ComingSoonButton(
+            icon: Icons.apple,
+            label: 'iOS App',
+            color: const Color(0xFF000000),
+            note: 'Apple Developer account required',
           ),
           const SizedBox(height: 16),
+          
+          // Info box
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: const Color(0xFFFFF3E0),
+              color: const Color(0xFFE3F2FD),
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: const Color(0xFFFFB74D)),
+              border: Border.all(color: const Color(0xFF2563eb).withOpacity(0.3)),
             ),
-            child: const Row(
+            child: Row(
               children: [
-                Icon(Icons.info_outline, color: Color(0xFFE65100), size: 18),
+                Icon(Icons.download_done, color: const Color(0xFF2563eb), size: 18),
                 SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'Native apps are built locally. See README for build instructions.',
-                    style: TextStyle(color: Color(0xFFE65100), fontSize: 11),
+                    'Download the latest release from GitHub. See releases page for all platform builds.',
+                    style: TextStyle(color: const Color(0xFF2563eb), fontSize: 11),
                   ),
                 ),
               ],
@@ -1069,19 +1076,12 @@ class _DownloadCard extends StatelessWidget {
       ),
     );
   }
+
   void _openUrl(String url) async {
     final uri = Uri.parse(url);
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     }
-  }
-  void _showComingSoon(BuildContext context, String platform) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('$platform build is coming soon!'),
-        backgroundColor: const Color(0xFF2563eb),
-      ),
-    );
   }
 }
 
@@ -1089,12 +1089,14 @@ class _DownloadButton extends StatelessWidget {
   final IconData icon;
   final String label;
   final Color color;
+  final String? subtitle;
   final VoidCallback onTap;
   
   const _DownloadButton({
     required this.icon,
     required this.label,
     required this.color,
+    this.subtitle,
     required this.onTap,
   });
   
@@ -1117,19 +1119,106 @@ class _DownloadButton extends StatelessWidget {
               Icon(icon, color: color, size: 24),
               const SizedBox(width: 12),
               Expanded(
-                child: Text(
-                  label,
-                  style: TextStyle(
-                    color: color,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 14,
-                  ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      label,
+                      style: TextStyle(
+                        color: color,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                      ),
+                    ),
+                    if (subtitle != null)
+                      Text(
+                        subtitle!,
+                        style: TextStyle(
+                          color: color.withOpacity(0.7),
+                          fontSize: 11,
+                        ),
+                      ),
+                  ],
                 ),
               ),
-              Icon(Icons.arrow_forward_ios, color: color.withOpacity(0.5), size: 16),
+              Icon(Icons.download, color: color.withOpacity(0.7), size: 20),
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _ComingSoonButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+  final String note;
+  
+  const _ComingSoonButton({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.note,
+  });
+  
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        color: Colors.grey.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.withOpacity(0.3)),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: Colors.grey, size: 24),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Text(
+                      label,
+                      style: const TextStyle(
+                        color: Colors.grey,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Text(
+                        'Coming Soon',
+                        style: TextStyle(
+                          color: Colors.grey,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                Text(
+                  note,
+                  style: TextStyle(
+                    color: Colors.grey.withOpacity(0.7),
+                    fontSize: 11,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
