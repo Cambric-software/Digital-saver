@@ -85,11 +85,34 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<void> _init() async {
-    // Check for existing session first
-    await Future.delayed(const Duration(milliseconds: 500));
-    _client = Supabase.instance.client;
-    assert(_client != null, "Supabase client should be initialized");
+    // Wait for Supabase to be fully initialized
+    // On web, this might take a moment after Supabase.initialize() returns
+    int waitCount = 0;
+    while (_client == null && waitCount < 50) {
+      await Future.delayed(const Duration(milliseconds: 100));
+      try {
+        _client = Supabase.instance.client;
+      } catch (e) {
+        // Ignore errors, will retry
+      }
+      waitCount++;
+    }
     
+    if (_client == null) {
+      await Future.delayed(const Duration(seconds: 1));
+      _client = Supabase.instance.client;
+    }
+    
+    if (_client == null) {
+      _error = 'Failed to connect to server';
+      _loading = false;
+      notifyListeners();
+      return;
+    }
+
+    // Check for existing session first
+    _checkExistingSession();
+
     // Then listen for auth changes
     _authSubscription = _client!.auth.onAuthStateChange.listen(_handleAuthChange);
     

@@ -37,7 +37,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     // Try to load from Supabase if authenticated
     if (auth.isAuthenticated && auth.user != null) {
       try {
-        // Load from Supabase database
         final result = await Supabase.instance.client
             .from('digital_saver_user_profiles')
             .select()
