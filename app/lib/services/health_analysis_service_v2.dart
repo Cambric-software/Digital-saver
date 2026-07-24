@@ -113,7 +113,7 @@ class HealthAnalyticsService {
     if (rrIntervals.length < 2) return 0;
     double sumSquaredDiff = 0;
     for (int i = 1; i < rrIntervals.length; i++) {
-      double diff = rrIntervals[i] - rrIntervals[i - 1];
+      double diff = (rrIntervals[i] - rrIntervals[i - 1]).toDouble();
       sumSquaredDiff += diff * diff;
     }
     return sqrt(sumSquaredDiff / (rrIntervals.length - 1));
@@ -150,7 +150,7 @@ class HealthAnalyticsService {
 
     // MAP consideration (2026 Perfusion Guidelines)
     if (bp.map > 0) {
-      double mapDeviation = (bp.map - 93).abs(); // 93 is optimal MAP
+      double mapDeviation = (bp.map - 93).abs().toDouble(); // 93 is optimal MAP
       score -= mapDeviation * 0.3;
     }
 
