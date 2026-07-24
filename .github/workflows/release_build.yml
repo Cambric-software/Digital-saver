@@ -84,8 +84,19 @@ jobs:
 
       - name: Build Windows (Release)
         run: |
+          # Replace VS bundled CMake with wrapper
+          $vsCmakeDir = "C:\Program Files\Microsoft Visual Studio\18\Enterprise\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin"
+          $vsCmakePath = Join-Path $vsCmakeDir "cmake.exe"
+          $vsCmakeRealPath = Join-Path $vsCmakeDir "cmake-real.exe"
+          
+          # Backup original and copy wrapper
+          if (Test-Path $vsCmakePath) {
+            Copy-Item $vsCmakePath $vsCmakeRealPath -Force
+            Copy-Item "app/windows/cmake-wrapper.bat" (Join-Path $vsCmakeDir "cmake.exe") -Force
+          }
+          
           cd app
-          flutter build windows --release -v
+          flutter build windows --release
 
       - name: Create ZIP
         shell: pwsh
