@@ -156,6 +156,18 @@ class AuthProvider extends ChangeNotifier {
         _user = null;
         _profile = null;
         break;
+
+      case AuthChangeEvent.mfaChallengeVerified:
+        // MFA challenge completed - refresh user
+        if (session?.user != null) {
+          _user = session!.user;
+          _profile = CambricUserProfile.fromUser(_user!);
+        }
+        break;
+
+      default:
+        // Handle unknown events gracefully
+        break;
     }
     
     notifyListeners();
