@@ -47,12 +47,13 @@ class CambricUserProfile {
   }
 }
 
-/// Minimal AuthProvider - simplified for reliability
+/// AuthProvider with proper state management
 class AuthProvider extends ChangeNotifier {
   User? _user;
   CambricUserProfile? _profile;
   bool _loading = true;
   String? _error;
+  bool _initialSessionChecked = false;
   StreamSubscription<AuthState>? _subscription;
 
   User? get user => _user;
@@ -81,12 +82,37 @@ class AuthProvider extends ChangeNotifier {
       return;
     }
 
+    _checkExistingSession(client);
     _subscription = client.auth.onAuthStateChange.listen((data) {
       _onAuthStateChange(client!, data);
     });
   }
 
+  void _checkExistingSession(SupabaseClient client) {
+    try {
+      final session = client.auth.currentSession;
+      if (session != null && session.user != null) {
+        _user = session.user;
+        _profile = CambricUserProfile.fromUser(_user!);
+        _loading = false;
+        _initialSessionChecked = true;
+        _ensureProfile();
+        notifyListeners();
+      } else {
+        _loading = false;
+        _initialSessionChecked = true;
+        notifyListeners();
+      }
+    } catch (e) {
+      _loading = false;
+      _initialSessionChecked = true;
+      notifyListeners();
+    }
+  }
+
   void _onAuthStateChange(SupabaseClient client, AuthState data) {
+    if (!_initialSessionChecked) return;
+    
     try {
       final event = data.event;
       final session = data.session;
@@ -100,25 +126,22 @@ class AuthProvider extends ChangeNotifier {
       } else if (event == AuthChangeEvent.signedOut) {
         _user = null;
         _profile = null;
-      } else if (event == AuthChangeEvent.initialSession && session?.user != null) {
-        _user = session!.user;
-        _profile = CambricUserProfile.fromUser(_user!);
-        _loading = false;
         _error = null;
       } else if (event == AuthChangeEvent.tokenRefreshed && session?.user != null) {
         _user = session!.user;
         _profile = CambricUserProfile.fromUser(_user!);
       }
     } catch (e) {
-      _loading = false;
+      // Ignore errors
     }
-    
+
     notifyListeners();
   }
 
   Future<bool> signIn({required String email, required String password}) async {
     _loading = true;
     _error = null;
+    _initialSessionChecked = true;
     notifyListeners();
 
     try {
@@ -153,6 +176,7 @@ class AuthProvider extends ChangeNotifier {
   Future<bool> signUp({required String email, required String password, String? displayName}) async {
     _loading = true;
     _error = null;
+    _initialSessionChecked = true;
     notifyListeners();
 
     try {
@@ -185,9 +209,13 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<void> signOut() async {
+    _loading = true;
+    notifyListeners();
+    
     try {
       await Supabase.instance.client.auth.signOut();
     } catch (_) {}
+    
     _user = null;
     _profile = null;
     _loading = false;
@@ -223,6 +251,7 @@ class AuthProvider extends ChangeNotifier {
     final msg = error.toString().toLowerCase();
     if (msg.contains('invalid')) return 'Invalid email or password';
     if (msg.contains('email')) return 'Check your email address';
+    if (msg.contains('already')) return 'Email already registered';
     return 'Authentication failed. Please try again.';
   }
 
