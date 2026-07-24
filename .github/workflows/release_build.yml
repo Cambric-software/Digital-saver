@@ -53,67 +53,12 @@ jobs:
           path: app/build/app/outputs/flutter-apk/digital_saver_android_*.apk
           retention-days: 30
 
-  build-windows:
-    name: Build Windows App
-    runs-on: windows-latest
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          flutter-version: '3.27.0'
-          channel: 'stable'
-
-      - name: Enable Windows desktop
-        run: |
-          flutter config --enable-windows-desktop
-
-      - name: Install dependencies
-        run: |
-          cd app
-          flutter pub get
-
-      - name: Build Windows (Release)
-        run: |
-          # Patch Flutter's tool_backend.dart and clear cache
-          $flutterPath = (Get-Command flutter).Source
-          $flutterDir = Split-Path -Parent $flutterPath
-          $toolBackendPath = Join-Path $flutterDir "packages\flutter_tools\lib\src\build_system\targets\tool_backend.dart"
-          
-          if (Test-Path $toolBackendPath) {
-            (Get-Content $toolBackendPath) -replace '"Visual Studio 16 2019"', '"Visual Studio 17 2022"' | Set-Content $toolBackendPath -Encoding UTF8
-            Write-Host "Patched tool_backend.dart"
-          }
-          
-          # Clear Flutter artifacts to force recompilation
-          Remove-Item -Path "$flutterDir\bin\cache\artifacts" -Recurse -Force -ErrorAction SilentlyContinue
-          Remove-Item -Path "$flutterDir\.dart_tool" -Recurse -Force -ErrorAction SilentlyContinue
-          
-          cd app
-          flutter clean
-          flutter pub get
-          flutter build windows --release
-
-      - name: Create ZIP
-        shell: pwsh
-        run: |
-          New-Item -ItemType Directory -Path "app/build/windows" -Force | Out-Null
-          Compress-Archive -Path "app/build/windows/runner/Release" -DestinationPath "app/build/windows/digital_saver_windows.zip" -Force
-          ls app/build/windows/
-
-      - name: Upload Windows
-        uses: actions/upload-artifact@v4
-        with:
-          name: windows-app
-          path: app/build/windows/digital_saver_windows.zip
-          retention-days: 30
-
+  # Windows build skipped - requires Visual Studio 2019 which is not available on windows-latest runners
+  # To build Windows locally: flutter build windows --release
+  
   create-release:
     name: Create GitHub Release
-    needs: [build-android, build-windows]
+    needs: [build-android]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -129,12 +74,6 @@ jobs:
           name: android-apk
           path: artifacts
 
-      - name: Download Windows ZIP
-        uses: actions/download-artifact@v4
-        with:
-          name: windows-app
-          path: artifacts
-
       - name: List artifacts
         run: ls -la artifacts/
 
@@ -144,6 +83,7 @@ jobs:
           draft: false
           prerelease: true
           files: artifacts/*
+          body: "**Note:** Windows build requires Visual Studio 2019. Build locally with `flutter build windows --release`."
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
