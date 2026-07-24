@@ -150,6 +150,12 @@ class AuthProvider extends ChangeNotifier {
       case AuthChangeEvent.passwordRecovery:
         // Password recovery email was sent - no action needed
         break;
+
+      case AuthChangeEvent.userDeleted:
+        // User account was deleted - sign out
+        _user = null;
+        _profile = null;
+        break;
     }
     
     notifyListeners();
