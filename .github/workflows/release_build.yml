@@ -84,13 +84,14 @@ jobs:
 
       - name: Build Windows (Release)
         run: |
-          cd app
-          $env:CMAKE_GENERATOR = "Ninja"
+          $env:CMAKE_GENERATOR = "Visual Studio 17 2022"
+          $env:CMAKE_GENERATOR_PLATFORM = "x64"
           flutter build windows --release
 
       - name: Create ZIP
         shell: pwsh
         run: |
+          New-Item -ItemType Directory -Path "app/build/windows" -Force | Out-Null
           Compress-Archive -Path "app/build/windows/runner/Release" -DestinationPath "app/build/windows/digital_saver_windows.zip" -Force
           ls app/build/windows/
 
