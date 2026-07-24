@@ -51,7 +51,7 @@ class CambricUserProfile {
 class AuthProvider extends ChangeNotifier {
   User? _user;
   CambricUserProfile? _profile;
-  bool _loading = true;
+  bool _loading = false;
   String? _error;
   bool _initialSessionChecked = false;
   StreamSubscription<AuthState>? _subscription;
@@ -67,25 +67,26 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<void> _init() async {
-    SupabaseClient? client;
-    for (int i = 0; i < 30 && client == null; i++) {
-      await Future.delayed(const Duration(milliseconds: 100));
-      try {
-        client = Supabase.instance.client;
-      } catch (_) {}
-    }
+    // Mark as ready immediately - Supabase is already initialized in main.dart
+    // This prevents infinite loading
+    _loading = false;
+    _initialSessionChecked = true;
     
-    if (client == null) {
-      _loading = false;
+    try {
+      final client = Supabase.instance.client;
+      
+      // Check existing session
+      _checkExistingSession(client);
+      
+      // Set up auth state listener
+      _subscription = client.auth.onAuthStateChange.listen((data) {
+        _onAuthStateChange(client, data);
+      });
+    } catch (e) {
       _error = 'Failed to connect to server';
+      _loading = false;
       notifyListeners();
-      return;
     }
-
-    _checkExistingSession(client);
-    _subscription = client.auth.onAuthStateChange.listen((data) {
-      _onAuthStateChange(client!, data);
-    });
   }
 
   void _checkExistingSession(SupabaseClient client) {
@@ -94,25 +95,15 @@ class AuthProvider extends ChangeNotifier {
       if (session != null && session.user != null) {
         _user = session.user;
         _profile = CambricUserProfile.fromUser(_user!);
-        _loading = false;
-        _initialSessionChecked = true;
         _ensureProfile();
-        notifyListeners();
-      } else {
-        _loading = false;
-        _initialSessionChecked = true;
-        notifyListeners();
       }
     } catch (e) {
-      _loading = false;
-      _initialSessionChecked = true;
-      notifyListeners();
+      // Ignore errors, user can still sign in
     }
+    notifyListeners();
   }
 
   void _onAuthStateChange(SupabaseClient client, AuthState data) {
-    if (!_initialSessionChecked) return;
-    
     try {
       final event = data.event;
       final session = data.session;
@@ -130,6 +121,10 @@ class AuthProvider extends ChangeNotifier {
       } else if (event == AuthChangeEvent.tokenRefreshed && session?.user != null) {
         _user = session!.user;
         _profile = CambricUserProfile.fromUser(_user!);
+      } else if (event == AuthChangeEvent.initialSession && session?.user != null) {
+        _user = session!.user;
+        _profile = CambricUserProfile.fromUser(_user!);
+        _ensureProfile();
       }
     } catch (e) {
       // Ignore errors
