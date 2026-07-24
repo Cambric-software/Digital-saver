@@ -84,17 +84,8 @@ jobs:
 
       - name: Build Windows (Release)
         run: |
-          # Setup cmake wrapper
-          $wrapperDir = Join-Path $env:RUNNER_TEMP "cmake-wrapper"
-          New-Item -ItemType Directory -Path $wrapperDir -Force | Out-Null
-          Copy-Item "app/windows/cmake-wrapper.bat" "$wrapperDir\cmake.exe"
-          # Rename real cmake
-          $cmakePath = (Get-Command cmake).Source
-          Copy-Item $cmakePath "$wrapperDir\cmake-real.exe"
-          # Prepend wrapper to PATH
-          $env:PATH = "$wrapperDir;$env:PATH"
           cd app
-          flutter build windows --release
+          flutter build windows --release -v
 
       - name: Create ZIP
         shell: pwsh
