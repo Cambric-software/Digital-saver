@@ -78,7 +78,7 @@ jobs:
 
       - name: Build Windows (Release)
         run: |
-          # Patch Flutter's tool_backend.dart to use VS 2022 generator
+          # Patch Flutter's tool_backend.dart and clear cache
           $flutterPath = (Get-Command flutter).Source
           $flutterDir = Split-Path -Parent $flutterPath
           $toolBackendPath = Join-Path $flutterDir "packages\flutter_tools\lib\src\build_system\targets\tool_backend.dart"
@@ -88,7 +88,13 @@ jobs:
             Write-Host "Patched tool_backend.dart"
           }
           
+          # Clear Flutter artifacts to force recompilation
+          Remove-Item -Path "$flutterDir\bin\cache\artifacts" -Recurse -Force -ErrorAction SilentlyContinue
+          Remove-Item -Path "$flutterDir\.dart_tool" -Recurse -Force -ErrorAction SilentlyContinue
+          
           cd app
+          flutter clean
+          flutter pub get
           flutter build windows --release
 
       - name: Create ZIP
