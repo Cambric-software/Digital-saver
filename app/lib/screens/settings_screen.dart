@@ -292,7 +292,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   );
                   final updated = [..._contacts, contact];
                   await StorageService.saveContacts(updated);
-                  setState(() => _contacts = updated);
+                  if (mounted) setState(() => _contacts = updated);
                   if (ctx.mounted) Navigator.pop(ctx);
                 },
                 child: const Text('Add Contact'),
@@ -307,7 +307,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _deleteContact(int index) async {
     final updated = [..._contacts]..removeAt(index);
     await StorageService.saveContacts(updated);
-    setState(() => _contacts = updated);
+    if (mounted) setState(() => _contacts = updated);
   }
 
   Future<void> _changeLanguage(String lang) async {
@@ -320,7 +320,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       language: lang,
     );
     await StorageService.saveProfile(updated);
-    setState(() => _profile = updated);
+    if (mounted) setState(() => _profile = updated);
   }
 
   void _showAuthScreen(BuildContext context) {
@@ -358,7 +358,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ),
     );
 
-    if (confirmed == true && context.mounted) {
+    if (confirmed && context.mounted) {
       await context.read<AuthProvider>().signOut();
       _load();
     }
