@@ -56,7 +56,6 @@ jobs:
   build-windows:
     name: Build Windows App
     runs-on: windows-latest
-    if: false  # Disable for now - Windows build requires MSVC toolchain setup
     
     steps:
       - name: Checkout code
@@ -92,7 +91,7 @@ jobs:
 
   create-release:
     name: Create GitHub Release
-    needs: [build-android]
+    needs: [build-android, build-windows]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -106,6 +105,12 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: android-apk
+          path: artifacts
+
+      - name: Download Windows ZIP
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-app
           path: artifacts
 
       - name: List artifacts

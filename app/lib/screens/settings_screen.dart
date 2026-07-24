@@ -1032,12 +1032,13 @@ class _DownloadCard extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           
-          // Windows - Coming Soon
-          _ComingSoonButton(
+          // Windows - Real download
+          _DownloadButton(
             icon: Icons.desktop_windows,
-            label: 'Windows App',
+            label: 'Download Windows App',
             color: const Color(0xFF0078D4),
-            note: 'Coming soon',
+            subtitle: 'v1.0.0-beta • Requires Windows 10+',
+            onTap: () => _openUrl(_windowsZipUrl),
           ),
           const SizedBox(height: 10),
           
@@ -1046,7 +1047,7 @@ class _DownloadCard extends StatelessWidget {
             icon: Icons.apple,
             label: 'iOS App',
             color: const Color(0xFF000000),
-            note: 'Apple Developer account required',
+            note: 'No Apple Developer account',
           ),
           const SizedBox(height: 16),
           
