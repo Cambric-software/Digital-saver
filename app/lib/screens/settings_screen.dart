@@ -192,7 +192,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       value: gender,
                       decoration: const InputDecoration(labelText: 'Gender', border: OutlineInputBorder()),
                       items: ['Male', 'Female'].map((g) => DropdownMenuItem(value: g, child: Text(g))).toList(),
-                      onChanged: (v) => ss(() => gender = v!),
+                      onChanged: (v) => ss(() { if (v != null) gender = v; }),
                     ),
                   ),
                 ],
@@ -393,7 +393,7 @@ class _ProfileCard extends StatelessWidget {
                 ),
                 child: Center(
                   child: Text(
-                    profile.name.isNotEmpty ? profile.name[0].toUpperCase() : '?',
+                    profile.name.isNotEmpty && profile.name.isNotEmpty ? profile.name[0].toUpperCase() : '?',
                     style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
                   ),
                 ),
@@ -687,7 +687,7 @@ class _ContactTile extends StatelessWidget {
           CircleAvatar(
             backgroundColor: const Color(0xFFEF4444).withOpacity(0.15),
             child: Text(
-              contact.name.isNotEmpty ? contact.name[0].toUpperCase() : '?',
+              contact.name.isNotEmpty && contact.name.isNotEmpty ? contact.name[0].toUpperCase() : '?',
               style: const TextStyle(color: Color(0xFFEF4444), fontWeight: FontWeight.bold),
             ),
           ),
@@ -915,7 +915,7 @@ class _CambricAccountCard extends StatelessWidget {
               radius: 24,
               backgroundColor: Colors.white.withOpacity(0.2),
               child: Text(
-                (profile?.displayName ?? profile?.email ?? 'U')[0].toUpperCase(),
+                (profile?.displayName ?? profile?.email ?? 'U').isNotEmpty ? (profile?.displayName ?? profile?.email ?? 'U')[0].toUpperCase() : 'U',
                 style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
               ),
             ),

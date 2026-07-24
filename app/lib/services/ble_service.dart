@@ -294,8 +294,8 @@ class BleService extends ChangeNotifier {
   }
 
   void _parseBattery(List<int> data) {
-    if (data.isNotEmpty) {
-      _batteryLevel = data[0].clamp(0, 100);
+    if (data.isEmpty) return;
+    _batteryLevel = data[0].clamp(0, 100);
       notifyListeners();
     }
   }
@@ -305,6 +305,9 @@ class BleService extends ChangeNotifier {
     
     // First byte is flags
     final flags = data[0];
+    
+    // Check minimum length for 8-bit HR
+    if (data.length < 2) return;
     final is16Bit = (flags & 0x01) != 0;
     
     int bpm;
@@ -327,11 +330,11 @@ class BleService extends ChangeNotifier {
   }
 
   void _parseBloodPressure(List<int> data) {
+    // IEEE 11073 format requires at least 7 bytes
     if (data.length < 7) return;
     
-    // IEEE 11073 format
-    final systolic = data[1] | (data[2] << 8);
-    final diastolic = data[5] | (data[6] << 8);
+    final systolic = data.length > 2 ? (data[1] | (data[2] << 8)) : 0;
+    final diastolic = data.length > 6 ? (data[5] | (data[6] << 8)) : 0;
     
     _bloodPressure = BloodPressureData(
       systolic: systolic,
@@ -347,7 +350,7 @@ class BleService extends ChangeNotifier {
     if (data.length < 2) return;
     
     _oxygen = OxygenData(
-      spO2: data[1],
+      spO2: data[1].clamp(0, 100),  // Ensure SpO2 is in valid range
       perfusionIndex: data.length > 2 ? data[2] : 8,
       respirationRate: data.length > 3 ? data[3] : 16,
       confidence: 90,

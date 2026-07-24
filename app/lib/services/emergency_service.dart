@@ -8,11 +8,13 @@ class EmergencyService {
   }
 
   static Future<void> callContact(EmergencyContact contact) async {
+    if (contact.phone.isEmpty) return;
     final uri = Uri(scheme: 'tel', path: contact.phone);
     if (await canLaunchUrl(uri)) await launchUrl(uri);
   }
 
   static Future<void> sendSmsAlert({
+    if (contact.phone.isEmpty) return;  // 
     required EmergencyContact contact,
     required String message,
   }) async {

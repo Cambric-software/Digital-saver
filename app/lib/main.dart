@@ -348,22 +348,30 @@ class _MainNavState extends State<MainNav> {
     SettingsScreen(),
   ];
 
+  bool _authChecked = false;
+
   @override
   void initState() {
     super.initState();
-    // Check auth status after build
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _checkAuth();
-    });
+    _authChecked = false;
   }
 
   void _checkAuth() {
+    if (_authChecked) return;  // Prevent multiple navigation attempts
     final auth = context.read<AuthProvider>();
     if (!auth.isAuthenticated && !auth.loading) {
-      // Not authenticated, redirect to auth screen
+      _authChecked = true;  // Mark as checked before navigation
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (_) => const AuthScreen()),
       );
+    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_authChecked) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _checkAuth());
     }
   }
 
@@ -383,22 +391,29 @@ class _MainNavState extends State<MainNav> {
 
     // Not authenticated AND not loading = redirect to auth screen
     if (!auth.isAuthenticated) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => AuthScreen(
-            onSignedIn: () {
-              Navigator.of(context).pushReplacement(
-                MaterialPageRoute(builder: (_) => const MainNav()),
-              );
-            },
-          )),
-        );
-      });
+      if (!_authChecked) {
+        _authChecked = true;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            Navigator.of(context).pushReplacement(
+              MaterialPageRoute(builder: (_) => AuthScreen(
+                onSignedIn: () {
+                  Navigator.of(context).pushReplacement(
+                    MaterialPageRoute(builder: (_) => const MainNav()),
+                  );
+                },
+              )),
+            );
+          }
+        });
+      }
       return const Scaffold(
         body: Center(
           child: CircularProgressIndicator(),
         ),
       );
+    } else {
+      _authChecked = true;  // Reset flag when authenticated
     }
 
     return Scaffold(

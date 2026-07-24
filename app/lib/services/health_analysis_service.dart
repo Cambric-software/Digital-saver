@@ -395,7 +395,7 @@ class HealthAnalysisService {
   static String? getBPCategory(double systolic, double diastolic) {
     if (systolic < 120 && diastolic < 80) return 'Normal';
     if (systolic >= 120 && systolic < 130 && diastolic < 80) return 'Elevated';
-    if (systolic >= 130 && systolic < 140 || diastolic >= 80 && diastolic < 90) return 'High Stage 1';
+    if ((systolic >= 130 && systolic < 140) || (diastolic >= 80 && diastolic < 90)) return 'High Stage 1';
     if (systolic >= 140 || diastolic >= 90) return 'High Stage 2';
     if (systolic > 180 || diastolic > 120) return 'Hypertensive Crisis';
     return null;

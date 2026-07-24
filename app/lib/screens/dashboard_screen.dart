@@ -489,7 +489,7 @@ class _VitalsGrid extends StatelessWidget {
     Row(children: [
       Expanded(child: _VitalCard(
         label: 'Blood Pressure', value: ble.isConnected ? _sysVal : '--',
-        unit: _diaUnit, icon: Icons.water_drop, gradient: AppColors.gradientBP,
+        unit: 'mmHg', icon: Icons.water_drop, gradient: AppColors.gradientBP,
         badge: ble.bloodPressure.systolic > 0 ? _bpBadge(ble.bloodPressure.systolic.toString() + '/' + ble.bloodPressure.diastolic.toString()) : null,
       )),
       const SizedBox(width: 12),
