@@ -55,7 +55,7 @@ jobs:
 
   build-windows:
     name: Build Windows App
-    runs-on: windows-2019
+    runs-on: windows-latest
     
     steps:
       - name: Checkout code
@@ -77,6 +77,9 @@ jobs:
           flutter pub get
 
       - name: Build Windows (Release)
+        env:
+          CMAKE_GENERATOR: "Visual Studio 17 2022"
+          CMAKE_GENERATOR_PLATFORM: x64
         run: |
           cd app
           flutter build windows --release
