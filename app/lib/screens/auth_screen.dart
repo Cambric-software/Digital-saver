@@ -100,10 +100,18 @@ class _AuthScreenState extends State<AuthScreen> {
       }
     } on TimeoutException {
       _loadingTimer?.cancel();
-      if (mounted) setState(() => _errorMessage = 'Connection timed out. Please try again.');
+      if (mounted) setState(() => _errorMessage = 'Connection timed out. Please check your internet.');
     } catch (e) {
       _loadingTimer?.cancel();
-      if (mounted) setState(() => _errorMessage = 'Connection error. Please try again.');
+      // Show more detailed error for debugging
+      String errorDetail = e.toString();
+      if (errorDetail.contains('SocketException') || errorDetail.contains('ClientException')) {
+        if (mounted) setState(() => _errorMessage = 'Network error. Check your internet connection.');
+      } else if (errorDetail.contains('CORS')) {
+        if (mounted) setState(() => _errorMessage = 'CORS error. Please contact support.');
+      } else {
+        if (mounted) setState(() => _errorMessage = 'Error: ${errorDetail.substring(0, errorDetail.length > 50 ? 50 : errorDetail.length)}');
+      }
     }
 
     _resetLoading();
@@ -169,10 +177,17 @@ class _AuthScreenState extends State<AuthScreen> {
       }
     } on TimeoutException {
       _loadingTimer?.cancel();
-      if (mounted) setState(() => _errorMessage = 'Connection timed out. Please try again.');
+      if (mounted) setState(() => _errorMessage = 'Connection timed out. Please check your internet.');
     } catch (e) {
       _loadingTimer?.cancel();
-      if (mounted) setState(() => _errorMessage = 'Connection error. Please try again.');
+      String errorDetail = e.toString();
+      if (errorDetail.contains('SocketException') || errorDetail.contains('ClientException')) {
+        if (mounted) setState(() => _errorMessage = 'Network error. Check your internet connection.');
+      } else if (errorDetail.contains('CORS')) {
+        if (mounted) setState(() => _errorMessage = 'CORS error. Please contact support.');
+      } else {
+        if (mounted) setState(() => _errorMessage = 'Error: ${errorDetail.substring(0, errorDetail.length > 50 ? 50 : errorDetail.length)}');
+      }
     }
 
     _resetLoading();
