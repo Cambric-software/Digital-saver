@@ -25,7 +25,7 @@ dependencies:
 
 # Override app_links to use a compatible version
 dependency_overrides:
-  app_links: ^6.3.2
+  app_links: 6.3.2
 
 dev_dependencies:
   flutter_test:
