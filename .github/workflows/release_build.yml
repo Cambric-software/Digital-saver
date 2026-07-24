@@ -83,7 +83,10 @@ jobs:
           flutter pub get
 
       - name: Build Windows (Release)
-        run: cd app && flutter build windows --release
+        run: |
+          cd app
+          $env:CMAKE_GENERATOR = "Ninja"
+          flutter build windows --release
 
       - name: Create ZIP
         shell: pwsh
