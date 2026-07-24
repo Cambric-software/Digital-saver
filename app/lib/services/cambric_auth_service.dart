@@ -3,15 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class CambricAuth {
-  static const String _supabaseUrl = 'https://dafgzzkerytjuvxzymnq.supabase.co';
-  static const String _supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRhZmd6emtlcnl0anV2eHp5bW5xIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM3MTE1MDUsImV4cCI6MjA5OTI4NzUwNX0.bZdxqNuy1ZyHMGzBieq7BzUd6IUEhfHEZxL-YTka3DQ';
-
-  static SupabaseClient? _client;
-
-  static SupabaseClient get client {
-    _client ??= SupabaseClient(_supabaseUrl, _supabaseAnonKey);
-    return _client!;
-  }
+  static SupabaseClient get client => Supabase.instance.client;
 
   static User? get currentUser => client.auth.currentUser;
   static Session? get currentSession => client.auth.currentSession;
@@ -77,11 +69,12 @@ class AuthProvider extends ChangeNotifier {
   bool _loading = false;
   String? _error;
   StreamSubscription<AuthState>? _authSubscription;
+  bool _initialized = false;
 
   User? get user => _user;
   CambricUserProfile? get profile => _profile;
   bool get isAuthenticated => _user != null;
-  bool get loading => _loading;
+  bool get loading => _loading || !_initialized;
   String? get error => _error;
 
   AuthProvider() {
@@ -89,43 +82,45 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<void> _init() async {
-    // Start listening to auth state changes FIRST
-    // This is critical for web where session restores asynchronously
-    _authSubscription = _client.auth.onAuthStateChange.listen((data) async {
-      final AuthChangeEvent event = data.event;
-      final Session? session = data.session;
+    try {
+      // Set up listener for auth state changes
+      _authSubscription = _client.auth.onAuthStateChange.listen((data) async {
+        final AuthChangeEvent event = data.event;
+        final Session? session = data.session;
 
-      // Handle initial session restore (web refresh)
-      if (event == AuthChangeEvent.initialSession || 
-          event == AuthChangeEvent.signedIn || 
-          event == AuthChangeEvent.tokenRefreshed) {
-        if (session?.user != null) {
-          _user = session!.user;
-          _profile = CambricUserProfile.fromUser(_user!);
-          await _loadFullProfile();
+        if (event == AuthChangeEvent.initialSession ||
+            event == AuthChangeEvent.signedIn ||
+            event == AuthChangeEvent.tokenRefreshed) {
+          if (session?.user != null) {
+            _user = session!.user;
+            _profile = CambricUserProfile.fromUser(_user!);
+            await _loadFullProfile();
+          }
+        } else if (event == AuthChangeEvent.signedOut) {
+          _user = null;
+          _profile = null;
         }
-      } else if (event == AuthChangeEvent.signedOut) {
-        _user = null;
-        _profile = null;
-      }
 
-      _loading = false;
-      _error = null;
-      notifyListeners();
-    });
-    
-    // Check if we already have a session
-    final existingSession = _client.auth.currentSession;
-    if (existingSession != null) {
-      _user = existingSession.user;
-      _profile = CambricUserProfile.fromUser(_user!);
-      await _loadFullProfile();
-      _loading = false;
-      notifyListeners();
-    } else {
-      _loading = false;
-      notifyListeners();
+        _initialized = true;
+        _loading = false;
+        _error = null;
+        notifyListeners();
+      });
+
+      // Check for existing session
+      final existingSession = _client.auth.currentSession;
+      if (existingSession != null) {
+        _user = existingSession.user;
+        _profile = CambricUserProfile.fromUser(_user!);
+        await _loadFullProfile();
+      }
+    } catch (e) {
+      // Initialization error, continue anyway
     }
+
+    _initialized = true;
+    _loading = false;
+    notifyListeners();
   }
 
   Future<void> _loadFullProfile() async {
