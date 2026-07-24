@@ -14,10 +14,10 @@ class EmergencyService {
   }
 
   static Future<void> sendSmsAlert({
-    if (contact.phone.isEmpty) return;  // 
     required EmergencyContact contact,
     required String message,
   }) async {
+    if (contact.phone.isEmpty) return;
     final encoded = Uri.encodeComponent(message);
     final uri = Uri.parse('sms:${contact.phone}?body=$encoded');
     if (await canLaunchUrl(uri)) await launchUrl(uri);

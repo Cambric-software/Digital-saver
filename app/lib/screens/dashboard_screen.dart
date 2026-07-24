@@ -621,7 +621,7 @@ class _TodaySummary extends StatelessWidget {
         _Stat(icon: Icons.directions_walk, label: 'Steps', value: ble.isConnected ? '${ble.activity.steps}' : '--', color: AppColors.stepAmber),
         _Stat(icon: Icons.local_fire_department, label: 'Calories', value: ble.isConnected ? '${ble.activity.calories.round()} kcal' : '--', color: AppColors.heartRed),
         _Stat(icon: Icons.thermostat, label: 'Temp', value: ble.isConnected && ble.oxygen.respirationRate > 0 ? '${ble.oxygen.respirationRate}' : '--', color: AppColors.accent),
-        _Stat(icon: Icons.bedtime, label: 'Sleep', value: '7h 20m',  // TODO: Replace with real sleep data from ble.activity.sleepHours color: AppColors.sleepPurple),
+        _Stat(icon: Icons.bedtime, label: 'Sleep', value: '7h 20m', color: AppColors.sleepPurple),
       ]),
     ]),
   );

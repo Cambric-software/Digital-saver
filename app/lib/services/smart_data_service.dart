@@ -60,7 +60,7 @@ class SmartDataService {
         await Supabase.instance.client
             .from('digital_saver_health_logs')
             .delete()
-            .in_('id', idsToDelete.cast<String>());
+            .inFilter('id', idsToDelete.cast<String>());
       }
     } catch (_) {}
     return report;

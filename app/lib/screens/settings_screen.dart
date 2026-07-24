@@ -358,7 +358,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ),
     );
 
-    if (confirmed && context.mounted) {
+    if (confirmed == true && context.mounted) {
       await context.read<AuthProvider>().signOut();
       _load();
     }

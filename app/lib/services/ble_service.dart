@@ -296,8 +296,7 @@ class BleService extends ChangeNotifier {
   void _parseBattery(List<int> data) {
     if (data.isEmpty) return;
     _batteryLevel = data[0].clamp(0, 100);
-      notifyListeners();
-    }
+    notifyListeners();
   }
 
   void _parseHeartRate(List<int> data) {
