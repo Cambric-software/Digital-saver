@@ -20,7 +20,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.24.0'
+          flutter-version: '3.27.0'
       - run: cd app && flutter pub get
       - run: cd app && flutter build web
       - uses: actions/upload-pages-artifact@v3

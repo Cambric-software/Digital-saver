@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/health_models.dart';
@@ -146,7 +147,17 @@ class UserProfileService {
           .toList(),
     });
 
-    await prefs.setString(_keyLocalProfile, json);
+    await prefs.setString(_keyLocalProfile, _encodeJson({
+      'name': profile.name,
+      'age': profile.age,
+      'weightKg': profile.weightKg,
+      'heightCm': profile.heightCm,
+      'gender': profile.gender,
+      'language': profile.language,
+      'emergencyContacts': profile.emergencyContacts
+          .map((c) => c.toMap())
+          .toList(),
+    }));
     await prefs.setInt(_keyProfileVersion, (prefs.getInt(_keyProfileVersion) ?? 0) + 1);
   }
 
@@ -224,71 +235,15 @@ class UserProfileService {
   }
 
   Map<String, dynamic> _parseJson(String json) {
-    // Simple JSON parser for SharedPreferences
-    final result = <String, dynamic>{};
-    final content = json.trim();
-    if (content.startsWith('{') && content.endsWith('}')) {
-      final inner = content.substring(1, content.length - 1);
-      _parseJsonObject(inner, result);
+    try {
+      return jsonDecode(json) as Map<String, dynamic>;
+    } catch (e) {
+      return <String, dynamic>{};
     }
-    return result;
-  }
-
-  void _parseJsonObject(String content, Map<String, dynamic> result) {
-    final pairs = _splitJsonPairs(content);
-    for (var pair in pairs) {
-      final colonIndex = pair.indexOf(':');
-      if (colonIndex > 0) {
-        final key = pair.substring(0, colonIndex).trim().replaceAll('"', '');
-        var value = pair.substring(colonIndex + 1).trim();
-        if (value.startsWith('"') && value.endsWith('"')) {
-          value = value.substring(1, value.length - 1);
-        } else if (value == 'null') {
-          value = '';
-        }
-        result[key] = value;
-      }
-    }
-  }
-
-  List<String> _splitJsonPairs(String content) {
-    final pairs = <String>[];
-    var current = '';
-    var depth = 0;
-    var inString = false;
-
-    for (var i = 0; i < content.length; i++) {
-      final c = content[i];
-      if (c == '"' && (i == 0 || content[i - 1] != '\\')) {
-        inString = !inString;
-      }
-      if (!inString) {
-        if (c == '{' || c == '[') depth++;
-        if (c == '}' || c == ']') depth--;
-        if (c == ',' && depth == 0) {
-          pairs.add(current);
-          current = '';
-          continue;
-        }
-      }
-      current += c;
-    }
-    if (current.isNotEmpty) pairs.add(current);
-    return pairs;
   }
 
   String _encodeJson(Map<String, dynamic> map) {
-    final pairs = map.entries.map((e) {
-      final value = e.value;
-      if (value is String) {
-        return '"${e.key}":"${value.replaceAll('"', '\\"')}"';
-      } else if (value is List) {
-        return '"${e.key}":[${value.map((v) => v.toString()).join(',')}]';
-      } else {
-        return '"${e.key}":$value';
-      }
-    }).join(',');
-    return '{$pairs}';
+    return jsonEncode(map);
   }
 
   Future<void> _updateLastSync() async {

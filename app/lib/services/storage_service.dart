@@ -16,8 +16,8 @@ class StorageService {
       return UserProfile(
         name: m['name'] ?? '',
         age: m['age'] ?? 30,
-        weightKg: (m['weightKg'] ?? 70).toDouble(),
-        heightCm: (m['heightCm'] ?? 170).toDouble(),
+        weightKg: (m['weightKg'] ?? 70).toString().toDouble(),
+        heightCm: (m['heightCm'] ?? 170).toString().toDouble(),
         gender: m['gender'] ?? 'Male',
         language: m['language'] ?? 'en',
       );

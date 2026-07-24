@@ -105,8 +105,6 @@ class _AuthScreenState extends State<AuthScreen> {
       _loadingTimer?.cancel();
       if (mounted) setState(() => _errorMessage = 'Error: $e');
     }
-
-    _resetLoading();
   }
 
   Future<void> _handleSignUp() async {
@@ -174,8 +172,6 @@ class _AuthScreenState extends State<AuthScreen> {
       _loadingTimer?.cancel();
       if (mounted) setState(() => _errorMessage = 'Error: $e');
     }
-
-    _resetLoading();
   }
 
   void _switchTab(int index) {

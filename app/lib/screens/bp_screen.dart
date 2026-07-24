@@ -115,7 +115,7 @@ class _BPMetrics extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final map = sys > 0 ? sys - dia : 0.0;
-    final pp = sys > 0 ? sys - dia : 0.0;
+    final pp = sys > 0 && dia > 0 ? sys - dia : 0.0;
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(20), boxShadow: AppShadows.card),

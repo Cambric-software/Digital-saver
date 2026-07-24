@@ -54,7 +54,7 @@ class BloodPressureData {
   String get category {
     if (systolic < 120 && diastolic < 80) return 'Normal';
     if (systolic < 130 && diastolic < 80) return 'Elevated';
-    if (systolic < 140 || diastolic < 90) return 'High Stage 1';
+    if (systolic < 140 && diastolic < 90) return 'High Stage 1';
     return 'High Stage 2';
   }
 

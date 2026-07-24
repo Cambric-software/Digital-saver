@@ -1,4 +1,4 @@
-name: Build Release (Android)
+name: Build Release (Android + Windows)
 
 on:
   push:
@@ -30,7 +30,6 @@ jobs:
         run: |
           cd app
           flutter pub get
-          # Remove cached lock to force dependency_overrides to take effect
           rm -f pubspec.lock
           flutter pub get
 
@@ -40,7 +39,6 @@ jobs:
       - name: Rename APK
         run: |
           cd app/build/app/outputs/flutter-apk
-          # Get version from tag, input, or default
           VERSION="${GITHUB_REF#refs/tags/}"
           if [ -z "$VERSION" ] || [[ "$VERSION" == refs/heads/* ]]; then
             VERSION="${{ inputs.release_version || 'dev' }}"
@@ -53,6 +51,43 @@ jobs:
         with:
           name: android-apk
           path: app/build/app/outputs/flutter-apk/digital_saver_android_*.apk
+          retention-days: 30
+
+  build-windows:
+    name: Build Windows App
+    runs-on: windows-latest
+    if: false  # Disable for now - Windows build requires MSVC toolchain setup
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.27.0'
+          channel: 'stable'
+          architecture: x64
+
+      - name: Install dependencies
+        run: |
+          cd app
+          flutter pub get
+
+      - name: Build Windows (Release)
+        run: cd app && flutter build windows --release
+
+      - name: Create ZIP
+        shell: pwsh
+        run: |
+          Compress-Archive -Path "app/build/windows/runner/Release" -DestinationPath "app/build/windows/digital_saver_windows.zip" -Force
+          ls app/build/windows/
+
+      - name: Upload Windows
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-app
+          path: app/build/windows/digital_saver_windows.zip
           retention-days: 30
 
   create-release:

@@ -120,12 +120,16 @@ class _HourlyChart extends StatelessWidget {
 
   List<BarChartGroupData> _bars(BleService ble) {
     final hour = DateTime.now().hour;
+    final hourlySteps = ble.activity.hourlySteps;
+    
+    // Ensure we have 24 values
+    final stepsData = List<int>.generate(24, (i) {
+      if (i < hourlySteps.length) return hourlySteps[i];
+      return 0;
+    });
+    
     return List.generate(24, (i) {
-      final s = i <= hour
-          ? (ble.isConnected
-              ? (ble.activity.steps / (hour + 1) * (0.5 + 0.5 * (i % 3 == 0 ? 1.4 : i % 2 == 0 ? 0.7 : 0.9))).round().clamp(0, 999)
-              : (300 + (i % 3 == 0 ? 400 : i % 2 == 0 ? 150 : 250)))
-          : 0;
+      final s = i <= hour ? stepsData[i] : 0;
       return BarChartGroupData(x: i, barRods: [BarChartRodData(
         toY: s.toDouble(),
         color: i == hour ? AppColors.stepAmber : AppColors.stepAmber.withOpacity(0.3),
