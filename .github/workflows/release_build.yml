@@ -77,10 +77,17 @@ jobs:
           flutter pub get
 
       - name: Build Windows (Release)
-        env:
-          CMAKE_GENERATOR: "Visual Studio 17 2022"
-          CMAKE_GENERATOR_PLATFORM: x64
         run: |
+          # Patch Flutter's tool_backend.dart to use VS 2022 generator
+          $flutterPath = (Get-Command flutter).Source
+          $flutterDir = Split-Path -Parent $flutterPath
+          $toolBackendPath = Join-Path $flutterDir "packages\flutter_tools\lib\src\build_system\targets\tool_backend.dart"
+          
+          if (Test-Path $toolBackendPath) {
+            (Get-Content $toolBackendPath) -replace '"Visual Studio 16 2019"', '"Visual Studio 17 2022"' | Set-Content $toolBackendPath -Encoding UTF8
+            Write-Host "Patched tool_backend.dart"
+          }
+          
           cd app
           flutter build windows --release
 
