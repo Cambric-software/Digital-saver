@@ -258,7 +258,7 @@ class AuthProvider extends ChangeNotifier {
       final result = await _client.auth.signInWithPassword(
         email: email,
         password: password,
-      ).timeout(const Duration(seconds: 10));
+      ).timeout(const Duration(seconds: 30));
 
       if (result.user != null) {
         _user = result.user;

@@ -53,7 +53,7 @@ class _AuthScreenState extends State<AuthScreen> {
 
   void _startLoadingTimer() {
     _loadingTimer?.cancel();
-    _loadingTimer = Timer(const Duration(seconds: 15), () {
+    _loadingTimer = Timer(const Duration(seconds: 60), () {
       _resetLoading();
       if (mounted) {
         setState(() => _errorMessage = 'Connection timed out. Please try again.');
@@ -85,7 +85,7 @@ class _AuthScreenState extends State<AuthScreen> {
       final success = await auth.signIn(
         email: email,
         password: password,
-      ).timeout(const Duration(seconds: 10));
+      ).timeout(const Duration(seconds: 30));
 
       _loadingTimer?.cancel();
 
@@ -148,7 +148,7 @@ class _AuthScreenState extends State<AuthScreen> {
         email: email,
         password: password,
         displayName: name,
-      ).timeout(const Duration(seconds: 10));
+      ).timeout(const Duration(seconds: 30));
 
       _loadingTimer?.cancel();
 
