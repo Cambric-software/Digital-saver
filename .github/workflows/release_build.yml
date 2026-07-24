@@ -55,7 +55,7 @@ jobs:
 
   build-windows:
     name: Build Windows App
-    runs-on: windows-latest
+    runs-on: windows-2019
     
     steps:
       - name: Checkout code
@@ -67,6 +67,10 @@ jobs:
           flutter-version: '3.27.0'
           channel: 'stable'
           architecture: x64
+
+      - name: Enable Windows desktop
+        run: |
+          flutter config --enable-windows-desktop
 
       - name: Install dependencies
         run: |
