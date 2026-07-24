@@ -38,16 +38,30 @@ class SmartDataService {
     return result.toList();
   }
 
-  /// Perform smart cleanup
-  Future<CleanupReport> performSmartCleanup(String userId) async {
+  /// Perform smart cleanup - delete old records beyond retention limit
+  Future<CleanupReport> performSmartCleanup(String userId, {int retentionDays = 90}) async {
     final report = CleanupReport();
     try {
-      final records = await Supabase.instance.client
+      final cutoffDate = DateTime.now().subtract(Duration(days: retentionDays));
+      
+      // Get count of old records
+      final oldRecords = await Supabase.instance.client
           .from('digital_saver_health_logs')
           .select('id')
           .eq('user_id', userId)
+          .lt('recorded_at', cutoffDate.toIso8601String())
           .limit(1000);
-      report.deletedRecords['total'] = records.length;
+      
+      report.deletedRecords['total'] = oldRecords.length;
+      
+      // Delete old records (keep most recent 1000 within retention)
+      if (oldRecords.isNotEmpty) {
+        final idsToDelete = oldRecords.map((r) => r['id']).toList();
+        await Supabase.instance.client
+            .from('digital_saver_health_logs')
+            .delete()
+            .in_('id', idsToDelete.cast<String>());
+      }
     } catch (_) {}
     return report;
   }
