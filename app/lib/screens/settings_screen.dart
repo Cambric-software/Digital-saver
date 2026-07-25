@@ -985,9 +985,8 @@ class _CambricAccountCard extends StatelessWidget {
 // DOWNLOAD CARD - App downloads for all platforms
 // ===========================================================================
 class _DownloadCard extends StatelessWidget {
-  // Direct download URLs for v1.0.0-beta
-  static const String _androidApkUrl = 'https://github.com/Cambric-software/Digital-saver/releases/download/v1.0.0-beta/digital_saver_android_v1.0.0-beta.apk';
-  static const String _windowsZipUrl = 'https://github.com/Cambric-software/Digital-saver/releases/download/v1.0.0-beta/digital_saver_windows_v1.0.0-beta.zip';
+  // Direct download URLs for v1.0.0-beta-16
+  static const String _androidApkUrl = 'https://github.com/Cambric-software/Digital-saver/releases/download/v1.0.0-beta-16/digital_saver_android_v1.0.0-beta-16.apk';
   static const String _releasesPageUrl = 'https://github.com/Cambric-software/Digital-saver/releases';
 
   @override
@@ -1027,18 +1026,17 @@ class _DownloadCard extends StatelessWidget {
             icon: Icons.android,
             label: 'Download Android APK',
             color: const Color(0xFF3DDC84),
-            subtitle: 'Recommended • v1.0.0-beta',
+            subtitle: 'Recommended • v1.0.0-beta-16',
             onTap: () => _openUrl(_androidApkUrl),
           ),
           const SizedBox(height: 10),
           
-          // Windows - Real download
-          _DownloadButton(
+          // Windows - Coming Soon (needs VS 2019 for CI build)
+          _ComingSoonButton(
             icon: Icons.desktop_windows,
-            label: 'Download Windows App',
+            label: 'Windows App',
             color: const Color(0xFF0078D4),
-            subtitle: 'v1.0.0-beta • Requires Windows 10+',
-            onTap: () => _openUrl(_windowsZipUrl),
+            note: 'Build locally: flutter build windows --release',
           ),
           const SizedBox(height: 10),
           
