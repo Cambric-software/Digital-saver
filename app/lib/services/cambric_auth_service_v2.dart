@@ -152,7 +152,10 @@ class AuthProvider extends ChangeNotifier {
         _loading = false;
         _error = null;
         notifyListeners();
-        _ensureProfile();
+        
+        // Await profile creation to prevent race condition
+        // where UI tries to access profile before it's ready
+        await _ensureProfile();
         return true;
       }
       
@@ -187,7 +190,9 @@ class AuthProvider extends ChangeNotifier {
         _profile = CambricUserProfile.fromUser(_user!);
         _loading = false;
         notifyListeners();
-        _ensureProfile();
+        
+        // Await profile creation to prevent race condition
+        await _ensureProfile();
         return true;
       }
       
@@ -233,13 +238,28 @@ class AuthProvider extends ChangeNotifier {
 
   Future<void> _ensureProfile() async {
     if (_user == null) return;
-    try {
-      await Supabase.instance.client.from('digital_saver_user_profiles').upsert({
-        'id': _user!.id,
-        'email': _user!.email,
-        'updated_at': DateTime.now().toIso8601String(),
-      });
-    } catch (_) {}
+    
+    // Retry logic for transient failures
+    const maxRetries = 3;
+    const retryDelay = Duration(milliseconds: 500);
+    
+    for (int attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        await Supabase.instance.client.from('digital_saver_user_profiles').upsert({
+          'id': _user!.id,
+          'email': _user!.email,
+          'updated_at': DateTime.now().toIso8601String(),
+        });
+        return; // Success - exit the retry loop
+      } catch (e) {
+        if (attempt < maxRetries) {
+          // Wait before retrying
+          await Future.delayed(retryDelay * attempt);
+        }
+        // Last attempt failed - log error but don't throw
+        // The user is still authenticated, profile can be created later
+      }
+    }
   }
 
   String _parseError(dynamic error) {
