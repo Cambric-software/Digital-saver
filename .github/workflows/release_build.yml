@@ -92,28 +92,29 @@ jobs:
           cd app
           flutter build windows --release 2>&1
 
-      - name: Rename EXE
+      - name: Package Windows Build
         shell: pwsh
         run: |
           $VERSION = "${{ github.ref_name }}"
           if ([string]::IsNullOrEmpty($VERSION) -or $VERSION.StartsWith("refs/heads/")) {
             $VERSION = "${{ inputs.release_version || 'dev' }}"
           }
-          $exePath = "app\build\windows\x64\runner\Release\digital_saver.exe"
-          $newPath = "app\build\windows\x64\runner\Release\digital_saver_windows_$VERSION.exe"
-          if (Test-Path $exePath) {
-            Move-Item $exePath $newPath
-            Get-ChildItem "app\build\windows\x64\runner\Release\digital_saver_windows_*"
-          } else {
-            Write-Host "EXE not found at expected path. Searching..."
-            Get-ChildItem "app\build\windows\x64\runner\Release\" -Filter "*.exe"
-          }
+          $srcDir = "app\build\windows\x64\runner\Release"
+          $zipPath = "app\build\windows\x64\runner\Release\digital_saver_windows_$VERSION.zip"
+          
+          Write-Host "Creating ZIP archive..."
+          Compress-Archive -Path "$srcDir\*" -DestinationPath $zipPath -Force
+          
+          Write-Host "ZIP contents:"
+          Get-ChildItem $zipPath | Select-Object Name, @{N='Size (KB)';E={[math]::Round($_.Length/1KB,1)}}
+          Write-Host "Source files:"
+          Get-ChildItem $srcDir | Select-Object Name, @{N='Size (KB)';E={[math]::Round($_.Length/1KB,1)}}
 
-      - name: Upload Windows EXE
+      - name: Upload Windows ZIP
         uses: actions/upload-artifact@v4
         with:
-          name: windows-exe
-          path: app/build/windows/x64/runner/Release/digital_saver_windows_*.exe
+          name: windows-zip
+          path: app/build/windows/x64/runner/Release/digital_saver_windows_*.zip
           retention-days: 30
 
   create-release:
@@ -134,10 +135,10 @@ jobs:
           name: android-apk
           path: artifacts
 
-      - name: Download Windows EXE
+      - name: Download Windows ZIP
         uses: actions/download-artifact@v4
         with:
-          name: windows-exe
+          name: windows-zip
           path: artifacts
 
       - name: List artifacts
@@ -149,7 +150,7 @@ jobs:
           draft: false
           prerelease: true
           files: artifacts/*
-          body: "## Downloads\n- **Android:** digital_saver_android_*.apk\n- **Windows:** digital_saver_windows_*.exe\n\n> For Windows, download and run the .exe file directly. No installation required."
+          body: "## Downloads\n- **Android:** digital_saver_android_*.apk\n- **Windows:** digital_saver_windows_*.zip (extract and run digital_saver.exe)\n\n### Windows Setup\n1. Download the ZIP file\n2. Extract to any folder\n3. Run `digital_saver.exe`\n\n> Requires Windows 10/11 (64-bit)"
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
