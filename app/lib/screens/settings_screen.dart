@@ -9,6 +9,7 @@ import '../services/storage_service.dart';
 import '../services/user_profile_service.dart';
 import '../services/cambric_auth_service_v2.dart';
 import '../services/smart_data_service.dart';
+import '../services/update_service.dart';
 import '../models/health_models.dart';
 import 'auth_screen.dart';
 
@@ -24,6 +25,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
   List<EmergencyContact> _contacts = [];
   bool _loading = true;
   final UserProfileService _profileService = UserProfileService();
+  final UpdateService _updateService = UpdateService();
+  bool _checkingUpdate = false;
+  UpdateCheckResult? _updateResult;
 
   @override
   void initState() {
@@ -94,6 +98,72 @@ class _SettingsScreenState extends State<SettingsScreen> {
         _loading = false;
       });
     }
+    
+    // Check for updates in background
+    _checkForUpdate();
+  }
+
+  Future<void> _checkForUpdate() async {
+    setState(() => _checkingUpdate = true);
+    try {
+      final result = await _updateService.checkForUpdate();
+      if (mounted) {
+        setState(() {
+          _updateResult = result;
+          _checkingUpdate = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _checkingUpdate = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _performUpdate() async {
+    if (_updateResult?.updateInfo != null) {
+      // Use in-app update
+      final result = await _updateService.startFlexibleUpdate();
+      if (result.success && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Downloading update...')),
+        );
+        // Wait for download
+        await Future.delayed(const Duration(seconds: 2));
+        await _updateService.completeFlexibleUpdate();
+      }
+    } else if (_updateResult?.downloadUrl != null) {
+      // Use external download
+      final result = await _updateService.downloadAndInstallExternal(_updateResult!.downloadUrl!);
+      if (mounted) {
+        if (result.success) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(result.message)),
+          );
+        } else if (result.fallbackUrl != null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('Opening releases page...'),
+              action: SnackBarAction(
+                label: 'Open',
+                onPressed: () => _launchUrl(result.fallbackUrl!),
+              ),
+            ),
+          );
+          await Future.delayed(const Duration(seconds: 1));
+          _launchUrl(result.fallbackUrl!);
+        }
+      }
+    }
+  }
+
+  void _launchUrl(String url) async {
+    final uri = Uri.parse(url);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
   }
 
   @override
@@ -118,6 +188,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          // Update banner
+          if (_updateResult?.hasUpdate == true) _UpdateBanner(
+            newVersion: _updateResult!.newVersion ?? '',
+            onUpdate: _performUpdate,
+          ),
+          if (_checkingUpdate) const _CheckingUpdateBanner(),
           _CambricAccountCard(
             isAuthenticated: auth.isAuthenticated,
             profile: auth.profile,
@@ -139,7 +215,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
           const SizedBox(height: 16),
           _LanguageCard(current: _profile.language, onChanged: _changeLanguage),
           const SizedBox(height: 16),
-          _DownloadCard(),
+          _DownloadCard(
+            currentVersion: _updateService.currentVersion,
+            onCheckUpdate: _checkForUpdate,
+          ),
           const SizedBox(height: 16),
           _AboutCard(),
           const SizedBox(height: 100),
@@ -982,10 +1061,130 @@ class _CambricAccountCard extends StatelessWidget {
 }
 
 // ===========================================================================
+// UPDATE BANNER - Shows when update is available
+// ===========================================================================
+class _UpdateBanner extends StatelessWidget {
+  final String newVersion;
+  final VoidCallback onUpdate;
+  
+  const _UpdateBanner({
+    required this.newVersion,
+    required this.onUpdate,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF2563EB), Color(0xFF7C3AED)],
+        ),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF2563EB).withOpacity(0.3),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(Icons.system_update, color: Colors.white, size: 24),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Update Available!',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Version $newVersion is ready to install',
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.9),
+                    fontSize: 13,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          ElevatedButton(
+            onPressed: onUpdate,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.white,
+              foregroundColor: const Color(0xFF2563EB),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            child: const Text('Update Now'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CheckingUpdateBanner extends StatelessWidget {
+  const _CheckingUpdateBanner();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF1F5F9),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: const Row(
+        children: [
+          SizedBox(
+            width: 20,
+            height: 20,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+          SizedBox(width: 12),
+          Text(
+            'Checking for updates...',
+            style: TextStyle(color: Color(0xFF64748B), fontSize: 14),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ===========================================================================
 // DOWNLOAD CARD - App downloads for all platforms
 // ===========================================================================
 class _DownloadCard extends StatelessWidget {
-  // Direct download URLs for v1.0.0-beta-18
+  final String currentVersion;
+  final VoidCallback onCheckUpdate;
+  
+  const _DownloadCard({
+    required this.currentVersion,
+    required this.onCheckUpdate,
+  });
+  
   static const String _androidApkUrl = 'https://github.com/Cambric-software/Digital-saver/releases/download/v1.0.0-beta-18/digital_saver_android_v1.0.0-beta-18.apk';
   static const String _releasesPageUrl = 'https://github.com/Cambric-software/Digital-saver/releases';
 
@@ -1007,24 +1206,34 @@ class _DownloadCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Row(
+          Row(
             children: [
-              Icon(Icons.download_for_offline_outlined, color: Color(0xFF2563eb), size: 20),
-              SizedBox(width: 8),
-              Text('Download App', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF1E3A5F), fontSize: 15)),
+              const Icon(Icons.download_for_offline_outlined, color: Color(0xFF2563eb), size: 20),
+              const SizedBox(width: 8),
+              const Text('App Updates', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF1E3A5F), fontSize: 15)),
+              const Spacer(),
+              TextButton.icon(
+                onPressed: onCheckUpdate,
+                icon: const Icon(Icons.refresh, size: 16),
+                label: const Text('Check Update'),
+                style: TextButton.styleFrom(
+                  foregroundColor: const Color(0xFF2563eb),
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 6),
-          const Text(
-            'Native apps with full Bluetooth support',
-            style: TextStyle(color: Color(0xFF64748B), fontSize: 12),
+          Text(
+            'Current version: $currentVersion',
+            style: const TextStyle(color: Color(0xFF64748B), fontSize: 12),
           ),
           const SizedBox(height: 16),
           
           // Android - Real download
           _DownloadButton(
             icon: Icons.android,
-            label: 'Download Android APK',
+            label: 'Download & Install Update',
             color: const Color(0xFF3DDC84),
             subtitle: 'Recommended • v1.0.0-beta-18',
             onTap: () => _openUrl(_androidApkUrl),
