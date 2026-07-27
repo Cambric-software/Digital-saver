@@ -1174,7 +1174,7 @@ class _DownloadCard extends StatelessWidget {
     required this.onCheckUpdate,
   });
   
-  static const String _androidApkUrl = 'https://github.com/Cambric-software/Digital-saver/releases/download/v1.0.0-beta-22/digital_saver_android_v1.0.0-beta-22.apk';
+  static const String _androidApkUrl = 'https://github.com/Cambric-software/Digital-saver/releases/download/v1.0.0-beta-23/digital_saver_android_v1.0.0-beta-23.apk';
   static const String _releasesPageUrl = 'https://github.com/Cambric-software/Digital-saver/releases';
 
   @override
@@ -1224,7 +1224,7 @@ class _DownloadCard extends StatelessWidget {
             icon: Icons.android,
             label: 'Download & Install Update',
             color: const Color(0xFF3DDC84),
-            subtitle: 'Recommended • v1.0.0-beta-22',
+            subtitle: 'Recommended • v1.0.0-beta-23',
             onTap: () => _openUrl(_androidApkUrl),
           ),
           const SizedBox(height: 10),
