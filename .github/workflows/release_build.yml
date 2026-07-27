@@ -57,12 +57,68 @@ jobs:
           path: app/build/app/outputs/flutter-apk/digital_saver_android_*.apk
           retention-days: 30
 
-  # Windows build skipped - requires Visual Studio 2019 which is not available on windows-latest runners
-  # To build Windows locally: flutter build windows --release
-  
+  build-windows:
+    name: Build Windows EXE
+    runs-on: windows-2022
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.27.0'
+          channel: 'stable'
+
+      - name: Install dependencies
+        run: |
+          cd app
+          flutter pub get
+
+      - name: Check Visual Studio
+        run: |
+          Write-Host "Checking Visual Studio installation..."
+          if (Get-Command vswhere -ErrorAction SilentlyContinue) {
+            vswhere -products *
+          } else {
+            Write-Host "vswhere not found, checking common VS paths..."
+            Get-ChildItem "C:\Program Files\Microsoft Visual Studio" -ErrorAction SilentlyContinue
+          }
+          flutter doctor -v
+
+      - name: Build Windows EXE (Release)
+        run: |
+          cd app
+          flutter build windows --release 2>&1
+
+      - name: Rename EXE
+        shell: pwsh
+        run: |
+          $VERSION = "${{ github.ref_name }}"
+          if ([string]::IsNullOrEmpty($VERSION) -or $VERSION.StartsWith("refs/heads/")) {
+            $VERSION = "${{ inputs.release_version || 'dev' }}"
+          }
+          $exePath = "app\build\windows\x64\runner\Release\digital_saver.exe"
+          $newPath = "app\build\windows\x64\runner\Release\digital_saver_windows_$VERSION.exe"
+          if (Test-Path $exePath) {
+            Move-Item $exePath $newPath
+            Get-ChildItem "app\build\windows\x64\runner\Release\digital_saver_windows_*"
+          } else {
+            Write-Host "EXE not found at expected path. Searching..."
+            Get-ChildItem "app\build\windows\x64\runner\Release\" -Filter "*.exe"
+          }
+
+      - name: Upload Windows EXE
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-exe
+          path: app/build/windows/x64/runner/Release/digital_saver_windows_*.exe
+          retention-days: 30
+
   create-release:
     name: Create GitHub Release
-    needs: [build-android]
+    needs: [build-android, build-windows]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -78,6 +134,12 @@ jobs:
           name: android-apk
           path: artifacts
 
+      - name: Download Windows EXE
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-exe
+          path: artifacts
+
       - name: List artifacts
         run: ls -la artifacts/
 
@@ -87,7 +149,7 @@ jobs:
           draft: false
           prerelease: true
           files: artifacts/*
-          body: "**Note:** Windows build requires Visual Studio 2019. Build locally with `flutter build windows --release`."
+          body: "## Downloads\n- **Android:** digital_saver_android_*.apk\n- **Windows:** digital_saver_windows_*.exe\n\n> For Windows, download and run the .exe file directly. No installation required."
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
