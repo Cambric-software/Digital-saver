@@ -39,4 +39,5 @@ flutter:
   uses-material-design: true
   assets:
     - assets/digital-saver-icon.png
+    - assets/digital-saver-icon.svg
     - assets/cambric-icon.png
