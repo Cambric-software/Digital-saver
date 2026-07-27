@@ -209,6 +209,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             currentVersion: _updateService.currentVersion,
             onCheckUpdate: _checkForUpdate,
             onInstallUpdate: _smartInstallUpdate,
+            onOpenUrl: _openUrl,
           ),
           const SizedBox(height: 16),
           _AboutCard(),
@@ -1233,13 +1234,14 @@ class _DownloadCard extends StatelessWidget {
   final String currentVersion;
   final VoidCallback onCheckUpdate;
   final VoidCallback onInstallUpdate;
-  
+  final void Function(String) onOpenUrl;
+
   const _DownloadCard({
     required this.currentVersion,
     required this.onCheckUpdate,
     required this.onInstallUpdate,
+    required this.onOpenUrl,
   });
-  
   static const String _androidApkUrl = 'https://github.com/Cambric-software/Digital-saver/releases/download/v1.0.0-beta-34/digital_saver_android_v1.0.0-beta-34.apk';
   static const String _releasesPageUrl = 'https://github.com/Cambric-software/Digital-saver/releases';
 
@@ -1298,17 +1300,14 @@ class _DownloadCard extends StatelessWidget {
             ),
             label: 'Download & Install Update',
             color: const Color(0xFF3DDC84),
-            subtitle: 'Recommended • v1.0.0-beta-34',
+            subtitle: 'Recommended • $currentVersion',
             onTap: onInstallUpdate,
           ),
           const SizedBox(height: 10),
           
-          // Windows - Coming Soon (needs VS 2019 for CI build)
-          _ComingSoonButton(
-            icon: Icons.desktop_windows,
-            label: 'Windows App',
-            color: const Color(0xFF0078D4),
-            note: 'Build locally: flutter build windows --release',
+          // Windows - Get from GitHub releases
+          _WindowsDownloadButton(
+            onTap: () => onOpenUrl('https://github.com/Cambric-software/Digital-saver/releases'),
           ),
           const SizedBox(height: 10),
           
@@ -1343,6 +1342,81 @@ class _DownloadCard extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _WindowsDownloadButton extends StatelessWidget {
+  final VoidCallback onTap;
+
+  const _WindowsDownloadButton({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          decoration: BoxDecoration(
+            color: const Color(0xFF0078D4).withOpacity(0.1),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: const Color(0xFF0078D4).withOpacity(0.3)),
+          ),
+          child: Row(
+            children: [
+              const Icon(Icons.desktop_windows, color: Color(0xFF0078D4), size: 24),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Text(
+                          'Windows App',
+                          style: TextStyle(
+                            color: Color(0xFF0078D4),
+                            fontWeight: FontWeight.w600,
+                            fontSize: 14,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF0078D4).withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Text(
+                            'Download',
+                            style: TextStyle(
+                              color: Color(0xFF0078D4),
+                              fontSize: 10,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    const Text(
+                      'Get from GitHub Releases',
+                      style: TextStyle(
+                        color: Color(0xFF0078D4),
+                        fontSize: 11,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.open_in_new, color: Color(0xFF0078D4), size: 18),
+            ],
+          ),
+        ),
       ),
     );
   }
