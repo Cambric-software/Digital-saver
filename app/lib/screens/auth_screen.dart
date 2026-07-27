@@ -29,7 +29,15 @@ class _AuthScreenState extends State<AuthScreen> {
   @override
   void initState() {
     super.initState();
-    _emailController.text = '';
+    // Pre-fill cached email for cross-platform login
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final auth = context.read<AuthProvider>();
+      if (auth.cachedEmail != null && auth.cachedEmail!.isNotEmpty) {
+        setState(() {
+          _emailController.text = auth.cachedEmail!;
+        });
+      }
+    });
     _passwordController.text = '';
     _nameController.text = '';
     _confirmController.text = '';
@@ -320,6 +328,21 @@ class _AuthScreenState extends State<AuthScreen> {
         ),
         const SizedBox(height: 20),
         _buildTextField(_emailController, 'Email', Icons.email_outlined, TextInputType.emailAddress),
+        Builder(
+          builder: (context) {
+            final auth = context.watch<AuthProvider>();
+            if (auth.cachedEmail != null && auth.cachedEmail!.isNotEmpty && _tabIndex == 0) {
+              return Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Text(
+                  'Same account as web version ✓',
+                  style: TextStyle(fontSize: 11, color: Colors.green[700]),
+                ),
+              );
+            }
+            return const SizedBox.shrink();
+          },
+        ),
         const SizedBox(height: 14),
         _buildPasswordField(),
         const SizedBox(height: 14),

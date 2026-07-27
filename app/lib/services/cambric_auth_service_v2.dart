@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// Profile data class for Digital Saver users
 class CambricUserProfile {
@@ -55,12 +56,14 @@ class AuthProvider extends ChangeNotifier {
   String? _error;
   bool _initialSessionChecked = false;
   StreamSubscription<AuthState>? _subscription;
+  String? _cachedEmail;
 
   User? get user => _user;
   CambricUserProfile? get profile => _profile;
   bool get isAuthenticated => _user != null;
   bool get loading => _loading;
   String? get error => _error;
+  String? get cachedEmail => _cachedEmail;
 
   AuthProvider() {
     _init();
@@ -71,6 +74,12 @@ class AuthProvider extends ChangeNotifier {
     // This prevents infinite loading
     _loading = false;
     _initialSessionChecked = true;
+
+    // Load cached email for cross-platform login
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      _cachedEmail = prefs.getString('cached_email');
+    } catch (_) {}
     
     try {
       final client = Supabase.instance.client;
@@ -156,6 +165,12 @@ class AuthProvider extends ChangeNotifier {
         // Await profile creation to prevent race condition
         // where UI tries to access profile before it's ready
         await _ensureProfile();
+
+        // Cache email for cross-platform login
+        try {
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString('cached_email', email);
+        } catch (_) {}
         return true;
       }
       
@@ -193,6 +208,12 @@ class AuthProvider extends ChangeNotifier {
         
         // Await profile creation to prevent race condition
         await _ensureProfile();
+
+        // Cache email for cross-platform login
+        try {
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString('cached_email', email);
+        } catch (_) {}
         return true;
       }
       

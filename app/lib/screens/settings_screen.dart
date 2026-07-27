@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../services/app_installer_service.dart';
 import '../services/ble_service.dart';
 import '../services/emergency_service.dart';
 import '../services/storage_service.dart';
@@ -1174,7 +1175,7 @@ class _DownloadCard extends StatelessWidget {
     required this.onCheckUpdate,
   });
   
-  static const String _androidApkUrl = 'https://github.com/Cambric-software/Digital-saver/releases/download/v1.0.0-beta-29/digital_saver_android_v1.0.0-beta-25.apk';
+  static const String _androidApkUrl = 'https://github.com/Cambric-software/Digital-saver/releases/download/v1.0.0-beta-34/digital_saver_android_v1.0.0-beta-34.apk';
   static const String _releasesPageUrl = 'https://github.com/Cambric-software/Digital-saver/releases';
 
   @override
@@ -1219,7 +1220,7 @@ class _DownloadCard extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           
-          // Android - Real download
+          // Android - Smart install (auto-uninstall if needed)
           _DownloadButton(
             iconWidget: ClipRRect(
               borderRadius: BorderRadius.circular(6),
@@ -1233,7 +1234,7 @@ class _DownloadCard extends StatelessWidget {
             label: 'Download & Install Update',
             color: const Color(0xFF3DDC84),
             subtitle: 'Recommended • v1.0.0-beta-34',
-            onTap: () => _openUrl(_androidApkUrl),
+            onTap: _smartInstallUpdate,
           ),
           const SizedBox(height: 10),
           
@@ -1285,6 +1286,59 @@ class _DownloadCard extends StatelessWidget {
     final uri = Uri.parse(url);
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
+  }
+
+  Future<void> _smartInstallUpdate() async {
+    // Show loading dialog
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const AlertDialog(
+        content: Row(
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(width: 20),
+            Text('Installing update...'),
+          ],
+        ),
+      ),
+    );
+
+    try {
+      final result = await AppInstallerService.smartInstall(_androidApkUrl);
+      
+      if (!mounted) return;
+      Navigator.of(context).pop(); // Close loading dialog
+
+      if (result.success) {
+        // Show success message
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result.message),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } else {
+        // Show error message
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result.message),
+            backgroundColor: Colors.red,
+          ),
+        );
+        // Fallback to manual download
+        _openUrl(_androidApkUrl);
+      }
+    } catch (e) {
+      if (!mounted) return;
+      Navigator.of(context).pop(); // Close loading dialog
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 }
