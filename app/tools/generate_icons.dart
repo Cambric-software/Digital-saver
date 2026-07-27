@@ -2,7 +2,8 @@ import 'dart:io';
 import 'package:image/image.dart' as img;
 
 void main() async {
-  final sourcePath = 'assets/logo.jpg';
+  // Use cambric-icon.png as the source (high resolution)
+  final sourcePath = 'assets/cambric-icon.png';
   
   // Read source image
   final sourceFile = File(sourcePath);
@@ -13,6 +14,8 @@ void main() async {
     print('Failed to decode source image');
     return;
   }
+  
+  print('Source image: ${source.width}x${source.height}');
   
   // Copy to all Android density folders
   for (final density in ['mdpi', 'hdpi', 'xhdpi', 'xxhdpi', 'xxxhdpi']) {
@@ -38,13 +41,18 @@ void main() async {
   }
   
   // Maskable icons for web
-  final maskable = img.copyResize(source, width: 512, height: 512);
-  await File('web/icons/Icon-maskable-192.png').writeAsBytes(img.encodePng(maskable));
-  await File('web/icons/Icon-maskable-512.png').writeAsBytes(img.encodePng(maskable));
-  print('Created: web/icons/Icon-maskable-192.png');
-  print('Created: web/icons/Icon-maskable-512.png');
+  for (final size in [192, 512]) {
+    final resized = img.copyResize(source, width: size, height: size);
+    await File('web/icons/Icon-maskable-$size.png').writeAsBytes(img.encodePng(resized));
+    print('Created: web/icons/Icon-maskable-$size.png');
+  }
   
-  print('\nDone! All icons generated.');
+  // Also create favicon
+  final favicon = img.copyResize(source, width: 32, height: 32);
+  await File('web/favicon.png').writeAsBytes(img.encodePng(favicon));
+  print('Created: web/favicon.png');
+  
+  print('\nDone! All icons generated from cambric-icon.png');
 }
 
 int _getAndroidSize(String density) {
