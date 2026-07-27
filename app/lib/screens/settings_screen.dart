@@ -208,6 +208,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           _DownloadCard(
             currentVersion: _updateService.currentVersion,
             onCheckUpdate: _checkForUpdate,
+            onInstallUpdate: _smartInstallUpdate,
           ),
           const SizedBox(height: 16),
           _AboutCard(),
@@ -1169,10 +1170,12 @@ class _CheckingUpdateBanner extends StatelessWidget {
 class _DownloadCard extends StatelessWidget {
   final String currentVersion;
   final VoidCallback onCheckUpdate;
+  final VoidCallback onInstallUpdate;
   
   const _DownloadCard({
     required this.currentVersion,
     required this.onCheckUpdate,
+    required this.onInstallUpdate,
   });
   
   static const String _androidApkUrl = 'https://github.com/Cambric-software/Digital-saver/releases/download/v1.0.0-beta-34/digital_saver_android_v1.0.0-beta-34.apk';
@@ -1234,7 +1237,7 @@ class _DownloadCard extends StatelessWidget {
             label: 'Download & Install Update',
             color: const Color(0xFF3DDC84),
             subtitle: 'Recommended • v1.0.0-beta-34',
-            onTap: _smartInstallUpdate,
+            onTap: onInstallUpdate,
           ),
           const SizedBox(height: 10),
           
