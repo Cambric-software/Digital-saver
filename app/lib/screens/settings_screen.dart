@@ -985,8 +985,8 @@ class _CambricAccountCard extends StatelessWidget {
 // DOWNLOAD CARD - App downloads for all platforms
 // ===========================================================================
 class _DownloadCard extends StatelessWidget {
-  // Direct download URLs for v1.0.0-beta-17
-  static const String _androidApkUrl = 'https://github.com/Cambric-software/Digital-saver/releases/download/v1.0.0-beta-17/digital_saver_android_v1.0.0-beta-17.apk';
+  // Direct download URLs for v1.0.0-beta-18
+  static const String _androidApkUrl = 'https://github.com/Cambric-software/Digital-saver/releases/download/v1.0.0-beta-18/digital_saver_android_v1.0.0-beta-18.apk';
   static const String _releasesPageUrl = 'https://github.com/Cambric-software/Digital-saver/releases';
 
   @override
@@ -1026,7 +1026,7 @@ class _DownloadCard extends StatelessWidget {
             icon: Icons.android,
             label: 'Download Android APK',
             color: const Color(0xFF3DDC84),
-            subtitle: 'Recommended • v1.0.0-beta-17',
+            subtitle: 'Recommended • v1.0.0-beta-18',
             onTap: () => _openUrl(_androidApkUrl),
           ),
           const SizedBox(height: 10),
