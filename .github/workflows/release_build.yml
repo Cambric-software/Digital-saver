@@ -32,9 +32,13 @@ jobs:
           flutter pub get
           rm -f pubspec.lock
           flutter pub get
+          flutter doctor -v
 
       - name: Build Android APK (Release)
-        run: cd app && flutter build apk --release
+        run: |
+          cd app
+          flutter build apk --release --verbose 2>&1 | tee build.log
+          cat build.log
 
       - name: Rename APK
         run: |
