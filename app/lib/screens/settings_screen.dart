@@ -1221,20 +1221,18 @@ class _DownloadCard extends StatelessWidget {
           
           // Android - Real download
           _DownloadButton(
-            iconWidget: Container(
-              width: 24,
-              height: 24,
-              decoration: BoxDecoration(
-                color: const Color(0xFF3DDC84),
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: Center(
-                child: Text('DS', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+            iconWidget: ClipRRect(
+              borderRadius: BorderRadius.circular(6),
+              child: Image.asset(
+                'assets/digital-saver-icon.png',
+                width: 24,
+                height: 24,
+                fit: BoxFit.cover,
               ),
             ),
             label: 'Download & Install Update',
             color: const Color(0xFF3DDC84),
-            subtitle: 'Recommended • v1.0.0-beta-29',
+            subtitle: 'Recommended • v1.0.0-beta-34',
             onTap: () => _openUrl(_androidApkUrl),
           ),
           const SizedBox(height: 10),
