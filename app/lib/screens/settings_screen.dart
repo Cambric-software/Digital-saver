@@ -1174,7 +1174,7 @@ class _DownloadCard extends StatelessWidget {
     required this.onCheckUpdate,
   });
   
-  static const String _androidApkUrl = 'https://github.com/Cambric-software/Digital-saver/releases/download/v1.0.0-beta-25/digital_saver_android_v1.0.0-beta-25.apk';
+  static const String _androidApkUrl = 'https://github.com/Cambric-software/Digital-saver/releases/download/v1.0.0-beta-26/digital_saver_android_v1.0.0-beta-25.apk';
   static const String _releasesPageUrl = 'https://github.com/Cambric-software/Digital-saver/releases';
 
   @override
@@ -1221,10 +1221,20 @@ class _DownloadCard extends StatelessWidget {
           
           // Android - Real download
           _DownloadButton(
-            icon: Icons.android,
+            iconWidget: Container(
+              width: 24,
+              height: 24,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(6),
+                image: DecorationImage(
+                  image: AssetImage('assets/digital-saver-icon.png'),
+                  fit: BoxFit.cover,
+                ),
+              ),
+            ),
             label: 'Download & Install Update',
             color: const Color(0xFF3DDC84),
-            subtitle: 'Recommended • v1.0.0-beta-25',
+            subtitle: 'Recommended • v1.0.0-beta-26',
             onTap: () => _openUrl(_androidApkUrl),
           ),
           const SizedBox(height: 10),
@@ -1282,14 +1292,14 @@ class _DownloadCard extends StatelessWidget {
 }
 
 class _DownloadButton extends StatelessWidget {
-  final IconData icon;
+  final Widget iconWidget;
   final String label;
   final Color color;
   final String? subtitle;
   final VoidCallback onTap;
   
   const _DownloadButton({
-    required this.icon,
+    required this.iconWidget,
     required this.label,
     required this.color,
     this.subtitle,
@@ -1312,7 +1322,7 @@ class _DownloadButton extends StatelessWidget {
           ),
           child: Row(
             children: [
-              Icon(icon, color: color, size: 24),
+              iconWidget,
               const SizedBox(width: 12),
               Expanded(
                 child: Column(

@@ -2,7 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 class UpdateService {
-  static const String _currentVersion = 'v1.0.0-beta-25';;
+  static const String _currentVersion = 'v1.0.0-beta-26';;;
   static const String _latestReleaseUrl = 'https://api.github.com/repos/Cambric-software/Digital-saver/releases/latest';
   static const String _githubReleasesUrl = 'https://github.com/Cambric-software/Digital-saver/releases';
 
