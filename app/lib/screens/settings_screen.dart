@@ -210,6 +210,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             onCheckUpdate: _checkForUpdate,
             onInstallUpdate: _smartInstallUpdate,
             onOpenUrl: _openUrl,
+            windowsUrl: _updateResult?.windowsDownloadUrl,
           ),
           const SizedBox(height: 16),
           _AboutCard(),
@@ -1235,15 +1236,15 @@ class _DownloadCard extends StatelessWidget {
   final VoidCallback onCheckUpdate;
   final VoidCallback onInstallUpdate;
   final void Function(String) onOpenUrl;
+  final String? windowsUrl;
 
   const _DownloadCard({
     required this.currentVersion,
     required this.onCheckUpdate,
     required this.onInstallUpdate,
     required this.onOpenUrl,
+    this.windowsUrl,
   });
-  static const String _androidApkUrl = 'https://github.com/Cambric-software/Digital-saver/releases/download/v1.0.0-beta-34/digital_saver_android_v1.0.0-beta-34.apk';
-  static const String _releasesPageUrl = 'https://github.com/Cambric-software/Digital-saver/releases';
 
   @override
   Widget build(BuildContext context) {
@@ -1307,7 +1308,8 @@ class _DownloadCard extends StatelessWidget {
           
           // Windows - Get from GitHub releases
           _WindowsDownloadButton(
-            onTap: () => onOpenUrl('https://github.com/Cambric-software/Digital-saver/releases'),
+            url: windowsUrl ?? 'https://github.com/Cambric-software/Digital-saver/releases',
+            onTap: onOpenUrl,
           ),
           const SizedBox(height: 10),
           
@@ -1348,16 +1350,17 @@ class _DownloadCard extends StatelessWidget {
 }
 
 class _WindowsDownloadButton extends StatelessWidget {
-  final VoidCallback onTap;
+  final String url;
+  final void Function(String) onTap;
 
-  const _WindowsDownloadButton({required this.onTap});
+  const _WindowsDownloadButton({required this.url, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: onTap,
+        onTap: () => onTap(url),
         borderRadius: BorderRadius.circular(12),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
@@ -1442,7 +1445,7 @@ class _DownloadButton extends StatelessWidget {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: onTap,
+        onTap: () => onTap(url),
         borderRadius: BorderRadius.circular(12),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),

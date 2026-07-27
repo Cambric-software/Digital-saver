@@ -2,7 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 class UpdateService {
-  static const String _currentVersion = 'v1.0.0-beta-33';
+  static const String _currentVersion = 'v1.0.0-beta-40';
   static const String _latestReleaseUrl = 'https://api.github.com/repos/Cambric-software/Digital-saver/releases/latest';
   static const String _githubReleasesUrl = 'https://github.com/Cambric-software/Digital-saver/releases';
 
@@ -23,7 +23,7 @@ class UpdateService {
             return UpdateCheckResult(
               hasUpdate: true,
               newVersion: latestVersion,
-              downloadUrl: data['download_url'],
+              downloadUrl: data['android_url'], windowsDownloadUrl: data['windows_url'],
               releaseNotes: data['body'],
             );
           }
@@ -40,19 +40,26 @@ class UpdateService {
       // Simple JSON parsing
       final tagMatch = RegExp(r'"tag_name":\s*"([^"]+)"').firstMatch(body);
       final bodyMatch = RegExp(r'"body":\s*"([^"]*)"').firstMatch(body);
-      final nameMatch = RegExp(r'"name":\s*"digital_saver_android_([^"]+\.apk)"').firstMatch(body);
+      final androidMatch = RegExp(r'"name":\s*"digital_saver_android_([^"]+\.apk)"').firstMatch(body);
+      final windowsMatch = RegExp(r'"name":\s*"digital_saver_windows_([^"]+\.zip)"').firstMatch(body);
       
       if (tagMatch != null) {
         final tag = tagMatch.group(1)!;
-        String? downloadUrl;
-        if (nameMatch != null) {
-          final apkName = nameMatch.group(1)!;
-          downloadUrl = 'https://github.com/Cambric-software/Digital-saver/releases/download/$tag/$apkName';
+        String? androidUrl;
+        String? windowsUrl;
+        if (androidMatch != null) {
+          final apkName = androidMatch.group(1)!;
+          androidUrl = 'https://github.com/Cambric-software/Digital-saver/releases/download/$tag/$apkName';
+        }
+        if (windowsMatch != null) {
+          final zipName = windowsMatch.group(1)!;
+          windowsUrl = 'https://github.com/Cambric-software/Digital-saver/releases/download/$tag/$zipName';
         }
         return {
           'tag_name': tag,
           'body': bodyMatch?.group(1) ?? '',
-          'download_url': downloadUrl ?? '',
+          'android_url': androidUrl ?? '',
+          'windows_url': windowsUrl ?? '',
         };
       }
     } catch (_) {}
@@ -76,7 +83,8 @@ class UpdateService {
 class UpdateCheckResult {
   final bool hasUpdate;
   final String? newVersion;
-  final String? downloadUrl;
+  final String? downloadUrl;       // Android APK URL
+  final String? windowsDownloadUrl; // Windows ZIP URL
   final String? releaseNotes;
   final String? error;
 
@@ -84,6 +92,7 @@ class UpdateCheckResult {
     required this.hasUpdate,
     this.newVersion,
     this.downloadUrl,
+    this.windowsDownloadUrl,
     this.releaseNotes,
     this.error,
   });
