@@ -24,6 +24,7 @@ dependencies:
   connectivity_plus: ^6.0.3
   http: ^1.6.0
   path_provider: ^2.1.5
+  image: ^4.8.0
 
 # Override app_links to use a compatible version
 dependency_overrides:
