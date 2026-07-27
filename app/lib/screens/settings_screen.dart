@@ -123,38 +123,27 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _performUpdate() async {
-    if (_updateResult?.updateInfo != null) {
-      // Use in-app update
-      final result = await _updateService.startFlexibleUpdate();
-      if (result.success && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Downloading update...')),
-        );
-        // Wait for download
-        await Future.delayed(const Duration(seconds: 2));
-        await _updateService.completeFlexibleUpdate();
-      }
-    } else if (_updateResult?.downloadUrl != null) {
-      // Use external download
-      final result = await _updateService.downloadAndInstallExternal(_updateResult!.downloadUrl!);
+    if (_updateResult?.downloadUrl != null) {
+      // Open the download URL
+      _launchUrl(_updateResult!.downloadUrl!);
       if (mounted) {
-        if (result.success) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(result.message)),
-          );
-        } else if (result.fallbackUrl != null) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Text('Opening releases page...'),
-              action: SnackBarAction(
-                label: 'Open',
-                onPressed: () => _launchUrl(result.fallbackUrl!),
-              ),
-            ),
-          );
-          await Future.delayed(const Duration(seconds: 1));
-          _launchUrl(result.fallbackUrl!);
-        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Opening download page...'),
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
+    } else {
+      // Fallback to releases page
+      _launchUrl('https://github.com/Cambric-software/Digital-saver/releases');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Opening releases page...'),
+            duration: Duration(seconds: 3),
+          ),
+        );
       }
     }
   }

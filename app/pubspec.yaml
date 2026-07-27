@@ -22,7 +22,6 @@ dependencies:
   google_fonts: ^6.2.1
   uuid: ^4.4.0
   connectivity_plus: ^6.0.3
-  in_app_update: ^4.2.5
   http: ^1.6.0
   path_provider: ^2.1.5
 

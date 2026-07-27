@@ -1,42 +1,16 @@
-import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
-import 'package:in_app_update/in_app_update.dart';
-import 'package:path_provider/path_provider.dart';
 
 class UpdateService {
-  static const String _currentVersion = 'v1.0.0-beta-18';
+  static const String _currentVersion = 'v1.0.0-beta-19';
   static const String _latestReleaseUrl = 'https://api.github.com/repos/Cambric-software/Digital-saver/releases/latest';
   static const String _githubReleasesUrl = 'https://github.com/Cambric-software/Digital-saver/releases';
-  
-  AppUpdateInfo? _updateInfo;
 
   String get currentVersion => _currentVersion;
 
   Future<UpdateCheckResult> checkForUpdate() async {
     try {
-      // First try flexible update (Google Play style)
-      final updateAvailable = await InAppUpdate.checkForUpdate();
-      _updateInfo = updateAvailable;
-      
-      if (updateAvailable.updateAvailability == UpdateAvailability.updateAvailable) {
-        return UpdateCheckResult(
-          hasUpdate: true,
-          newVersion: 'v1.0.0-beta-18',
-          updateInfo: updateAvailable,
-        );
-      }
-      
-      // Fallback: Check GitHub API for latest release
-      return await _checkGithubRelease();
-    } catch (e) {
-      // If in-app update fails, check GitHub directly
-      return await _checkGithubRelease();
-    }
-  }
-
-  Future<UpdateCheckResult> _checkGithubRelease() async {
-    try {
+      // Check GitHub API for latest release
       final response = await http.get(Uri.parse(_latestReleaseUrl));
       if (response.statusCode == 200) {
         final data = await compute(_parseGithubRelease, response.body);
@@ -97,77 +71,6 @@ class UpdateService {
     }
     return 0;
   }
-
-  Future<UpdateResult> startFlexibleUpdate() async {
-    if (_updateInfo == null) {
-      return UpdateResult(success: false, message: 'No update available');
-    }
-    
-    try {
-      final result = await InAppUpdate.startFlexibleUpdate();
-      return UpdateResult(
-        success: true,
-        message: 'Download started',
-      );
-    } catch (e) {
-      return UpdateResult(success: false, message: e.toString());
-    }
-  }
-
-  Future<UpdateResult> completeFlexibleUpdate() async {
-    try {
-      await InAppUpdate.completeFlexibleUpdate();
-      return UpdateResult(success: true, message: 'Update installed! Restart the app.');
-    } catch (e) {
-      return UpdateResult(success: false, message: e.toString());
-    }
-  }
-
-  Future<UpdateResult> downloadAndInstallExternal(String downloadUrl) async {
-    if (downloadUrl.isEmpty) {
-      return UpdateResult(
-        success: false, 
-        message: 'No download URL available',
-        fallbackUrl: _githubReleasesUrl,
-      );
-    }
-    
-    try {
-      // Download the APK
-      final response = await http.get(Uri.parse(downloadUrl));
-      if (response.statusCode != 200) {
-        return UpdateResult(
-          success: false,
-          message: 'Download failed',
-          fallbackUrl: _githubReleasesUrl,
-        );
-      }
-      
-      // Save to temp directory
-      final dir = await getTemporaryDirectory();
-      final file = File('${dir.path}/digital_saver_update.apk');
-      await file.writeAsBytes(response.bodyBytes);
-      
-      // Open installer
-      if (Platform.isAndroid) {
-        // Use platform channel to install
-        // For now, we'll use url_launcher to open the releases page
-        return UpdateResult(
-          success: false,
-          message: 'Download complete! Opening installer...',
-          downloadedPath: file.path,
-        );
-      }
-      
-      return UpdateResult(success: false, message: 'Platform not supported');
-    } catch (e) {
-      return UpdateResult(
-        success: false,
-        message: e.toString(),
-        fallbackUrl: _githubReleasesUrl,
-      );
-    }
-  }
 }
 
 class UpdateCheckResult {
@@ -176,7 +79,6 @@ class UpdateCheckResult {
   final String? downloadUrl;
   final String? releaseNotes;
   final String? error;
-  final AppUpdateInfo? updateInfo;
 
   UpdateCheckResult({
     required this.hasUpdate,
@@ -184,30 +86,5 @@ class UpdateCheckResult {
     this.downloadUrl,
     this.releaseNotes,
     this.error,
-    this.updateInfo,
   });
-}
-
-class UpdateResult {
-  final bool success;
-  final String message;
-  final int? bytesDownloaded;
-  final int? totalBytesToDownload;
-  final String? downloadedPath;
-  final String? fallbackUrl;
-
-  UpdateResult({
-    required this.success,
-    required this.message,
-    this.bytesDownloaded,
-    this.totalBytesToDownload,
-    this.downloadedPath,
-    this.fallbackUrl,
-  });
-
-  double get progress {
-    if (bytesDownloaded == null || totalBytesToDownload == null) return 0;
-    if (totalBytesToDownload == 0) return 0;
-    return bytesDownloaded! / totalBytesToDownload!;
-  }
 }
