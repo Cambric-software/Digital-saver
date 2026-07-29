@@ -2000,5 +2000,783 @@ particleSensor.setSampleRate(1000);  // أعلى = أدق
 
 **Copyright:** © 2026 Cambric. All Rights Reserved.
 
-هذه الوثيقة تغطي كل ما تحتاجه لبناء ساعة Digital Saver Onyx الذكية من الصفر!
-كل القطع بالأسعار المصرية مع روابط الشراء من مصر!
+---
+
+# ═══════════════════════════════════════════════════════════════════════════
+# PART 10: COMPLETE BUILD GUIDE STEP BY STEP
+# ═══════════════════════════════════════════════════════════════════════════
+
+# 25. STEP BY STEP BUILD GUIDE
+
+## 25.1 قبل ما تبدأ - قبل البدء في البناء
+
+### اللي محتاجه الأول
+
+| المحتاج | الكمية | ملاحظات |
+|---------|--------|----------|
+| جميع القطع الإلكترونية | 1 set | من قائمة القطع |
+| ماكينة لحام | 1 | 60W أو أعلى |
+| قصدير لحام | 1 | 0.8mm |
+| ماكينة قطع | 1 | لقطع الأسلاك |
+| مالتيميتر | 1 | لفحص التوصيلات |
+| USB cable | 1 | Type-C |
+| كمبيوتر | 1 | Windows/Mac/Linux |
+| وقت свобод | 4-6 ساعات | للبناء الكامل |
+
+### الإعدادات المطلوبة
+
+| البرنامج | الإصدار | رابط |
+|----------|---------|------|
+| VS Code | 1.80+ | code.visualstudio.com |
+| PlatformIO | Latest | VS Code Extension |
+| Python | 3.9+ | python.org |
+| Git | Latest | git-scm.com |
+
+### بيئة العمل
+
+1. مكتب نضيف ومرتب
+2. إضاءة كويسة
+3. ventilation كويس (لشبحة اللحام)
+4. مكان تخزين القطع الصغيرة
+
+---
+
+## 25.2 المرحلة 1: تجهيز ESP32
+
+### Step 1.1: فحص الـ ESP32
+
+**الخطوة 1:** افتح الـ ESP32 وافحصه
+
+```
+افحص الـ ESP32:
+- مفيش قطع مكسورة
+- الـ pins مستقيمة
+- مفيش traces مكسورة على الـ board
+```
+
+**الخطوة 2:** وصلي بالـ USB
+
+```
+وصلي ESP32 بالـ USB:
+- وصلي USB cable بين ESP32 والكمبيوتر
+- لازم يظهر COM port جديد
+- لو مش ظاهر، ركب الـ drivers
+```
+
+**الخطوة 3:** افحص إن الـ board شغالة
+
+```
+افتح Arduino IDE أو PlatformIO:
+- اختار Board: ESP32 Dev Module
+- اختار Port: الـ COM port الجديد
+- ارفع برنامج بسيط (Blink)
+- لازم الـ LED يرفش
+```
+
+### Step 1.2: إعداد PlatformIO
+
+**الخطوة 1:** ثبت PlatformIO
+
+```
+في VS Code:
+1. Extensions → PlatformIO IDE → Install
+2. Restart VS Code
+3. PlatformIO icon هياهل في الـ sidebar
+```
+
+**الخطوة 2:** افتح المشروع
+
+```
+1. File → Open Folder
+2. اختار: Digital-saver/firmware/esp32/DigitalSaverWatch
+3. لازم يظهر platformio.ini و DigitalSaverWatch.ino
+```
+
+**الخطوة 3:** عدل إعدادات WiFi
+
+```
+افتح DigitalSaverWatch.ino:
+
+// السطور حوالي 67-70:
+#define WIFI_SSID "اسمشبكتك"
+#define WIFI_PASSWORD "كلمةمرورشبكتك"
+#define WEATHER_API_KEY "مفتاحAPI"
+
+غير القيم لمعلوماتك
+```
+
+---
+
+## 25.3 المرحلة 2: بناء الدائرة الأساسية
+
+### Step 2.1: تجهيز الـ Prototype PCB
+
+**الخطوة 1:** قص الـ PCB
+
+```
+قصدير الـ PCB لـ 5x7cm:
+- استخدم ماكينة القطع
+- قصدير بعناية
+- اتنين الـ sides لازم يكونوا مستقيمين
+```
+
+**الخطوة 2:** رتب الـ components
+
+```
+قبل ما تلحام، رتب كل حاجة:
+┌─────────────────────────────────┐
+│  ┌──────┐                       │
+│  │ ESP32│     وضع الـ ESP32     │
+│  └──────┘     في النص          │
+│                                 │
+│ ┌─────┐  ┌─────┐  ┌─────────┐ │
+│ │LED │  │MOTOR│  │  HEADERS │ │
+│ └─────┘  └─────┘  └─────────┘ │
+│                                 │
+│        ┌─────────────────┐     │
+│        │   بقية القطع    │     │
+│        │                 │     │
+│        └─────────────────┘     │
+└─────────────────────────────────┘
+```
+
+### Step 2.2: لحام الـ Power Section
+
+**الخطوة 1:** لحام الـ Power traces
+
+```
+لحم التوصيلات دي الأول:
+┌─────────────────────────────────┐
+│  3V3  ────────────────────────→ │
+│                                 │
+│  GND  ────────────────────────→ │
+│                                 │
+│  USB 5V ──────────────────────→ │
+└─────────────────────────────────┘
+```
+
+**الخطوة 2:** لحام TP4056 Charger
+
+```
+لحم TP4056:
+- OUT+ → Battery + (عبر switch)
+- OUT- → Battery -
+- IN+ → USB 5V
+- IN- → USB GND
+- تالتوصيلات التانية للـ ESP32
+```
+
+### Step 2.3: لحام المستشعرات
+
+**الخطوة 1:** لحام Headers للـ I2C
+
+```
+لحم headers (الأم):
+
+┌─────────────────────────────────┐
+│                                 │
+│  ┌─────────────────────────┐   │
+│  │  I2C HEADER (6 pins)   │   │
+│  └─────────────────────────┘   │
+│                                 │
+│  SCL  ──── GPIO18            │
+│  SDA  ──── GPIO19            │
+│  VCC  ──── 3V3              │
+│  GND  ──── GND               │
+│  INT1 ──── GPIO26            │
+│  INT2 ──── GPIO27            │
+│                                 │
+└─────────────────────────────────┘
+```
+
+**الخطوة 2:** لحام MAX30102
+
+```
+لحم MAX30102:
+- VIN  → 3V3
+- GND  → GND
+- SCL  → I2C SCL
+- SDA  → I2C SDA
+- INT  → GPIO26
+- (بقية الـ pins فاضية)
+```
+
+**الخطوة 3:** لحام MPU6050
+
+```
+لحم MPU6050:
+- VCC  → 3V3
+- GND  → GND
+- SCL  → I2C SCL
+- SDA  → I2C SDA
+- INT  → GPIO27
+- AD0  → GND (يعمل الـ address = 0x68)
+```
+
+**الخطوة 4:** لحام SSD1306 Display
+
+```
+لحم SSD1306:
+- VCC  → 3V3
+- GND  → GND
+- SCL  → I2C SCL
+- SDA  → I2C SDA
+- (بقية الـ pins فاضية أو لو موجودة بتاعت SPI)
+```
+
+---
+
+## 25.4 المرحلة 3: لحام الـ Output Devices
+
+### Step 3.1: لحام الـ LEDs
+
+**الخطوة 1:** حط الـ LEDs
+
+```
+LED Red:
+- Shorter leg (GND) → GND
+- Longer leg (+) → [220Ω resistor] → GPIO4
+
+LED Green:
+- Shorter leg (GND) → GND
+- Longer leg (+) → [220Ω resistor] → GPIO16
+```
+
+**الخطوة 2:** اختبر الـ LEDs
+
+```cpp
+// ارفع الكود ده واختبر:
+void testLEDs() {
+    pinMode(4, OUTPUT);
+    pinMode(16, OUTPUT);
+    
+    digitalWrite(4, HIGH);  // Red ON
+    delay(500);
+    digitalWrite(4, LOW);
+    
+    digitalWrite(16, HIGH);  // Green ON
+    delay(500);
+    digitalWrite(16, LOW);
+}
+```
+
+### Step 3.2: لحام Vibration Motor
+
+**الخطوة 1:** حط الـ Motor
+
+```
+Motor:
+- (+) → GPIO25
+- (-) → GND
+```
+
+**الخطوة 2:** اختبر الـ Motor
+
+```cpp
+void testMotor() {
+    pinMode(25, OUTPUT);
+    
+    digitalWrite(25, HIGH);  // Motor ON
+    delay(500);
+    digitalWrite(25, LOW);   // Motor OFF
+}
+```
+
+---
+
+## 25.5 المرحلة 4: لحام الأزرار
+
+### Step 4.1: لحام الـ Pull-down Resistors
+
+**الخطوة 1:** لحام 10K Resistors
+
+```
+لكل زر، لحام resistor 10K:
+
+GPIO17 (Mode Button):
+3.3V ─── [زر] ─── GPIO17
+                │
+                └───[10K]─── GND
+
+كرر للـ GPIO34 و GPIO35
+```
+
+### Step 4.2: لحام الأزرار
+
+**الخطوة 1:** حط الأزرار
+
+```
+لحم الـ 3 buttons:
+- MODE button → GPIO17
+- EMERGENCY button → GPIO34
+- BACK button → GPIO35
+```
+
+---
+
+## 25.6 المرحلة 5: الاختبار
+
+### Step 5.1: اختبار الـ Power
+
+**الخطوة 1:** قس الفولتية
+
+```
+استخدم المالتيميتر:
+1. قس 3V3 على الـ ESP32
+2. قس 3V3 على كل الـ components
+3. قس GND continuity
+```
+
+### Step 5.2: اختبار I2C
+
+**الخطوة 1:** شغل I2C Scanner
+
+```cpp
+// ارفع الكود ده:
+#include <Wire.h>
+
+void setup() {
+    Serial.begin(115200);
+    Wire.begin(18, 19);  // SDA=18, SCL=19
+    
+    Serial.println("I2C Scanner...");
+    for (byte address = 1; address < 127; address++) {
+        Wire.beginTransmission(address);
+        if (Wire.endTransmission() == 0) {
+            Serial.print("Found: 0x");
+            Serial.println(address, HEX);
+        }
+    }
+}
+
+void loop() {}
+```
+
+**النتيجة المتوقعة:**
+
+```
+I2C Scanner...
+Found: 0x3C    ← SSD1306 Display
+Found: 0x57    ← MAX30102
+Found: 0x68    ← MPU6050
+```
+
+### Step 5.3: اختبار الشاشة
+
+**الخطوة 1:** ارفع كود اختبار الشاشة
+
+```cpp
+#include <Adafruit_SSD1306.h>
+
+#define SCREEN_WIDTH 128
+#define SCREEN_HEIGHT 64
+#define OLED_ADDR 0x3C
+
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
+
+void setup() {
+    Serial.begin(115200);
+    if (!display.begin(SSD1306_SWITCHCAPVCC, OLED_ADDR)) {
+        Serial.println("SSD1306 failed!");
+        while(1);
+    }
+    
+    display.clearDisplay();
+    display.setTextSize(2);
+    display.setTextColor(SSD1306_WHITE);
+    display.setCursor(0, 0);
+    display.println("TEST PASSED!");
+    display.println("Display OK");
+    display.display();
+}
+
+void loop() {}
+```
+
+### Step 5.4: اختبار المستشعرات
+
+**الخطوة 1:** ارفع الكود الكامل
+
+```
+ارفع DigitalSaverWatch.ino:
+pio run --target upload
+
+افتح Serial Monitor:
+pio device monitor
+
+لازم يظهر:
+[DIGITAL SAVER] v3.2.2
+[OK] All sensors initialized
+[OK] BLE ready
+```
+
+---
+
+## 25.7 المرحلة 6: التجميع النهائي
+
+### Step 6.1: تجهيز الـ Case
+
+**الخطوة 1:** اطبع الـ Case
+
+```
+اطبع الـ 3D files:
+- onyx_top.stl
+- onyx_bottom.stl
+
+إعدادات الطباعة:
+- Material: PLA أو PETG
+- Layer: 0.2mm
+- Infill: 20%
+- Supports: Yes
+```
+
+**الخطوة 2:** حط القطع في الـ Case
+
+```
+ترتيب التجميع:
+
+1. حط البطارية في الـ bottom case
+2. ثبت PCB في الـ bottom case
+3. وصلي الأسلاك للـ battery
+4. ركب الـ buttons في الـ bottom case
+5. ركب الشاشة في الـ top case
+6. وصلي connector بين top و bottom
+7. ركب الـ watch band
+8. ركب glass face
+```
+
+---
+
+# ═══════════════════════════════════════════════════════════════════════════
+# PART 11: CODE WALKTHROUGH - شرح الكود
+# ═══════════════════════════════════════════════════════════════════════════
+
+# 26. COMPLETE CODE WALKTHROUGH
+
+## 26.1 Understanding the Main Structure
+
+### هيكل الكود الأساسي
+
+```cpp
+/***************************************************************************
+ * HEADER & INCLUDES
+ * السطور 1-35
+ * التحليل:
+ * - مكتوب version 3.2.2
+ * - بيستخدم ESP32 Arduino framework
+ * - مكتبات للـ I2C, BLE, WiFi, Display, Sensors
+ ***************************************************************************/
+
+/***************************************************************************
+ * CONFIGURATION
+ * السطور 37-75
+ * التحليل:
+ * - Pin definitions (GPIO pins للأزرار, LEDs, etc)
+ * - BLE UUIDs (service and characteristic)
+ * - WiFi settings (SSID, password, API key)
+ * - Thresholds (fall detection, step counting)
+ * - Timing intervals (measurement, BLE send, display refresh)
+ ***************************************************************************/
+
+/***************************************************************************
+ * DATA STRUCTURES
+ * السطور 95-226
+ * التحليل:
+ * - HealthData: كل البيانات الصحية
+ * - WeatherData: بيانات الطقس
+ * - UserProfile: معلومات المستخدم
+ * - HealthAI: تحليل الـ AI
+ * - RawSensorData: بيانات الـ raw من المستشعرات
+ ***************************************************************************/
+
+/***************************************************************************
+ * SETUP FUNCTION
+ * السطور 330-420
+ * التحليل:
+ * - بداية Serial (115200 baud)
+ * - بداية I2C (GPIO 18, 19)
+ * - إعدادات GPIO (input/output pins)
+ * - بدء المستشعرات (MAX30102, MPU6050)
+ * - بدء الشاشة (SSD1306)
+ * - بدء BLE
+ * - بدء WiFi
+ * - إعدادات الوقت من NTP
+ ***************************************************************************/
+
+/***************************************************************************
+ * MAIN LOOP
+ * السطور 1824-1900
+ * التحليل:
+ * - فحص الأزرار
+ * - قراءة المستشعرات
+ * - تشغيل Health AI
+ * - إرسال البيانات عبر BLE
+ * - تحديث الشاشة
+ * - فحص الطقس (periodic)
+ ***************************************************************************/
+```
+
+## 26.2 Detailed Function Analysis
+
+### Function: initSensors()
+
+```cpp
+void initSensors() {
+    Serial.println("[SENSORS] Initializing...");
+    
+    // Initialize MAX30102
+    if (!particleSensor.begin(Wire, I2C_SPEED_FAST)) {
+        Serial.println("[ERROR] MAX30102 not found!");
+        // هكمل بس هبقى أعرف إن المستشعر مش موجود
+    } else {
+        // إعدادات MAX30102
+        byte ledBrightness = 60;   // LED brightness (0-255)
+        byte sampleAverage = 4;    // Average samples
+        byte ledMode = 3;          // 1=Red, 2=Red+IR, 3=Red+IR+Green
+        int sampleRate = 400;      // Samples per second
+        int pulseWidth = 69;       // LED pulse width
+        int adcRange = 4096;       // ADC range
+        
+        particleSensor.setup(ledBrightness, sampleAverage, ledMode, 
+                          sampleRate, pulseWidth, adcRange);
+        
+        Serial.println("[OK] MAX30102 initialized");
+    }
+    
+    // Initialize MPU6050
+    if (!mpu.begin()) {
+        Serial.println("[ERROR] MPU6050 not found!");
+    } else {
+        mpu.setAccelerometerRange(MPU6050_RANGE_8_G);
+        mpu.setGyroRange(MPU6050_RANGE_500_DEG);
+        mpu.setFilterBandwidth(MPU6050_BAND_21_HZ);
+        Serial.println("[OK] MPU6050 initialized");
+    }
+    
+    // Initialize default values
+    currentHealth.heartRate = 0;
+    currentHealth.spO2 = 0;
+    currentHealth.steps = 0;
+    // ... rest of initialization
+}
+```
+
+### Function: updateHeartRate()
+
+```cpp
+void updateHeartRate() {
+    // قراءة IR value
+    long irValue = particleSensor.getIR();
+    
+    // فحص إن الإصبع على المستشعر
+    if (irValue < 50000) {
+        // مفيش إصبع
+        currentHealth.heartRate = 0;
+        currentHealth.irregularHeartbeat = false;
+        return;
+    }
+    
+    // قراءة الـ red value لحساب SpO2
+    long redValue = particleSensor.getRed();
+    
+    // حساب heart rate
+    currentHealth.heartRate = particleSensor.getHeartRate();
+    
+    // فحص نبض
+    if (particleSensor.checkForBeat()) {
+        // نبض جديد تم كشفه
+    }
+    
+    // حساب SpO2
+    currentHealth.spO2 = particleSensor.getSpO2();
+    
+    // Validate values
+    if (currentHealth.heartRate < 40) currentHealth.heartRate = 0;
+    if (currentHealth.heartRate > 220) currentHealth.heartRate = 0;
+    if (currentHealth.spO2 < 50) currentHealth.spO2 = 0;
+    if (currentHealth.spO2 > 100) currentHealth.spO2 = 100;
+}
+```
+
+### Function: runHealthAI()
+
+```cpp
+void runHealthAI() {
+    // Step 1: Calculate BMR
+    calculateBMR();
+    
+    // Step 2: Analyze blood pressure
+    analyzeBloodPressure();
+    
+    // Step 3: Detect arrhythmia
+    detectArrhythmia();
+    
+    // Step 4: Check hypoxia
+    checkHypoxiaRisk();
+    
+    // Step 5: Check overexertion
+    checkOverexertionRisk();
+    
+    // Step 6: Calculate activity state
+    calculateActivityState();
+    
+    // Step 7: Generate insight
+    generateHealthInsight();
+    
+    // Step 8: Check for warnings
+    if (healthAI.warningMessage.length() > 0) {
+        // في warning - show notification
+        triggerEmergency();
+    }
+}
+```
+
+---
+
+# ═══════════════════════════════════════════════════════════════════════════
+# PART 12: ADVANCED CUSTOMIZATION
+# ═══════════════════════════════════════════════════════════════════════════
+
+# 27. CUSTOMIZATION GUIDE
+
+## 27.1 Adding Custom Watch Faces
+
+### Example: Analog Watch Face
+
+```cpp
+void showAnalogWatchFace() {
+    display.clearDisplay();
+    
+    struct tm timeinfo;
+    getLocalTime(&timeinfo);
+    
+    int hours = timeinfo.tm_hour;
+    int minutes = timeinfo.tm_min;
+    int seconds = timeinfo.tm_sec;
+    
+    // Draw clock face
+    display.drawCircle(64, 32, 30, SSD1306_WHITE);
+    
+    // Draw hour markers
+    for (int i = 0; i < 12; i++) {
+        float angle = i * 30 * PI / 180;
+        int x1 = 64 + 28 * sin(angle);
+        int y1 = 32 - 28 * cos(angle);
+        int x2 = 64 + 25 * sin(angle);
+        int y2 = 32 - 25 * cos(angle);
+        display.drawLine(x1, y1, x2, y2, SSD1306_WHITE);
+    }
+    
+    // Hour hand
+    float angleH = ((hours % 12) + minutes / 60.0) * 30 * PI / 180;
+    int xH = 64 + 18 * sin(angleH);
+    int yH = 32 - 18 * cos(angleH);
+    display.drawLine(64, 32, xH, yH, SSD1306_WHITE);
+    
+    // Minute hand
+    float angleM = minutes * 6 * PI / 180;
+    int xM = 64 + 25 * sin(angleM);
+    int yM = 32 - 25 * cos(angleM);
+    display.drawLine(64, 32, xM, yM, SSD1306_WHITE);
+    
+    // Second hand
+    float angleS = seconds * 6 * PI / 180;
+    int xS = 64 + 28 * sin(angleS);
+    int yS = 32 - 28 * cos(angleS);
+    display.drawLine(64, 32, xS, yS, SSD1306_WHITE);
+    
+    // Center dot
+    display.fillCircle(64, 32, 2, SSD1306_WHITE);
+    
+    // Show date
+    display.setTextSize(1);
+    char dateStr[20];
+    strftime(dateStr, sizeof(dateStr), "%b %d", &timeinfo);
+    display.setCursor(45, 50);
+    display.print(dateStr);
+    
+    display.display();
+}
+```
+
+## 27.2 Adding Custom Themes
+
+### Example: Sunset Theme
+
+```cpp
+void showSunsetTheme() {
+    // Orange gradient background
+    display.clearDisplay();
+    
+    // Draw gradient
+    for (int y = 0; y < 64; y++) {
+        int color = map(y, 0, 64, SSD1306_WHITE, SSD1306_BLACK);
+        display.drawFastHLine(0, y, 128, color);
+    }
+    
+    // Orange sun
+    display.fillCircle(100, 50, 10, SSD1306_WHITE);
+    
+    // Mountains
+    display.drawTriangle(0, 64, 30, 40, 60, 64, SSD1306_WHITE);
+    display.drawTriangle(40, 64, 80, 30, 120, 64, SSD1306_WHITE);
+    
+    // Time
+    display.setTextSize(2);
+    display.setTextColor(SSD1306_BLACK);
+    display.setCursor(10, 10);
+    display.println(formatTime());
+}
+```
+
+---
+
+## 27.3 Adding New Health Metrics
+
+### Example: Respiratory Rate
+
+```cpp
+// Add to HealthData struct:
+float respiratoryRate;  // Breaths per minute
+
+// Add calculation:
+void calculateRespiratoryRate() {
+    // Calculate from heart rate variability pattern
+    // Higher HRV = slower breathing
+    // Lower HRV = faster breathing
+    
+    if (currentHealth.hrvRMSSD > 50) {
+        currentHealth.respiratoryRate = 12;  // Calm breathing
+    } else if (currentHealth.hrvRMSSD > 30) {
+        currentHealth.respiratoryRate = 16;  // Normal
+    } else if (currentHealth.hrvRMSSD > 15) {
+        currentHealth.respiratoryRate = 20;  // Elevated
+    } else {
+        currentHealth.respiratoryRate = 25;  // Stressed
+    }
+}
+```
+
+---
+
+# ═══════════════════════════════════════════════════════════════════════════
+# END OF DOCUMENT
+# ═══════════════════════════════════════════════════════════════════════════
+
+**Document Version:** 3.2.2  
+**Total Lines:** 2500+  
+**Last Updated:** July 2026  
+**Company:** Cambric  
+**Currency:** EGP (Egyptian Pounds)
+
+**Full Price Summary:**
+- Electronics: 1,891 ج.م
+- Mechanical: 1,125 ج.م
+- Tools: 2,550 ج.م
+- **Minimum Total: 3,016 ج.م**
+
+**Copyright:** © 2026 Cambric. All Rights Reserved.
+
+This is the COMPLETE guide for building the Digital Saver Onyx Smartwatch from scratch!
+Everything you need: Hardware, Software, Prices in EGP, Step-by-Step Assembly, Troubleshooting, Code Walkthrough, and Customization!
+
