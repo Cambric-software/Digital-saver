@@ -1,7 +1,7 @@
 /**
  * ╔═══════════════════════════════════════════════════════════════════════════╗
  * ║                    DIGITAL SAVER - SMARTWATCH FIRMWARE                     ║
- * ║                           Version 3.0.3 (July 2026)                        ║
+ * ║                           Version 3.1.0 (July 2026)                        ║
  * ╠═══════════════════════════════════════════════════════════════════════════╣
  * ║  Features:                                                                 ║
  * ║  ✓ Real-time Heart Rate Monitoring (MAX30102 PPG)                        ║
@@ -10,11 +10,13 @@
  * ║  ✓ Fall Detection (MPU6050 accelerometer)                               ║
  * ║  ✓ Heart Rate Variability (HRV) Analysis                                ║
  * ║  ✓ Bluetooth Low Energy (BLE) Communication                              ║
+ * ║  ✓ WiFi Internet Connection (Weather!)                                  ║
  * ║  ✓ OLED Display Interface (5 Themes!)                                   ║
  * ║  ✓ Emergency Alert System                                                 ║
  * ║  ✓ Sleep Tracking                                                         ║
- * ║  ✓ Activity Monitoring                                                    ║
- * ║  ✓ Customizable Themes (via BLE)                                         ║
+ * ║  ✓ Activity Monitoring (Steps, Calories)                                 ║
+ * ║  ✓ Weather Display (From Internet!)                                      ║
+ * ║  ✓ STEALTH Mode (Looks like normal watch!)                             ║
  * ╠═══════════════════════════════════════════════════════════════════════════╣
  * ║  Hardware: ESP32-WROOM-32 + MAX30102 + MPU6050 + OLED 0.96"             ║
  * ║  Framework: Arduino + PlatformIO                                          ║
@@ -30,6 +32,9 @@
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 #include <SparkFunMAX3010x.h>
+#include <WiFi.h>
+#include <HTTPClient.h>
+#include <ArduinoJson.h>
 
 // ============================================
 //           CONFIGURATION
@@ -58,7 +63,16 @@
 // BLE Settings
 #define SERVICE_UUID "4fafc201-1fb5-459e-8fcc-c5c9c331914b"
 #define CHARACTERISTIC_UUID "beb5483e-36e1-4688-b7f5-ea07361b26a8"
-#define COMMAND_CHAR_UUID "beb5483e-36e1-4688-b7f5-ea07361b26f0"  // Command characteristic
+#define COMMAND_CHAR_UUID "beb5483e-36e1-4688-b7f5-ea07361b26f0"  // Command characteristic"
+
+// WiFi Settings - CONNECT TO INTERNET FOR WEATHER
+#define WIFI_SSID "YourWiFiName"
+#define WIFI_PASSWORD "YourWiFiPassword"
+#define WEATHER_API_KEY "YOUR_OPENWEATHERMAP_API_KEY"
+#define WEATHER_API_URL "http://api.openweathermap.org/data/2.5/weather"
+
+// Weather Update Interval (30 minutes)
+#define WEATHER_UPDATE_INTERVAL 1800000
 
 // Health Thresholds
 #define MIN_HEART_RATE 40
@@ -129,6 +143,22 @@ struct RawSensorData {
 HealthData currentHealth;
 RawSensorData rawData;
 
+// Weather Data (from internet)
+struct WeatherData {
+    float temperature;      // Celsius
+    int humidity;          // Percentage
+    String condition;       // "Clear", "Cloudy", "Rain", etc
+    String icon;            // Icon code
+    int windSpeed;          // m/s
+    bool updated;           // Has data been fetched
+};
+WeatherData currentWeather;
+
+// WiFi Status
+bool wifiConnected = false;
+bool wifiEnabled = false;
+uint32_t lastWeatherUpdate = 0;
+
 // ============================================
 //           STATE VARIABLES
 // ============================================
@@ -140,6 +170,8 @@ enum WatchMode {
     MODE_BLOOD_PRESSURE,
     MODE_ACTIVITY,
     MODE_SLEEP,
+    MODE_WEATHER,      // NEW! Shows weather from internet
+    MODE_STEALTH,     // NEW! Looks like normal watch - DISCREET MODE
     MODE_SETTINGS
 };
 WatchMode currentMode = MODE_CLOCK;
@@ -199,6 +231,7 @@ void initDisplay();
 void initSensors();
 void initBLE();
 void initGPIO();
+void initWiFi();
 
 void updateHeartRate();
 void updateSpO2();
@@ -207,8 +240,11 @@ void calculateHRV();
 void detectFall();
 void updateActivity();
 void updateSleep();
+void fetchWeather();
 
 void updateDisplay();
+void showWeatherDisplay();
+void showStealthDisplay();
 void sendBLEData();
 
 void vibrate(uint16_t duration);
@@ -428,6 +464,80 @@ void initBLE() {
     Serial.println("[OK] BLE initialized - waiting for connection...");
 }
 
+// ============================================
+//           WiFi & INTERNET FUNCTIONS
+// ============================================
+
+void initWiFi() {
+    Serial.println("[WIFI] Initializing WiFi...");
+    WiFi.mode(WIFI_STA);
+    WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+    
+    int attempts = 0;
+    while (WiFi.status() != WL_CONNECTED && attempts < 20) {
+        delay(500);
+        Serial.print(".");
+        attempts++;
+    }
+    
+    if (WiFi.status() == WL_CONNECTED) {
+        wifiConnected = true;
+        wifiEnabled = true;
+        Serial.println("\n[WIFI] Connected! IP: " + WiFi.localIP().toString());
+        vibrate(100);
+        
+        // Get weather immediately
+        fetchWeather();
+    } else {
+        wifiConnected = false;
+        Serial.println("\n[WIFI] Connection failed!");
+    }
+}
+
+void fetchWeather() {
+    if (!wifiConnected || !wifiEnabled) {
+        Serial.println("[WEATHER] WiFi not connected!");
+        return;
+    }
+    
+    Serial.println("[WEATHER] Fetching weather data...");
+    
+    HTTPClient http;
+    String url = String(WEATHER_API_URL) + 
+        "?q=Cairo&appid=" + WEATHER_API_KEY + "&units=metric";
+    
+    http.begin(url);
+    int httpCode = http.GET();
+    
+    if (httpCode == HTTP_CODE_OK) {
+        String payload = http.getString();
+        
+        // Parse JSON weather data
+        StaticJsonDocument<1024> doc;
+        DeserializationError error = deserializeJson(doc, payload);
+        
+        if (!error) {
+            currentWeather.temperature = doc["main"]["temp"];
+            currentWeather.humidity = doc["main"]["humidity"];
+            currentWeather.condition = doc["weather"][0]["main"].as<String>();
+            currentWeather.icon = doc["weather"][0]["icon"].as<String>();
+            currentWeather.windSpeed = doc["wind"]["speed"];
+            currentWeather.updated = true;
+            
+            Serial.println("[WEATHER] Updated: " + 
+                String(currentWeather.temperature) + "C, " + 
+                currentWeather.condition);
+        } else {
+            Serial.println("[WEATHER] JSON parse error!");
+        }
+    } else {
+        Serial.println("[WEATHER] HTTP Error: " + String(httpCode));
+    }
+    
+    http.end();
+    lastWeatherUpdate = millis();
+}
+
 class BLEServerCallbacks: public BLEServerCallbacks {
     void onConnect(BLEServer* pServer) {
         deviceConnected = true;
@@ -466,7 +576,7 @@ class BLECommandCallbacks: public BLECharacteristicCallbacks {
                 vibrate(50);  // Confirm with vibration
             }
             
-            // Parse mode: "MODE:X" where X is 0-5
+            // Parse mode: "MODE:X" where X is 0-7
             else if (rxData.substr(0, 5) == "MODE:") {
                 int modeId = atoi(rxData.substr(5).c_str());
                 switch (modeId) {
@@ -475,9 +585,35 @@ class BLECommandCallbacks: public BLECharacteristicCallbacks {
                     case 2: currentMode = MODE_BLOOD_PRESSURE; break;
                     case 3: currentMode = MODE_ACTIVITY; break;
                     case 4: currentMode = MODE_SLEEP; break;
-                    case 5: currentMode = MODE_SETTINGS; break;
+                    case 5: currentMode = MODE_WEATHER; break;
+                    case 6: currentMode = MODE_STEALTH; break;
+                    case 7: currentMode = MODE_SETTINGS; break;
                 }
                 Serial.printf("[MODE] Set to mode %d\n", modeId);
+                vibrate(30);  // Confirm
+            }
+            
+            // WiFi commands
+            else if (rxData == "WIFI:ON") {
+                if (!wifiEnabled) {
+                    initWiFi();
+                }
+                pCommandCharacteristic->setValue("WIFI:STARTED");
+                pCommandCharacteristic->notify();
+            }
+            else if (rxData == "WIFI:OFF") {
+                WiFi.disconnect();
+                wifiEnabled = false;
+                wifiConnected = false;
+                pCommandCharacteristic->setValue("WIFI:OFF");
+                pCommandCharacteristic->notify();
+            }
+            else if (rxData == "WEATHER:REFRESH") {
+                if (wifiConnected) {
+                    fetchWeather();
+                    pCommandCharacteristic->setValue("WEATHER:UPDATED");
+                    pCommandCharacteristic->notify();
+                }
             }
             
             // Ping: respond with pong
@@ -895,6 +1031,12 @@ void updateDisplay() {
         case MODE_SLEEP:
             showSleepDisplay();
             break;
+        case MODE_WEATHER:
+            showWeatherDisplay();
+            break;
+        case MODE_STEALTH:
+            showStealthDisplay();
+            break;
         case MODE_SETTINGS:
             showSettingsDisplay();
             break;
@@ -938,6 +1080,88 @@ void showMinimalDisplay() {
     int m2 = minutes % 10;
     for (int i = 0; i < 4; i++) {
         if (m2 & (1 << i)) display.drawPixel(70 + i * 4, 10, SSD1306_WHITE);
+    }
+}
+
+// ============================================
+//           WEATHER DISPLAY
+// ============================================
+
+void showWeatherDisplay() {
+    // Weather icon (simple)
+    display.setTextSize(2);
+    display.setCursor(5, 5);
+    if (currentWeather.icon.indexOf("01") >= 0) {
+        display.print("SUN");  // Clear
+    } else if (currentWeather.icon.indexOf("02") >= 0 || currentWeather.icon.indexOf("03") >= 0) {
+        display.print("CLO");  // Cloudy
+    } else if (currentWeather.icon.indexOf("09") >= 0 || currentWeather.icon.indexOf("10") >= 0) {
+        display.print("RAIN"); // Rain
+    } else if (currentWeather.icon.indexOf("11") >= 0) {
+        display.print("STORM"); // Thunderstorm
+    } else if (currentWeather.icon.indexOf("50") >= 0) {
+        display.print("FOG");  // Mist
+    } else {
+        display.print("?");
+    }
+    
+    // Temperature
+    display.setTextSize(3);
+    display.setCursor(10, 28);
+    if (currentWeather.updated) {
+        display.print(currentWeather.temperature, 0);
+        display.print((char)247);  // Degree symbol
+        display.print("C");
+    } else {
+        display.print("--");
+    }
+    
+    // Humidity
+    display.setTextSize(1);
+    display.setCursor(5, 55);
+    if (currentWeather.updated) {
+        display.print("HUM:");
+        display.print(currentWeather.humidity);
+        display.print("%  WIND:");
+        display.print(currentWeather.windSpeed);
+        display.print("m/s");
+    } else {
+        display.print("No weather data");
+    }
+    
+    // Check for weather update
+    if (wifiConnected && (millis() - lastWeatherUpdate > WEATHER_UPDATE_INTERVAL)) {
+        fetchWeather();
+    }
+}
+
+// ============================================
+//           STEALTH/DISCREET MODE
+// ============================================
+
+void showStealthDisplay() {
+    // STEALTH MODE: Watch looks like a normal analog watch!
+    // Shows ONLY time as regular digits, no health icons
+    // Perfect for meetings, interviews, or when you don't want
+    // people to know it's a smart watch!
+    
+    display.setTextSize(4);  // Big digits
+    display.setCursor(8, 18);
+    display.print(formatTime());  // Just show time, nothing else!
+    
+    // Small date at bottom (looks like engraving)
+    display.setTextSize(1);
+    display.setCursor(25, 52);
+    struct tm timeinfo;
+    if (getLocalTime(&timeinfo)) {
+        char dateStr[20];
+        strftime(dateStr, sizeof(dateStr), "%b %d", &timeinfo);
+        display.print(dateStr);
+    }
+    
+    // Optional: Tiny dot at corner (hardly noticeable)
+    if (deviceConnected) {
+        display.drawPixel(124, 2, SSD1306_WHITE);  // Small BLE indicator
     }
 }
 
