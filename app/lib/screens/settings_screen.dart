@@ -11,6 +11,7 @@ import '../services/user_profile_service.dart';
 import '../services/cambric_auth_service_v2.dart';
 import '../services/smart_data_service.dart';
 import '../services/update_service.dart';
+import '../services/theme_service.dart';
 import '../models/health_models.dart';
 import 'auth_screen.dart';
 
@@ -205,12 +206,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
           const SizedBox(height: 16),
           _LanguageCard(current: _profile.language, onChanged: _changeLanguage),
           const SizedBox(height: 16),
-          _DownloadCard(
+          const _ThemeCard(),
+          const SizedBox(height: 16),
+          _UpdateOnlyCard(
             currentVersion: _updateService.currentVersion,
             onCheckUpdate: _checkForUpdate,
             onInstallUpdate: _smartInstallUpdate,
-            onOpenUrl: _openUrl,
-            windowsUrl: _updateResult?.windowsDownloadUrl,
           ),
           const SizedBox(height: 16),
           _AboutCard(),
@@ -913,6 +914,96 @@ class _LanguageCard extends StatelessWidget {
   }
 }
 
+class _ThemeCard extends StatelessWidget {
+  const _ThemeCard();
+
+  @override
+  Widget build(BuildContext context) {
+    final themeService = context.watch<ThemeService>();
+    final themes = themeService.getAvailableThemes();
+    
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(themeService.getThemeIcon(), color: const Color(0xFF2563eb), size: 20),
+              const SizedBox(width: 8),
+              const Text('App Theme', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Current: ${themeService.getThemeName()}',
+            style: const TextStyle(color: Color(0xFF64748B), fontSize: 12),
+          ),
+          const SizedBox(height: 16),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: themes.map((t) {
+              final isSelected = themeService.themeModeType == t['mode'];
+              return GestureDetector(
+                onTap: () => themeService.setTheme(t['mode'] as AppThemeMode),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  width: 70,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  decoration: BoxDecoration(
+                    color: isSelected ? (t['color'] as Color).withOpacity(0.15) : Colors.grey.shade100,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: isSelected ? t['color'] as Color : Colors.transparent,
+                      width: 2,
+                    ),
+                  ),
+                  child: Column(
+                    children: [
+                      Container(
+                        width: 32, height: 32,
+                        decoration: BoxDecoration(
+                          color: t['color'] as Color,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 2),
+                          boxShadow: [BoxShadow(color: (t['color'] as Color).withOpacity(0.3), blurRadius: 4)],
+                        ),
+                        child: Icon(
+                          t['icon'] as IconData,
+                          color: Colors.white,
+                          size: 16,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        t['name'] as String,
+                        style: TextStyle(
+                          fontSize: 9,
+                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                          color: isSelected ? t['color'] as Color : Colors.grey.shade600,
+                        ),
+                        textAlign: TextAlign.center,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _AboutCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
@@ -1229,21 +1320,17 @@ class _CheckingUpdateBanner extends StatelessWidget {
 }
 
 // ===========================================================================
-// DOWNLOAD CARD - App downloads for all platforms
+// UPDATE ONLY CARD - Simple update checker for Android
 // ===========================================================================
-class _DownloadCard extends StatelessWidget {
+class _UpdateOnlyCard extends StatelessWidget {
   final String currentVersion;
   final VoidCallback onCheckUpdate;
   final VoidCallback onInstallUpdate;
-  final void Function(String) onOpenUrl;
-  final String? windowsUrl;
 
-  const _DownloadCard({
+  const _UpdateOnlyCard({
     required this.currentVersion,
     required this.onCheckUpdate,
     required this.onInstallUpdate,
-    required this.onOpenUrl,
-    this.windowsUrl,
   });
 
   @override
@@ -1266,7 +1353,7 @@ class _DownloadCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Icon(Icons.download_for_offline_outlined, color: Color(0xFF2563eb), size: 20),
+              const Icon(Icons.system_update, color: Color(0xFF2563eb), size: 20),
               const SizedBox(width: 8),
               const Text('App Updates', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF1E3A5F), fontSize: 15)),
               const Spacer(),
@@ -1288,271 +1375,39 @@ class _DownloadCard extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           
-          // Android - Smart install (auto-uninstall if needed)
-          _DownloadButton(
-            iconWidget: ClipRRect(
-              borderRadius: BorderRadius.circular(6),
-              child: Image.asset(
-                'assets/digital-saver-icon-transparent.png',
-                width: 24,
-                height: 24,
-                fit: BoxFit.cover,
+          // Install Update Button
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: onInstallUpdate,
+              icon: const Icon(Icons.download, size: 20),
+              label: const Text('Download & Install Update'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF2563eb),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
             ),
-            label: 'Download & Install Update',
-            color: const Color(0xFF3DDC84),
-            subtitle: 'Recommended • $currentVersion',
-            onTap: onInstallUpdate,
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
           
-          // Windows - Get from GitHub releases
-          _WindowsDownloadButton(
-            url: windowsUrl ?? 'https://github.com/Cambric-software/Digital-saver/releases',
-            onTap: onOpenUrl,
-          ),
-          const SizedBox(height: 10),
-          
-          // iOS - Coming Soon
-          _ComingSoonButton(
-            icon: Icons.apple,
-            label: 'iOS App',
-            color: const Color(0xFF000000),
-            note: 'No Apple Developer account',
-          ),
-          const SizedBox(height: 16),
-          
-          // Info box
+          // Info
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: const Color(0xFFE3F2FD),
+              color: const Color(0xFFF0F7FF),
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: const Color(0xFF2563eb).withOpacity(0.3)),
+              border: Border.all(color: const Color(0xFF2563eb).withOpacity(0.2)),
             ),
             child: Row(
               children: [
-                Icon(Icons.download_done, color: const Color(0xFF2563eb), size: 18),
-                SizedBox(width: 8),
-                Expanded(
+                Icon(Icons.info_outline, color: const Color(0xFF2563eb), size: 18),
+                const SizedBox(width: 8),
+                const Expanded(
                   child: Text(
-                    'Download the latest release from GitHub. See releases page for all platform builds.',
-                    style: TextStyle(color: const Color(0xFF2563eb), fontSize: 11),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _WindowsDownloadButton extends StatelessWidget {
-  final String url;
-  final void Function(String) onTap;
-
-  const _WindowsDownloadButton({required this.url, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: () => onTap(url),
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          decoration: BoxDecoration(
-            color: const Color(0xFF0078D4).withOpacity(0.1),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: const Color(0xFF0078D4).withOpacity(0.3)),
-          ),
-          child: Row(
-            children: [
-              const Icon(Icons.desktop_windows, color: Color(0xFF0078D4), size: 24),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        const Text(
-                          'Windows App',
-                          style: TextStyle(
-                            color: Color(0xFF0078D4),
-                            fontWeight: FontWeight.w600,
-                            fontSize: 14,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF0078D4).withOpacity(0.2),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: const Text(
-                            'Download',
-                            style: TextStyle(
-                              color: Color(0xFF0078D4),
-                              fontSize: 10,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    const Text(
-                      'Get from GitHub Releases',
-                      style: TextStyle(
-                        color: Color(0xFF0078D4),
-                        fontSize: 11,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const Icon(Icons.open_in_new, color: Color(0xFF0078D4), size: 18),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _DownloadButton extends StatelessWidget {
-  final Widget iconWidget;
-  final String label;
-  final Color color;
-  final String? subtitle;
-  final VoidCallback onTap;
-  
-  const _DownloadButton({
-    required this.iconWidget,
-    required this.label,
-    required this.color,
-    this.subtitle,
-    required this.onTap,
-  });
-  
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: color.withOpacity(0.3)),
-          ),
-          child: Row(
-            children: [
-              iconWidget,
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      label,
-                      style: TextStyle(
-                        color: color,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 14,
-                      ),
-                    ),
-                    if (subtitle != null)
-                      Text(
-                        subtitle!,
-                        style: TextStyle(
-                          color: color.withOpacity(0.7),
-                          fontSize: 11,
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-              Icon(Icons.download, color: color.withOpacity(0.7), size: 20),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _ComingSoonButton extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final Color color;
-  final String note;
-  
-  const _ComingSoonButton({
-    required this.icon,
-    required this.label,
-    required this.color,
-    required this.note,
-  });
-  
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      decoration: BoxDecoration(
-        color: Colors.grey.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.withOpacity(0.3)),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, color: Colors.grey, size: 24),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Text(
-                      label,
-                      style: const TextStyle(
-                        color: Colors.grey,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 14,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: Colors.grey.withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Text(
-                        'Coming Soon',
-                        style: TextStyle(
-                          color: Colors.grey,
-                          fontSize: 10,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                Text(
-                  note,
-                  style: TextStyle(
-                    color: Colors.grey.withOpacity(0.7),
-                    fontSize: 11,
+                    'Download latest version from GitHub releases page.',
+                    style: TextStyle(color: Color(0xFF2563eb), fontSize: 12),
                   ),
                 ),
               ],

@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'services/ble_service.dart';
 import 'services/cambric_auth_service_v2.dart';
+import 'services/theme_service.dart';
 import 'screens/auth_screen.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/heart_screen.dart';
@@ -32,6 +33,7 @@ void main() async {
       providers: [
         ChangeNotifierProvider(create: (_) => BleService()),
         ChangeNotifierProvider(create: (_) => AuthProvider()),
+        ChangeNotifierProvider(create: (_) => ThemeService()),
       ],
       child: const DigitalSaverApp(),
     ),
@@ -43,25 +45,14 @@ class DigitalSaverApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final themeService = context.watch<ThemeService>();
+    
     return MaterialApp(
       title: 'Digital Saver',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF2563eb),
-          brightness: Brightness.light,
-        ),
-        fontFamily: 'Inter',
-      ),
-      darkTheme: ThemeData(
-        useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF2563eb),
-          brightness: Brightness.dark,
-        ),
-      ),
-      themeMode: ThemeMode.light,
+      theme: themeService.getLightTheme(),
+      darkTheme: themeService.getDarkTheme(),
+      themeMode: themeService.themeMode,
       home: const SplashScreen(),
     );
   }
@@ -161,52 +152,86 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   const Spacer(),
+                  // App Icon with animation
                   Container(
-                    width: 100, height: 100,
+                    width: 120, height: 120,
                     decoration: BoxDecoration(
                       gradient: const LinearGradient(
                         colors: [Color(0xFF2563EB), Color(0xFF7C3AED)],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       ),
-                      borderRadius: BorderRadius.circular(25),
+                      borderRadius: BorderRadius.circular(28),
                       boxShadow: [
                         BoxShadow(
-                          color: const Color(0xFF2563EB).withOpacity(0.4),
-                          blurRadius: 30,
-                          offset: const Offset(0, 10),
+                          color: const Color(0xFF2563EB).withOpacity(0.5),
+                          blurRadius: 40,
+                          offset: const Offset(0, 15),
                         ),
                       ],
                     ),
-                    child: const Icon(Icons.favorite, color: Colors.white, size: 50),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(28),
+                      child: Image.asset(
+                        'assets/digital-saver-icon-transparent.png',
+                        width: 120, height: 120,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => const Icon(Icons.favorite, color: Colors.white, size: 60),
+                      ),
+                    ),
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 32),
                   const Text(
                     'Digital Saver',
                     style: TextStyle(
                       color: Colors.white,
-                      fontSize: 32,
+                      fontSize: 36,
                       fontWeight: FontWeight.bold,
-                      letterSpacing: 1,
+                      letterSpacing: 1.5,
+                      shadows: [Shadow(color: Colors.black26, blurRadius: 10)],
                     ),
                   ),
                   const SizedBox(height: 8),
                   const Text(
                     'Health Monitoring System',
-                    style: TextStyle(
-                      color: Colors.white70,
-                      fontSize: 16,
+                    style: TextStyle(color: Colors.white70, fontSize: 16, letterSpacing: 0.5),
+                  ),
+                  const SizedBox(height: 12),
+                  // Cambric badge
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: Colors.white24),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 20, height: 20,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.3),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(4),
+                            child: Image.asset(
+                              'assets/cambric-icon-transparent.png',
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => const Icon(Icons.layers, color: Colors.white, size: 14),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        const Text(
+                          'by Cambric',
+                          style: TextStyle(color: Colors.white70, fontSize: 13),
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'Made by Cambric',
-                    style: TextStyle(
-                      color: Colors.white60,
-                      fontSize: 12,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 24),
                   // Session status indicator
                   if (auth.loading)
                     Container(
