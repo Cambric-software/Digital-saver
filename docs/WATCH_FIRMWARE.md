@@ -1,10 +1,10 @@
 # DIGITAL SAVER ONYX SMARTWATCH
 ## Complete Build Guide & Technical Documentation
 
-**Version:** 3.2.0  
+**Version:** 3.2.1  
 **Last Updated:** July 2026  
 **Company:** Cambric  
-**Total Document Lines:** 2000+
+**Currency:** جميع الأسعار بالجنيه المصري (EGP)
 
 ---
 
@@ -18,164 +18,129 @@ The Digital Saver Onyx is a custom-built smartwatch that monitors your health an
 
 ## 1.1 Key Features (v3.2.0)
 
-This watch does EVERYTHING:
-
-| Feature | Description | Status |
-|---------|-------------|--------|
-| Heart Rate Monitoring | Real-time HR using PPG sensor | ✅ Working |
-| Blood Oxygen (SpO2) | Measures oxygen in blood | ✅ Working |
-| Blood Pressure | Estimates BP from PPG waveform | ✅ Working |
-| Step Counting | Tracks steps using accelerometer | ✅ Working |
-| Fall Detection | Detects falls and alerts | ✅ Working |
-| Sleep Tracking | Monitors sleep quality | ✅ Working |
-| Calorie Tracking | Calculates burned calories | ✅ Working |
-| Stress Detection | Analyzes HRV for stress | ✅ Working |
-| Weather Display | Shows weather from internet | ✅ Working |
-| STEALTH Mode | Looks like normal watch | ✅ Working |
-| WiFi Internet | Connects to WiFi | ✅ Working |
-| BLE Sync | Sends data to phone | ✅ Working |
-| User Profiles | Personalized health | ✅ Working |
-| Advanced Health AI | On-device health analysis | ✅ Working |
-
-## 1.2 Version History
-
-| Version | Date | Major Changes |
-|---------|------|---------------|
-| **3.2.0** | July 2026 | User Profile + Advanced Health AI |
-| 3.1.0 | July 2026 | WiFi, Weather, STEALTH Mode |
-| 3.0.3 | July 2026 | 5 Display Themes |
-| 3.0.0 | July 2026 | Major firmware rewrite |
-| 2.0.0 | March 2026 | Added sensors |
-| 1.0.0 | January 2026 | Initial release |
-
-## 1.3 Who Is This For?
-
-This watch is for:
-- Health enthusiasts who want custom tracking
-- Developers learning embedded systems
-- Hackers who want full control
-- Anyone who wants a smartwatch built from scratch
+| Feature | الوصف |
+|---------|-------|
+| Heart Rate Monitoring | قياس نبض القلب |
+| Blood Oxygen (SpO2) | نسبة الأكسجين في الدم |
+| Blood Pressure | ضغط الدم |
+| Step Counting | عد الخطوات |
+| Fall Detection | اكتشاف السقوط |
+| Sleep Tracking | تتبع النوم |
+| Calorie Tracking | حساب السعرات |
+| Stress Detection | كشف التوتر |
+| Weather Display | عرض الطقس |
+| STEALTH Mode | وضع التخفي |
+| WiFi Internet | اتصال بالإنترنت |
+| BLE Sync | إرسال البيانات للهاتف |
+| User Profiles | ملفات شخصية |
+| Advanced Health AI | ذكاء اصطناعي للصحة |
 
 ---
 
 # ═══════════════════════════════════════════════════════════════════════════
-# PART 2: COMPLETE HARDWARE LIST WITH PRICES
+# PART 2: COMPLETE HARDWARE LIST WITH PRICES (EGP)
 # ═══════════════════════════════════════════════════════════════════════════
 
-# 2. COMPONENT LIST WITH PRICES & LINKS
+# 2. قائمة القطع الكاملة بالأسعار
 
-## 2.1 Main Electronics
+## 2.1 القطع الإلكترونية الرئيسية
 
-| # | Component | Part Number | Quantity | Unit Price | Total | Buy Link |
-|---|-----------|-------------|----------|------------|-------|----------|
-| 1 | ESP32 Development Board | ESP32-WROOM-32 | 1 | $6.50 | $6.50 | https://amzn.to/3xyz123 |
-| 2 | MAX30102 Heart Rate Sensor | MAX30102 | 1 | $8.99 | $8.99 | https://amzn.to/3abc456 |
-| 3 | MPU6050 Accelerometer | MPU6050 | 1 | $3.49 | $3.49 | https://amzn.to/3def789 |
-| 4 | SSD1306 OLED Display 0.96" | SSD1306 128x64 | 1 | $4.99 | $4.99 | https://amzn.to/3ghi012 |
-| 5 | TP4056 Battery Charger | TP4056 USB-C | 1 | $1.50 | $1.50 | https://amzn.to/3jkl345 |
-| 6 | LiPo Battery 500mAh | 502035 | 1 | $4.99 | $4.99 | https://amzn.to/3mno678 |
-| 7 | Vibration Motor 3V | 3V ERM | 1 | $1.00 | $1.00 | https://amzn.to/3pqr901 |
-| 8 | Red LED 3mm | 3mm Red LED | 1 | $0.10 | $0.10 | https://amzn.to/3stu234 |
-| 9 | Green LED 3mm | 3mm Green LED | 1 | $0.10 | $0.10 | https://amzn.to/3vwx567 |
-| 10 | Tactile Buttons 6x6mm | 6x6x5mm | 3 | $0.05 | $0.15 | https://amzn.to/3yza890 |
-| 11 | Resistor 220 Ohm | 220R 1/4W | 2 | $0.01 | $0.02 | https://amzn.to/3bcd123 |
-| 12 | Resistor 10K Ohm | 10K 1/4W | 3 | $0.01 | $0.03 | https://amzn.to/3efg456 |
-| 13 | Jumper Wires | M/M 40pcs | 1 | $2.99 | $2.99 | https://amzn.to/3hij789 |
-| 14 | Prototype PCB | 5x7cm | 1 | $1.99 | $1.99 | https://amzn.to/3klm012 |
-| 15 | Pin Headers | Male 40pin | 1 | $1.00 | $1.00 | https://amzn.to/3nop345 |
+| # | القطعة | رقم الجزء | الكمية | السعر بالجنيه | السعر USD | رابط الشراء |
+|---|--------|----------|--------|---------------|-----------|--------------|
+| 1 | ESP32 Development Board | ESP32-WROOM-32 | 1 | 325 ج.م | $6.50 | https://egypt.tmart.com |
+| 2 | MAX30102 Heart Rate Sensor | MAX30102 | 1 | 450 ج.م | $8.99 | https://egypt.tmart.com |
+| 3 | MPU6050 Accelerometer | MPU6050 | 1 | 175 ج.م | $3.49 | https://egypt.tmart.com |
+| 4 | SSD1306 OLED Display 0.96" | SSD1306 128x64 | 1 | 250 ج.م | $4.99 | https://egypt.tmart.com |
+| 5 | TP4056 Battery Charger | TP4056 USB-C | 1 | 75 ج.م | $1.50 | https://egypt.tmart.com |
+| 6 | LiPo Battery 500mAh | 502035 | 1 | 250 ج.م | $4.99 | https://egypt.tmart.com |
+| 7 | Vibration Motor 3V | 3V ERM | 1 | 50 ج.م | $1.00 | https://egypt.tmart.com |
+| 8 | Red LED 3mm | 3mm Red LED | 1 | 5 ج.م | $0.10 | https://egypt.tmart.com |
+| 9 | Green LED 3mm | 3mm Green LED | 1 | 5 ج.م | $0.10 | https://egypt.tmart.com |
+| 10 | Tactile Buttons 6x6mm | 6x6x5mm | 3 | 3 ج.م | $0.05 | https://egypt.tmart.com |
+| 11 | Resistor 220 Ohm | 220R 1/4W | 2 | 1 ج.م | $0.01 | https://egypt.tmart.com |
+| 12 | Resistor 10K Ohm | 10K 1/4W | 3 | 2 ج.م | $0.03 | https://egypt.tmart.com |
+| 13 | Jumper Wires | M/M 40pcs | 1 | 150 ج.م | $2.99 | https://egypt.tmart.com |
+| 14 | Prototype PCB | 5x7cm | 1 | 100 ج.م | $1.99 | https://egypt.tmart.com |
+| 15 | Pin Headers | Male 40pin | 1 | 50 ج.م | $1.00 | https://egypt.tmart.com |
 
-**TOTAL ELECTRONICS: ~$36.84**
+**إجمالي electronics: 1,891 ج.م (~$38)**
 
-## 2.2 Case & Mechanical Parts
+## 2.2 Case & القطع الميكانيكية
 
-| # | Component | Quantity | Unit Price | Total | Buy Link |
-|---|-----------|----------|------------|-------|----------|
-| 16 | 3D Printed Case Top | 1 | $5.00* | $5.00 | 3D print yourself |
-| 17 | 3D Printed Case Bottom | 1 | $5.00* | $5.00 | 3D print yourself |
-| 18 | Silicone Watch Band | 22mm | 1 | $4.99 | $4.99 | https://amzn.to/3qrs678 |
-| 19 | Glass Watch Face | 40mm | 1 | $2.99 | $2.99 | https://amzn.to/3tuv901 |
-| 20 | Screws M1.5x3mm | 4pcs | $0.50 | $0.50 | https://amzn.to/3wxy234 |
-| 21 | Double Sided Tape | 3M 468MP | 1 | $3.99 | $3.99 | https://amzn.to/3zab567 |
+| # | القطعة | الكمية | السعر بالجنيه | السعر USD |
+|---|--------|--------|---------------|-----------|
+| 16 | 3D Printed Case Top | 1 | 250 ج.م | $5.00 |
+| 17 | 3D Printed Case Bottom | 1 | 250 ج.م | $5.00 |
+| 18 | Silicone Watch Band | 22mm | 1 | 250 ج.م | $4.99 |
+| 19 | Glass Watch Face | 40mm | 1 | 150 ج.م | $2.99 |
+| 20 | Screws M1.5x3mm | 4pcs | 25 ج.م | $0.50 |
+| 21 | Double Sided Tape | 3M 468MP | 1 | 200 ج.م | $3.99 |
 
-**TOTAL MECHANICAL: ~$22.47**
+**إجمالي الميكانيكية: 1,125 ج.م (~$22)**
 
-## 2.3 Tools Needed
+## 2.3 الأدوات المطلوبة
 
-| # | Tool | Price | Buy Link |
-|---|------|-------|----------|
-| 22 | Soldering Iron 60W | $15.99 | https://amzn.to/3cde890 |
-| 23 | Solder Wire 0.8mm | $8.99 | https://amzn.to/3fgh123 |
-| 24 | Wire Cutters | $6.99 | https://amzn.to/3ijk456 |
-| 25 | Multimeter | $12.99 | https://amzn.to/3lmn789 |
-| 26 | USB Cable Type-C | $5.99 | https://amzn.to/3opq012 |
-| 27 | 3D Printer (optional) | $200+ | https://amzn.to/3rst345 |
+| # | الأداة | السعر بالجنيه | السعر USD |
+|---|--------|-------------|-----------|
+| 22 | مكواة لحام 60W | 800 ج.م | $15.99 |
+| 23 | سلك لحام 0.8mm | 450 ج.م | $8.99 |
+| 24 | قاطعات أسلاك | 350 ج.م | $6.99 |
+| 25 | مالتيميتر | 650 ج.م | $12.99 |
+| 26 | كابل USB Type-C | 300 ج.م | $5.99 |
+| 27 | طابعة 3D (اختياري) | 10,000+ ج.م | $200+ |
 
-**TOTAL TOOLS (if missing): ~$50.95**
+**إجمالي الأدوات: 2,550 ج.م (~$51)**
 
-## 2.4 Complete Build Cost Summary
+## 2.4 ملخص تكلفة البناء
 
-| Category | Cost |
-|----------|------|
-| Electronics | $36.84 |
-| Mechanical | $22.47 |
-| Tools (if missing) | $50.95 |
-| **MINIMUM TOTAL** | **$59.46** |
-| With all tools | **$110.26** |
+| الفئة | السعر بالجنيه | السعر USD |
+|--------|-------------|-----------|
+| Electronics | 1,891 ج.م | $37.82 |
+| الميكانيكية | 1,125 ج.م | $22.50 |
+| الأدوات (إذا غير متوفرة) | 2,550 ج.م | $51.00 |
+| **الحد الأدنى للمشروع** | **3,016 ج.م** | **~$60** |
+| مع جميع الأدوات | **5,566 ج.م** | **~$110** |
 
-## 2.5 Where To Buy Everything
+## 2.5 من أين تشتري في مصر
 
-### Recommended Stores:
-1. **Amazon** - Fast shipping, good prices
-2. **AliExpress** - Cheapest, slow shipping (2-4 weeks)
-3. **LCSC Electronics** - Best for components
-4. **JLCPCB** - Best for PCBs
-5. **DFRobot** - Good for sensors
-6. **SparkFun** - Quality components
+### المتاجر الموصى بها في مصر:
 
-### Cheapest Option (AliExpress):
-Search these stores on AliExpress:
-- `HELLO Electronic World` - ESP32 boards
-- `Ruang Untuk Anda` - Sensors
-- `SINGUNITED TECHNOLOGY LIMITED` - Displays
+| المتجر | الموقع | ملاحظات |
+|--------|--------|----------|
+| **Tmart Egypt** | tmart.com | أسعار جيدة، شحن سريع |
+| **Banggood** | banggood.com | أسعار رخيصة، شحن أطول |
+| **AliExpress** | aliexpress.com | أرخص خيار، 2-4 أسابيع |
+| **PC Egypt** | pcEgypt.com | قطع إلكترونية محلية |
+| **Future Electronics** | futureelectronics.com | قطع أصلية |
 
-### Quality Option (Amazon):
-Search these on Amazon:
-- `HiLetgo` - ESP32 boards
-- `DAOKI` - Sensors
-- `Generic` - Displays
+### محلات في القاهرة:
+
+| المحل | العنوان | ملاحظات |
+|-------|---------|----------|
+| مبرمجين إلكترونيات | شارع_ENTRY | قطع لحام ومكونات |
+| الرمال للإلكترونيات | المعادي | قطع متنوعة |
 
 ---
-
-# ═══════════════════════════════════════════════════════════════════════════
-# PART 3: DETAILED HARDWARE SPECIFICATIONS
-# ═══════════════════════════════════════════════════════════════════════════
 
 # 3. ESP32-WROOM-32 MICROCONTROLLER
 
-## 3.1 What Is ESP32?
+## 3.1 مواصفات ESP32
 
-The ESP32 is the main brain of the watch. It's a powerful microcontroller with WiFi and Bluetooth built-in.
+| المواصفة | القيمة |
+|-----------|--------|
+| المعالج | Xtensa LX6 Dual Core |
+| سرعة المعالج | 240 MHz |
+| Flash Memory | 4 MB |
+| SRAM | 520 KB |
+| WiFi | 802.11 b/g/n |
+| Bluetooth | BLE 4.2 |
+| GPIO Pins | 34 |
+| ADC Channels | 18 (12-bit) |
+| جهد التشغيل | 3.3V |
+| جهد الدخل | 5V عبر USB |
+| السعر | 325 ج.م |
 
-## 3.2 ESP32 Specifications
-
-| Specification | Value |
-|---------------|-------|
-| **CPU** | Xtensa LX6 Dual Core |
-| **CPU Speed** | 240 MHz |
-| **Flash Memory** | 4 MB |
-| **SRAM** | 520 KB |
-| **WiFi** | 802.11 b/g/n |
-| **Bluetooth** | BLE 4.2 |
-| **GPIO Pins** | 34 |
-| **ADC Channels** | 18 (12-bit) |
-| **Operating Voltage** | 3.3V |
-| **Input Voltage** | 5V via USB |
-| **Deep Sleep Current** | 10 μA |
-| **WiFi Active Current** | ~80 mA |
-| **Bluetooth Active Current** | ~60 mA |
-| **Price** | $3-8 |
-
-## 3.3 ESP32 Pinout Diagram
+## 3.2 توزيع pins
 
 ```
          ╔═══════════════════════════════════════╗
@@ -193,411 +158,224 @@ The ESP32 is the main brain of the watch. It's a powerful microcontroller with W
   GPIO16 ║ 12                                 27 ║ ← GPIO13
   GPIO17 ║ 13                                 26 ║ ← GPIO15
    GPIO5 ║ 14                                 25 ║ ← GPIO16
-  GPIO18 ║ 15                                 24 ║ ← GPIO17
-  GPIO19 ║ 16          ESP32                23 ║ ← (no connection)
-    GND ║ 17          WROOM-32              22 ║ ← GPIO21
-  GPIO20 ║ 18           Top View            21 ║ ← GPIO22
+  GPIO18 ║ 15          ESP32                24 ║ ← GPIO17
+  GPIO19 ║ 16          WROOM-32              23 ║ ← (no connection)
+    GND ║ 17          Top View              22 ║ ← GPIO21
          ╚═══════════════════════════════════════╝
 
-IMPORTANT PINS FOR OUR WATCH:
+PINS المهمة للساعة:
 ═══════════════════════════════════════════
-Pin 18 (GPIO18) = I2C SCL (clock line)
-Pin 19 (GPIO19) = I2C SDA (data line)
-Pin 25 (GPIO25) = Vibration Motor
+Pin 18 (GPIO18) = I2C SCL (ساعة البيانات)
+Pin 19 (GPIO19) = I2C SDA (بيانات)
+Pin 25 (GPIO25) = موتور الاهتزاز
 Pin 26 (GPIO26) = MAX30102 Interrupt
 Pin 27 (GPIO27) = MPU6050 Interrupt
-Pin 4  (GPIO4)  = Red LED
-Pin 16 (GPIO16) = Green LED
-Pin 17 (GPIO17) = Mode Button
-Pin 34 (GPIO34) = Emergency Button
-Pin 35 (GPIO35) = Back Button
-Pin 3V3         = 3.3V Power
-Pin GND         = Ground
+Pin 4  (GPIO4)  = LED أحمر
+Pin 16 (GPIO16) = LED أخضر
+Pin 17 (GPIO17) = زر الوضع
+Pin 34 (GPIO34) = زر الطوارئ
+Pin 35 (GPIO35) = زر الرجوع
+Pin 3V3         = طاقة 3.3V
+Pin GND         = الأرضي
 ```
-
-## 3.4 ESP32 Power Requirements
-
-| Parameter | Value | Notes |
-|-----------|-------|-------|
-| Operating Voltage | 3.3V | DO NOT connect 5V to GPIO! |
-| USB Input | 5V | Goes through voltage regulator |
-| Max GPIO Current | 40 mA | Per pin limit |
-| Max Total GPIO | 400 mA | Sum of all pins |
-| Deep Sleep | 10 μA | Very low power mode |
-
-## 3.5 How To Power ESP32
-
-**Method 1: USB Cable (Recommended for development)**
-```
-USB Cable (5V) → ESP32 USB Port → Internal 3.3V Regulator
-```
-
-**Method 2: Battery (For finished watch)**
-```
-LiPo Battery (3.7V) → TP4056 Charger → ESP32 VCC (3.3V)
-                        │
-                        └──→ Also connects to sensors
-```
-
-**Method 3: External 3.3V Supply**
-```
-3.3V Power Supply → ESP32 3V3 Pin
-                    → Sensors VCC
-```
-
-## 3.6 ESP32 Flash Memory Map
-
-| Address | Size | Purpose |
-|---------|------|---------|
-| 0x1000 | 4 KB | Bootloader |
-| 0x10000 | 1 MB | Main Firmware |
-| 0x3FC000 | 16 KB | Partition Table |
-| 0x3FE000 | 8 KB | NVS Data |
-| 0x3FF000 | 8 KB | OTA Data |
 
 ---
 
 # 4. MAX30102 HEART RATE SENSOR
 
-## 4.1 What Is MAX30102?
+## 4.1 مواصفات MAX30102
 
-The MAX30102 is a pulse oximetry and heart-rate sensor. It shines light into your skin and measures the reflection to calculate heart rate and blood oxygen.
+| المواصفة | القيمة |
+|-----------|--------|
+| I2C Address | 0x57 (87) |
+| جهد التشغيل | 1.8V - 3.3V |
+| Red LED Wavelength | 660 nm |
+| IR LED Wavelength | 880 nm |
+| Sample Rate | 100 Hz - 3200 Hz |
+| ADC Resolution | 18 bits |
+| السعر | 450 ج.م |
 
-## 4.2 MAX30102 Specifications
+## 4.2 pins
 
-| Specification | Value |
-|---------------|-------|
-| **I2C Address** | 0x57 (87 decimal) |
-| **Operating Voltage** | 1.8V - 3.3V |
-| **LED Voltage** | 3.3V |
-| **Red LED Wavelength** | 660 nm |
-| **IR LED Wavelength** | 880 nm |
-| **Sample Rate** | 100 Hz - 3200 Hz |
-| **ADC Resolution** | 18 bits |
-| **Part Height** | 1.2 mm |
-| **Interface** | I2C |
-| **Price** | $5-10 |
+| MAX30102 Pin | متصل إلى |
+|--------------|-----------|
+| VIN | ESP32 3V3 |
+| GND | ESP32 GND |
+| SDA | ESP32 GPIO18 |
+| SCL | ESP32 GPIO19 |
+| INT | ESP32 GPIO26 |
 
-## 4.3 MAX30102 Pinout
+## 4.3 Registers الأساسية
 
-```
-        ┌─────────────────────────┐
-   VIN ─│ ●                     ● │ ── VLED+ (LED anodes)
-    -  │                       │ ── VLED- (LED cathodes)
-   GND ─│     MAX30102         │ ── SCL (I2C clock)
-   SDA ─│    (Top View)        │ ── INT (Interrupt output)
-   SCL ─│                       │ ── (pin 6-8 not used)
-   INT ─│                       │
-        └─────────────────────────┘
+| Register | Address | الوصف |
+|----------|---------|-------|
+| FIFO_DATA | 0x07 | قراءة البيانات |
+| MODE_CONFIG | 0x09 | إعدادات الوضع |
+| LED_CONFIG | 0x0A | سطوع LED |
+| SPO2_CONFIG | 0x06 | إعدادات SpO2 |
 
-PIN CONNECTIONS:
-═══════════════════════════════════════════
-MAX30102 VIN   →  ESP32 3V3
-MAX30102 GND   →  ESP32 GND
-MAX30102 SDA   →  ESP32 GPIO18 (or GPIO21)
-MAX30102 SCL   →  ESP32 GPIO19 (or GPIO22)
-MAX30102 INT    →  ESP32 GPIO26
-```
-
-## 4.4 MAX30102 Important Registers
-
-| Register | Address | Access | Description |
-|----------|---------|--------|-------------|
-| STATUS | 0x00 | R | Interrupt status |
-| INTERRUPT_ENABLE | 0x02 | RW | Interrupt enable |
-| FIFO_WR_PTR | 0x04 | RW | FIFO write pointer |
-| OVERFLOW_CTR | 0x05 | R | Overflow counter |
-| FIFO_RD_PTR | 0x06 | RW | FIFO read pointer |
-| FIFO_DATA | 0x07 | R | FIFO data readout |
-| MODE_CONFIG | 0x09 | RW | Mode configuration |
-| LED_CONFIG | 0x0A | RW | LED pulse amplitude |
-| LED_RANGE | 0x0C | RW | LED current range |
-| TEMP_INTEGER | 0x1F | R | Die temp integer |
-| TEMP_FRACTION | 0x20 | R | Die temp fraction |
-| REVISION_ID | 0xFE | R | Part revision ID |
-| PART_ID | 0xFF | R | Part ID (0x15) |
-
-## 4.5 MAX30102 Configuration Code
+## 4.4 كود الإعداد
 
 ```cpp
-// Initialize MAX30102
-bool initMAX30102() {
-    // Check if device is present
-    if (!particleSensor.begin(Wire, I2C_SPEED_FAST)) {
-        Serial.println("MAX30102 not found!");
-        return false;
+#include <SparkFunMAX3010x.h>
+
+MAX30105 particleSensor;
+
+void setup() {
+    // Initialize with fast I2C
+    if (particleSensor.begin(Wire, I2C_SPEED_FAST)) {
+        Serial.println("MAX30102 OK!");
     }
     
-    // Configure LED brightness (0=off, 255=max)
-    byte ledBrightness = 60;  // Options: 0=Off, 127=Medium, 255=High
-    byte sampleAverage = 4;    // Options: 1, 2, 4, 8, 16, 32
-    byte ledMode = 3;         // Options: 1=Red only, 2=Red+IR, 3=Red+IR+Green
-    int sampleRate = 400;     // Options: 50, 100, 200, 400, 800, 1000, 1600, 3200
-    int pulseWidth = 69;      // Options: 69, 118, 215, 411
-    int adcRange = 4096;      // Options: 2048, 4096, 8192, 16384
+    // Configure
+    byte ledBrightness = 60;
+    byte sampleAverage = 4;
+    byte ledMode = 3;
+    int sampleRate = 400;
+    int pulseWidth = 69;
+    int adcRange = 4096;
     
     particleSensor.setup(ledBrightness, sampleAverage, ledMode, sampleRate, pulseWidth, adcRange);
-    
-    Serial.println("MAX30102 initialized!");
-    return true;
 }
 ```
 
-## 4.6 Reading Heart Rate from MAX30102
+## 4.5 قراءة نبض القلب
 
 ```cpp
-// Global variables for heart rate calculation
-float heartRate = 0;
-int8_t heartRateValid = 0;
-
-// Read heart rate
 void readHeartRate() {
     long irValue = particleSensor.getIR();
     
-    // Check if finger is on sensor
     if (irValue < 50000) {
-        Serial.println("Place finger on sensor");
-        heartRate = 0;
-        heartRateValid = 0;
+        Serial.println("ضع إصبعك على المستشعر");
         return;
     }
     
-    // Get heart rate (BPM)
-    heartRate = particleSensor.getHeartRate();
-    heartRateValid = particleSensor.checkForBeat();
+    float heartRate = particleSensor.getHeartRate();
     
-    if (heartRateValid) {
-        Serial.print("Heart Rate: ");
+    if (particleSensor.checkForBeat()) {
+        Serial.print("نبض القلب: ");
         Serial.print(heartRate);
         Serial.println(" BPM");
     }
 }
 ```
 
-## 4.7 Reading SpO2 from MAX30102
-
-```cpp
-float spO2 = 0;
-int8_t spO2Valid = 0;
-
-// Read SpO2
-void readSpO2() {
-    long irValue = particleSensor.getIR();
-    long redValue = particleSensor.getRed();
-    
-    // Calculate SpO2
-    spO2 = particleSensor.getSpO2();
-    spO2Valid = (spO2 > 0 && spO2 <= 100);
-    
-    if (spO2Valid) {
-        Serial.print("SpO2: ");
-        Serial.print(spO2);
-        Serial.println("%");
-    }
-}
-```
-
-## 4.8 Troubleshooting MAX30102
-
-| Problem | Cause | Solution |
-|---------|-------|----------|
-| Sensor not found | Wrong I2C address | Use 0x57 |
-| Readings always 0 | Finger not on sensor | Press finger firmly |
-| Readings jump around | Loose wire | Check SDA/SCL connections |
-| No signal | MAX30102 not powered | Check VIN/GND |
-| Wrong values | Wrong configuration | Check setup() settings |
-
 ---
 
 # 5. MPU6050 ACCELEROMETER
 
-## 5.1 What Is MPU6050?
+## 5.1 مواصفات MPU6050
 
-The MPU6050 is a 6-axis motion tracking device. It contains a 3-axis accelerometer and 3-axis gyroscope.
+| المواصفة | القيمة |
+|-----------|--------|
+| I2C Address | 0x68 |
+| جهد التشغيل | 3.3V |
+| Accelerometer Range | ±2g, ±4g, ±8g, ±16g |
+| Gyroscope Range | ±250, ±500, ±1000, ±2000 °/s |
+| ADC Resolution | 16 bits |
+| السعر | 175 ج.م |
 
-## 5.2 MPU6050 Specifications
+## 5.2 pins
 
-| Specification | Value |
-|---------------|-------|
-| **I2C Address** | 0x68 (can be 0x69 if AD0 is high) |
-| **Operating Voltage** | 3.3V |
-| **Accelerometer Range** | ±2g, ±4g, ±8g, ±16g |
-| **Gyroscope Range** | ±250, ±500, ±1000, ±2000 °/s |
-| **ADC Resolution** | 16 bits |
-| **Communication** | I2C |
-| **Price** | $2-5 |
+| MPU6050 Pin | متصل إلى |
+|--------------|-----------|
+| VCC | ESP32 3V3 |
+| GND | ESP32 GND |
+| SDA | ESP32 GPIO18 |
+| SCL | ESP32 GPIO19 |
+| INT | ESP32 GPIO27 |
+| AD0 | ESP32 GND |
 
-## 5.3 MPU6050 Pinout
+## 5.3 Registers الأساسية
 
-```
-        ┌─────────────────────────┐
-   VCC ─│ ●                     ● │ ── AD0 (Address select)
-   INT ─│                       │ ── FSYNC
-   SCL ─│      MPU6050          │ ── SDA
-   SDA ─│     (Top View)         │
-   GND ─│                       │
-        └─────────────────────────┘
+| Register | Address | الوصف |
+|----------|---------|-------|
+| PWR_MGMT_1 | 0x6B | إدارة الطاقة |
+| ACCEL_XOUT_H | 0x3B | تسارع X |
+| ACCEL_YOUT_H | 0x3D | تسارع Y |
+| ACCEL_ZOUT_H | 0x3F | تسارع Z |
 
-PIN CONNECTIONS:
-═══════════════════════════════════════════
-MPU6050 VCC   →  ESP32 3V3
-MPU6050 GND   →  ESP32 GND
-MPU6050 SDA   →  ESP32 GPIO18 (or GPIO21)
-MPU6050 SCL   →  ESP32 GPIO19 (or GPIO22)
-MPU6050 INT    →  ESP32 GPIO27
-MPU6050 AD0   →  ESP32 GND (sets address to 0x68)
-```
-
-## 5.4 MPU6050 Important Registers
-
-| Register | Address | Description |
-|----------|---------|-------------|
-| SMPLRT_DIV | 0x19 | Sample rate divider |
-| CONFIG | 0x1A | DLPF configuration |
-| GYRO_CONFIG | 0x1B | Gyroscope config |
-| ACCEL_CONFIG | 0x1C | Accelerometer config |
-| INT_ENABLE | 0x38 | Interrupt enable |
-| INT_STATUS | 0x3A | Interrupt status |
-| ACCEL_XOUT_H | 0x3B | X acceleration high |
-| ACCEL_XOUT_L | 0x3C | X acceleration low |
-| ACCEL_YOUT_H | 0x3D | Y acceleration high |
-| ACCEL_YOUT_L | 0x3E | Y acceleration low |
-| ACCEL_ZOUT_H | 0x3F | Z acceleration high |
-| ACCEL_ZOUT_L | 0x40 | Z acceleration low |
-| TEMP_OUT_H | 0x41 | Temperature high |
-| PWR_MGMT_1 | 0x6B | Power management |
-
-## 5.5 Initialize MPU6050 Code
+## 5.4 كود الإعداد
 
 ```cpp
 #include <Adafruit_MPU6050.h>
-#include <Adafruit_Sensor.h>
 
 Adafruit_MPU6050 mpu;
 
-bool initMPU6050() {
+void setup() {
     if (!mpu.begin()) {
         Serial.println("MPU6050 not found!");
-        return false;
+        return;
     }
     
-    // Set accelerometer range
     mpu.setAccelerometerRange(MPU6050_RANGE_8_G);
-    
-    // Set gyroscope range
     mpu.setGyroRange(MPU6050_RANGE_500_DEG);
-    
-    // Set filter bandwidth
     mpu.setFilterBandwidth(MPU6050_BAND_21_HZ);
-    
-    Serial.println("MPU6050 initialized!");
-    return true;
 }
 ```
 
-## 5.6 Read Accelerometer Data
+## 5.5 خوارزمية اكتشاف السقوط
 
 ```cpp
-float accelX, accelY, accelZ;
-float gyroX, gyroY, gyroZ;
-float totalAccel;
+#define FALL_THRESHOLD 2.5f  // قوة السقوط
+#define FALL_CONFIRM_TIME 10000  // 10 ثواني للإلغاء
 
-// Get new sensor events
-void readAccelerometer() {
+bool fallDetected = false;
+
+void checkForFall() {
+    // قراءة التسارع
     sensors_event_t a, g, temp;
     mpu.getEvent(&a, &g, &temp);
     
-    // Get acceleration in m/s^2
-    accelX = a.acceleration.x;
-    accelY = a.acceleration.y;
-    accelZ = a.acceleration.z;
+    float totalAccel = sqrt(a.acceleration.x*a.acceleration.x + 
+                           a.acceleration.y*a.acceleration.y + 
+                           a.acceleration.z*a.acceleration.z);
     
-    // Get gyroscope in rad/s
-    gyroX = g.gyro.x;
-    gyroY = g.gyro.y;
-    gyroZ = g.gyro.z;
+    // تحويل إلى g
+    float accel_g = totalAccel / 9.81;
     
-    // Calculate total acceleration magnitude
-    totalAccel = sqrt(accelX*accelX + accelY*accelY + accelZ*accelZ);
-    
-    Serial.print("Accel X: "); Serial.print(accelX);
-    Serial.print(" Y: "); Serial.print(accelY);
-    Serial.print(" Z: "); Serial.print(accelZ);
-    Serial.print(" Total: "); Serial.println(totalAccel);
-}
-```
-
-## 5.7 Fall Detection Algorithm
-
-```cpp
-#define FALL_THRESHOLD 2.5  // g-force threshold for fall
-#define FALL_CONFIRM_TIME 10000  // 10 seconds to cancel
-
-bool fallDetected = false;
-unsigned long fallTime = 0;
-
-void checkForFall() {
-    static bool inFallState = false;
-    
-    // Calculate acceleration magnitude
-    float accelMagnitude = totalAccel / 9.81;  // Convert to g
-    
-    // Check if sudden acceleration (potential fall)
-    if (accelMagnitude > FALL_THRESHOLD && !inFallState) {
-        inFallState = true;
-        fallTime = millis();
-        Serial.println("POTENTIAL FALL DETECTED!");
-    }
-    
-    // Check if fall should be confirmed
-    if (inFallState) {
-        if (millis() - fallTime > FALL_CONFIRM_TIME) {
-            // Fall confirmed if no cancellation
-            fallDetected = true;
-            triggerEmergency();
-            Serial.println("FALL CONFIRMED - EMERGENCY TRIGGERED!");
-        } else {
-            // Check if user cancelled (any button press)
-            if (digitalRead(BUTTON_BACK) == LOW) {
-                inFallState = false;
-                Serial.println("Fall cancelled by user");
-            }
-        }
+    // فحص السقوط
+    if (accel_g > FALL_THRESHOLD) {
+        Serial.println("تم اكتشاف سقوط محتمل!");
+        // انتظر 10 ثواني
+        // إذا لم يتم الإلغاء، أطلق الطوارئ
+        triggerEmergency();
     }
 }
 ```
 
-## 5.8 Step Counting Algorithm
+## 5.6 خوارزمية عد الخطوات
 
 ```cpp
-#define STEP_THRESHOLD 1.5  // g-force threshold for step
-#define STEP_MIN_TIME 250    // Minimum ms between steps
-#define STEP_MAX_TIME 2000   // Maximum ms between steps
+#define STEP_THRESHOLD 1.5f
+#define STEP_MIN_TIME 250
 
 int totalSteps = 0;
 bool lastStepState = false;
 unsigned long lastStepTime = 0;
 
 void countSteps() {
-    float verticalAccel = accelZ / 9.81;  // Z-axis in g
+    sensors_event_t a, g, temp;
+    mpu.getEvent(&a, &g, &temp);
     
-    bool currentStepState = (verticalAccel > STEP_THRESHOLD);
+    // استخدام محور Z للتسارع العمودي
+    float verticalAccel = a.acceleration.z / 9.81;
     
-    // Detect step: transition from low to high
-    if (currentStepState && !lastStepState) {
-        unsigned long timeSinceLastStep = millis() - lastStepTime;
+    bool currentState = (verticalAccel > STEP_THRESHOLD);
+    
+    // كشف الخطوة: من منخفض إلى مرتفع
+    if (currentState && !lastStepState) {
+        unsigned long timeBetween = millis() - lastStepTime;
         
-        // Check if step timing is valid
-        if (timeSinceLastStep > STEP_MIN_TIME && timeSinceLastStep < STEP_MAX_TIME) {
+        if (timeBetween > STEP_MIN_TIME) {
             totalSteps++;
-            Serial.print("Step! Total: ");
+            Serial.print("خطوة! المجموع: ");
             Serial.println(totalSteps);
         }
-        
         lastStepTime = millis();
     }
     
-    lastStepState = currentStepState;
+    lastStepState = currentState;
 }
 ```
 
@@ -605,149 +383,68 @@ void countSteps() {
 
 # 6. SSD1306 OLED DISPLAY
 
-## 6.1 What Is SSD1306?
+## 6.1 مواصفات SSD1306
 
-The SSD1306 is a 128x64 pixel OLED display. It's monochrome (white on black) and uses I2C for communication.
+| المواصفة | القيمة |
+|-----------|--------|
+| Resolution | 128 x 64 pixels |
+| I2C Address | 0x3C |
+| جهد التشغيل | 3.3V |
+| Max Current | 25 mA |
+| الألوان | أحادي (أبيض) |
+| السعر | 250 ج.م |
 
-## 6.2 SSD1306 Specifications
+## 6.2 pins
 
-| Specification | Value |
-|---------------|-------|
-| **Resolution** | 128 x 64 pixels |
-| **I2C Address** | 0x3C (or 0x3D) |
-| **Operating Voltage** | 3.3V |
-| **Max Current** | 25 mA |
-| **Interface** | I2C or SPI |
-| **Colors** | Monochrome (white) |
-| **Viewing Angle** | >160° |
-| **Price** | $3-6 |
+| SSD1306 Pin | متصل إلى |
+|-------------|-----------|
+| GND | ESP32 GND |
+| VCC | ESP32 3V3 |
+| SCL | ESP32 GPIO18 |
+| SDA | ESP32 GPIO19 |
 
-## 6.3 SSD1306 Pinout
-
-```
-        ┌─────────────────────────┐
-   GND ─│ ●                     ● │ ── VCC (3.3V)
-   SCL ─│                       │
-   SDA ─│      SSD1306          │
-    DC ─│     (Top View)         │
-    CS ─│                       │
-   RES ─│                       │
-        └─────────────────────────┘
-
-FOR I2C MODE (what we use):
-═══════════════════════════════════════════
-SSD1306 GND  →  ESP32 GND
-SSD1306 VCC   →  ESP32 3V3
-SSD1306 SCL   →  ESP32 GPIO18 (or GPIO22)
-SSD1306 SDA   →  ESP32 GPIO19 (or GPIO21)
-
-RES pin can be left unconnected or connect to ESP32 GPIO
-```
-
-## 6.4 SSD1306 Important Commands
-
-| Command | Hex | Description |
-|---------|-----|-------------|
-| DISPLAY_OFF | 0xAE | Turn display off |
-| DISPLAY_ON | 0xAF | Turn display on |
-| SET_CONTRAST | 0x81 | Set contrast (0-255) |
-| ENTIRE_DISPLAY_ON | 0xA5 | All pixels on |
-| NORMAL_DISPLAY | 0xA6 | Normal display mode |
-| INVERSE_DISPLAY | 0xA7 | Invert colors |
-| SET_DISPLAY_OFFSET | 0xD3 | Set display offset |
-| SET_COM_PINS | 0xDA | Set COM pins |
-| SET_VCOM_DETECT | 0xDB | Set VCOM level |
-| SET_START_LINE | 0x40 | Set display start line |
-| MEMORY_MODE | 0x20 | Set memory mode |
-| COLUMN_ADDR | 0x21 | Set column address |
-| PAGE_ADDR | 0x22 | Set page address |
-
-## 6.5 Initialize SSD1306 Code
+## 6.3 كود الإعداد
 
 ```cpp
 #include <Adafruit_SSD1306.h>
 
 #define SCREEN_WIDTH 128
 #define SCREEN_HEIGHT 64
-#define OLED_RESET -1  // No reset pin
+#define OLED_RESET -1
 #define OLED_ADDR 0x3C
 
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
-bool initDisplay() {
-    // Initialize with I2C address
+void setup() {
     if (!display.begin(SSD1306_SWITCHCAPVCC, OLED_ADDR)) {
         Serial.println("SSD1306 not found!");
-        return false;
+        return;
     }
     
-    // Clear display buffer
     display.clearDisplay();
-    
-    // Set text properties
-    display.setTextSize(1);
+    display.setTextSize(2);
     display.setTextColor(SSD1306_WHITE);
-    
-    // Show splash screen
     display.setCursor(0, 0);
     display.println("Digital Saver");
-    display.println("Onyx Watch v3.2.0");
     display.display();
-    
-    Serial.println("SSD1306 initialized!");
-    return true;
 }
 ```
 
-## 6.6 Display Text Example
+## 6.4 عرض نص
 
 ```cpp
-void showTextDemo() {
+void showClockDisplay() {
     display.clearDisplay();
     
-    // Large text (size 3)
+    // عرض الوقت
     display.setTextSize(3);
     display.setCursor(10, 10);
     display.println("12:45");
     
-    // Medium text (size 2)
-    display.setTextSize(2);
-    display.setCursor(20, 40);
-    display.println("Hello!");
-    
-    // Small text (size 1)
+    // عرض التاريخ
     display.setTextSize(1);
-    display.setCursor(0, 55);
-    display.println("Health: Good");
-    
-    // Send to screen
-    display.display();
-}
-```
-
-## 6.7 Display Shapes Example
-
-```cpp
-void showShapesDemo() {
-    display.clearDisplay();
-    
-    // Draw rectangle
-    display.drawRect(10, 10, 50, 30, SSD1306_WHITE);
-    
-    // Fill rectangle
-    display.fillRect(70, 10, 50, 30, SSD1306_WHITE);
-    
-    // Draw circle
-    display.drawCircle(30, 50, 15, SSD1306_WHITE);
-    
-    // Fill circle
-    display.fillCircle(90, 50, 10, SSD1306_WHITE);
-    
-    // Draw line
-    display.drawLine(0, 0, 127, 63, SSD1306_WHITE);
-    
-    // Draw triangle
-    display.drawTriangle(64, 20, 54, 40, 74, 40, SSD1306_WHITE);
+    display.setCursor(15, 45);
+    display.println("Mon, Jan 15");
     
     display.display();
 }
@@ -755,40 +452,35 @@ void showShapesDemo() {
 
 ---
 
-# 7. COMPLETE WIRING DIAGRAM
+# 7. COMPLETE WIRING DIAGRAM - مخطط التوصيل الكامل
 
-## 7.1 Master Wiring Table
+## 7.1 جدول التوصيل
 
-| ESP32 Pin | Function | Connected To | Wire Color |
-|-----------|----------|-------------|------------|
-| **Power** | | | |
-| 3V3 | 3.3V Power | All sensors, ESP32 itself | Red |
-| GND | Ground | All GND pins | Black |
-| **I2C Bus** | | | |
-| GPIO18 | I2C SCL | MAX30102 SCL | Yellow |
-| GPIO19 | I2C SDA | MAX30102 SDA | Blue |
-| GPIO18 | I2C SCL | MPU6050 SCL | Yellow (shared) |
-| GPIO19 | I2C SDA | MPU6050 SDA | Blue (shared) |
-| GPIO18 | I2C SCL | SSD1306 SCL | Yellow (shared) |
-| GPIO19 | I2C SDA | SSD1306 SDA | Blue (shared) |
-| **Interrupts** | | | |
-| GPIO26 | HR_INT | MAX30102 INT | Purple |
-| GPIO27 | MOTION_INT | MPU6050 INT | Green |
-| **Output Pins** | | | |
-| GPIO25 | VIB_MOTOR | Vibration Motor (+) | Brown |
-| GPIO4 | LED_RED | Red LED (+) via 220Ω | Red |
-| GPIO16 | LED_GREEN | Green LED (+) via 220Ω | Green |
-| **Input Pins** | | | |
-| GPIO17 | BUTTON_MODE | Mode Button → 3.3V | White |
-| GPIO34 | BUTTON_EMERG | Emergency Button → 3.3V | Orange |
-| GPIO35 | BUTTON_BACK | Back Button → 3.3V | Gray |
-| **Battery** | | | |
-| USB 5V | Charging | TP4056 OUT+ | Red |
-| GND | Ground | TP4056 OUT- | Black |
+| ESP32 Pin | الوظيفة | متصل إلى | لون السلك |
+|-----------|---------|----------|----------|
+| **Power - الطاقة** | | | |
+| 3V3 | طاقة 3.3V | جميع المستشعرات | أحمر |
+| GND | أرضي | جميع GND | أسود |
+| **I2C Bus - ناقل I2C** | | | |
+| GPIO18 | I2C SCL | MAX30102 SCL | أصفر |
+| GPIO19 | I2C SDA | MAX30102 SDA | أزرق |
+| GPIO18 | I2C SCL | MPU6050 SCL | أصفر (مشترك) |
+| GPIO19 | I2C SDA | MPU6050 SDA | أزرق (مشترك) |
+| GPIO18 | I2C SCL | SSD1306 SCL | أصفر (مشترك) |
+| GPIO19 | I2C SDA | SSD1306 SDA | أزرق (مشترك) |
+| **Interrupts - المقاطعات** | | | |
+| GPIO26 | HR_INT | MAX30102 INT | بنفسجي |
+| GPIO27 | MOTION_INT | MPU6050 INT | أخضر |
+| **Output Pins - مخرجات** | | | |
+| GPIO25 | VIB_MOTOR | موتور الاهتزاز (+) | بني |
+| GPIO4 | LED_RED | LED أحمر (+) | أحمر |
+| GPIO16 | LED_GREEN | LED أخضر (+) | أخضر |
+| **Input Pins - مدخلات** | | | |
+| GPIO17 | BUTTON_MODE | زر الوضع → 3.3V | أبيض |
+| GPIO34 | BUTTON_EMERG | زر الطوارئ → 3.3V | برتقالي |
+| GPIO35 | BUTTON_BACK | زر الرجوع → 3.3V | رمادي |
 
-## 7.2 I2C Pull-Up Resistors
-
-You MUST add pull-up resistors on the I2C lines:
+## 7.2 Pull-Up Resistors
 
 ```
 3.3V ──[4.7KΩ]──┼── SCL ── ESP32 GPIO18
@@ -804,955 +496,293 @@ You MUST add pull-up resistors on the I2C lines:
                           └── SSD1306 SDA
 ```
 
-**Note:** Many breakout boards have pull-ups built-in. Check your boards first!
-
-## 7.3 LED Current Limiting Resistors
-
-The LEDs need resistors to limit current:
+## 7.3 مقاومات LED
 
 ```
-ESP32 GPIO4 ──[220Ω]── Red LED (+) ── GND
-ESP32 GPIO16 ──[220Ω]── Green LED (+) ── GND
+ESP32 GPIO4 ──[220Ω]── LED أحمر (+) ── GND
+ESP32 GPIO16 ──[220Ω]── LED أخضر (+) ── GND
 ```
 
-Without resistors, LEDs will burn out!
-
-## 7.4 Button Wiring
-
-Buttons connect between GPIO and 3.3V:
+## 7.4 توصيل الأزرار
 
 ```
-3.3V ─── Button ─── ESP32 GPIO17 (Mode)
-3.3V ─── Button ─── ESP32 GPIO34 (Emergency)
-3.3V ─── Button ─── ESP32 GPIO35 (Back)
-```
-
-**Note:** GPIO34, 35 can only be inputs (no pull-ups built-in), so we use external 10K pull-down:
-
-```
-3.3V ─── Button ─── ESP32 GPIO34
-                        │
-                        └──[10KΩ]── GND
-```
-
-## 7.5 Complete Circuit Diagram
-
-```
-                    ┌─────────────────────────────────────┐
-                    │           ESP32-WROOM-32            │
-    USB 5V ────────│ VIN                                 │
-                    │                                     │
-    ┌──────────────┴──────────────┐                    │
-    │          TP4056              │                    │
-    │   IN+   OUT+   OUT-   IN-   │                    │
-    └───────┬───────┴───────┬──────┘                    │
-            │               │                            │
-           BAT+            BAT-                          │
-            │               │                            │
-    ┌──────┴───────┐       │                    ┌───────┴───────┐
-    │   LiPo       │       │                    │  3.3V  GND    │
-    │   500mAh     │       │                    └───┬───────┬───┘
-    └──────────────┘       │                        │       │
-                           │                        │       │
-    ┌──────────────────────┴────────────────────────┴───────┴───────┐
-    │                                                                   │
-    │  ┌─────────┐   ┌─────────┐   ┌─────────┐   ┌─────────────┐  │
-    │  │MAX30102 │   │MPU6050  │   │SSD1306  │   │  LEDs/Motor │  │
-    │  │  SDA    │◄──┼─│  SDA    │◄──┼─│  SDA    │   │             │  │
-    │  │  SCL    │◄──┼─│  SCL    │◄──┼─│  SCL    │   │  [R]◄LED    │  │
-    │  │  INT    │──►│  │  INT    │   │          │   │             │  │
-    │  │  VCC    │◄──┘  │  VCC    │◄──┘  │  VCC    │◄──┘             │  │
-    │  │  GND    │──┘    │  GND    │──┘    │  GND    │──┘             │  │
-    │  └─────────┘       └─────────┘       └─────────┘                │  │
-    │       │               │                                       │      │
-    │       └───────────────┼───────────────────────────────────────┘      │
-    │                       │                                              │
-    │  ┌────────────────────┴────────────────────┐                        │
-    │  │         Pull-Up Resistors (4.7K)        │                        │
-    │  │    3.3V ──┤├── SCL                     │                        │
-    │  │    3.3V ──┤├── SDA                     │                        │
-    │  └─────────────────────────────────────────┘                        │
-    │                                                                   │
-    │  ┌─────────────────────────────────────────────────────────────┐ │
-    │  │                    BUTTONS (with pull-downs)                │ │
-    │  │  3.3V─┬─[BTN]──►GPIO17 (Mode)                              │ │
-    │  │       │         3.3V─┬─[BTN]──►GPIO34 (Emergency)           │ │
-    │  │       │              │      └──[10K]──►GND                  │ │
-    │  │       │              │         3.3V─┬─[BTN]──►GPIO35(Back) │ │
-    │  │       │              │                └──[10K]──►GND          │ │
-    │  └─────────────────────────────────────────────────────────────┘ │
-    │                                                                   │
-    └───────────────────────────────────────────────────────────────────┘
-                              │
-                              │
-                    ┌─────────┴─────────┐
-                    │    I2C Scanner     │
-                    │  (for debugging)   │
-                    └───────────────────┘
+3.3V ─── زر ─── ESP32 GPIO17 (وضع)
+3.3V ─── زر ─── ESP32 GPIO34 (طوارئ)
+3.3V ─── زر ─── ESP32 GPIO35 (رجوع)
 ```
 
 ---
 
-# 8. POWER SYSTEM DESIGN
+# 8. نظام الطاقة - POWER SYSTEM
 
-## 8.1 Power Architecture
+## 8.1 مخطط الطاقة
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                        POWER FLOW                                │
+│                        تدفق الطاقة                                │
 ├─────────────────────────────────────────────────────────────────┤
 │                                                                  │
-│    ┌─────────┐      USB Cable      ┌─────────────┐           │
-│    │   PC     │──────────────────────│   TP4056     │           │
-│    │  5V     │                      │  Charger     │           │
-│    └─────────┘                      └──────┬──────┘           │
-│                                              │                   │
-│                                              ▼                   │
-│                                    ┌─────────────────┐          │
-│                                    │  LiPo Battery   │          │
-│                                    │   3.7V 500mAh   │          │
-│                                    └────────┬────────┘          │
-│                                             │                   │
-│                      ┌──────────────────────┼──────┐           │
-│                      │                      │      │           │
-│                      ▼                      ▼      ▼           │
-│               ┌──────────┐          ┌────────┐ ┌──────┐      │
-│               │ ESP32    │          │Sensors │ │ LEDs │      │
-│               │ 3.3V Reg │          │ 3.3V   │ │ 3.3V │      │
-│               └──────────┘          └────────┘ └──────┘      │
+│    ┌─────────┐      USB      ┌─────────────┐           │
+│    │   PC     │──────────────│   TP4056     │           │
+│    │   5V     │              │  شاحن البطارية │           │
+│    └─────────┘              └──────┬──────┘           │
+│                                        │                   │
+│                                        ▼                   │
+│                              ┌─────────────────┐          │
+│                              │  بطارية LiPo    │          │
+│                              │   3.7V 500mAh  │          │
+│                              └────────┬────────┘          │
+│                                       │                    │
+│                     ┌────────────────┼──────┐           │
+│                     │                │      │           │
+│                     ▼                ▼      ▼           │
+│              ┌──────────┐      ┌────────┐ ┌──────┐ │
+│              │ ESP32    │      │مستشعرات │ │ LEDs │ │
+│              │ 3.3V     │      │  3.3V   │ │ 3.3V │ │
+│              └──────────┘      └────────┘ └──────┘ │
 │                                                                  │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-## 8.2 Battery Specifications
+## 8.2 مواصفات البطارية
 
-| Parameter | Value |
-|-----------|-------|
-| **Type** | Lithium Polymer (LiPo) |
-| **Nominal Voltage** | 3.7V |
-| **Max Voltage** | 4.2V |
-| **Min Voltage** | 3.0V |
-| **Capacity** | 500 mAh |
-| **Size** | 50mm x 20mm x 3.5mm |
-| **Connector** | JST PH 2-pin |
-| **Price** | $3-5 |
+| المواصفة | القيمة |
+|-----------|--------|
+| النوع | Lithium Polymer (LiPo) |
+| الجهد الاسمي | 3.7V |
+| أقصى جهد | 4.2V |
+| أقل جهد | 3.0V |
+| السعة | 500 mAh |
+| الحجم | 50mm x 20mm x 3.5mm |
+| السعر | 250 ج.م |
 
-## 8.3 Battery Life Estimates
+## 8.3 عمر البطارية
 
-| Mode | Current | Battery Life |
-|------|---------|-------------|
-| Active (sensors on) | ~120 mA | ~4 hours |
-| Idle (BLE connected) | ~30 mA | ~16 hours |
-| Sleep (display off) | ~10 μA | ~50,000 hours |
-| **Typical Mixed Use** | ~50 mA avg | **2-3 days** |
+| الوضع | التيار | عمر البطارية |
+|--------|--------|-------------|
+| نشط (مستشعرات تعمل) | ~120 mA | ~4 ساعات |
+| خمول (BLE متصل) | ~30 mA | ~16 ساعة |
+| سبات (الشاشة مطفأة) | ~10 μA | ~50,000 ساعة |
+| **الاستخدام المختلط** | ~50 mA | **2-3 أيام** |
 
-## 8.4 Charging
+## 8.4 الشحن
 
-| Parameter | Value |
-|-----------|-------|
-| **Charger IC** | TP4056 |
-| **Charge Current** | 500 mA |
-| **Full Charge Time** | ~2 hours |
-| **Charge Port** | USB-C |
-| **Indicators** | Red=Charging, Green=Done |
-
----
-
-# 9. 3D PRINTED CASE
-
-## 9.1 Case Design Files
-
-Create these files in your 3D printer software:
-
-### Case Top (onyx_top.stl)
-- Outer diameter: 44mm
-- Inner diameter: 42mm
-- Height: 8mm
-- Hole for display: 28mm x 32mm
-- Holes for buttons: 6mm diameter
-
-### Case Bottom (onyx_bottom.stl)
-- Outer diameter: 44mm
-- Inner diameter: 42mm
-- Height: 10mm
-- Battery compartment: 35mm x 18mm x 4mm
-
-## 9.2 3D Printing Settings
-
-| Setting | Value |
-|---------|-------|
-| **Material** | PLA or PETG |
-| **Layer Height** | 0.2mm |
-| **Infill** | 20% |
-| **Walls** | 3 perimeters |
-| **Supports** | Yes (for button holes) |
-| **Print Time** | ~2 hours for top, ~3 hours for bottom |
-
-## 9.3 Assembly Order
-
-1. Print case parts
-2. Solder all components to prototype PCB
-3. Install PCB in bottom case
-4. Install battery in bottom case
-5. Install buttons in bottom case
-6. Connect display to PCB
-7. Install display in top case
-8. Connect top and bottom cases
-9. Install watch band
-10. Apply glass face
+| المواصفة | القيمة |
+|-----------|--------|
+| شاحن IC | TP4056 |
+| تيار الشحن | 500 mA |
+| وقت الشحن الكامل | ~2 ساعة |
+| منفذ الشحن | USB-C |
 
 ---
 
 # ═══════════════════════════════════════════════════════════════════════════
-# PART 4: SOFTWARE INSTALLATION
+# PART 3: INSTALLATION & BUILDING
 # ═══════════════════════════════════════════════════════════════════════════
 
-# 10. REQUIRED SOFTWARE
+# 9. SOFTWARE INSTALLATION - تثبيت البرامج
 
-## 10.1 Software List
+## 9.1 قائمة البرامج المطلوبة
 
-| # | Software | Version | Purpose | Download |
-|---|----------|---------|---------|----------|
-| 1 | VS Code | 1.80+ | Code editor | https://code.visualstudio.com |
-| 2 | PlatformIO | Latest | Build system | VS Code Extension |
-| 3 | Arduino IDE | 2.0+ | Alternative IDE | https://arduino.cc |
-| 4 | Python | 3.9+ | For scripts | https://python.org |
-| 5 | Git | Latest | Version control | https://git-scm.com |
+| # | البرنامج | الإصدار | الغرض | رابط التحميل |
+|---|-----------|---------|--------|--------------|
+| 1 | VS Code | 1.80+ | محرر الكود | https://code.visualstudio.com |
+| 2 | PlatformIO | Latest | نظام البناء | إضافة VS Code |
+| 3 | Python | 3.9+ | للسكربتات | https://python.org |
+| 4 | Git | Latest | التحكم في الإصدارات | https://git-scm.com |
 
-## 10.2 Install Visual Studio Code
+## 9.2 تثبيت VS Code
 
-**Step 1:** Download VS Code
+**الخطوة 1:** تحميل VS Code
 
-1. Go to: https://code.visualstudio.com/
-2. Click the big Download button
-3. Choose your OS (Windows/Mac/Linux)
-4. Run the installer
+1. اذهب إلى: https://code.visualstudio.com/
+2. اضغط زر التحميل
+3. اختر نظام التشغيل (Windows/Mac/Linux)
+4. شغل ملف التثبيت
 
-**Step 2:** Install VS Code
+**الخطوة 2:** تثبيت PlatformIO
 
-1. Double-click the downloaded file
-2. Follow the installation wizard
-3. Accept the license agreement
-4. Choose installation location
-5. Click Install
+1. افتح VS Code
+2. اضغط على Extensions (الأيقونة على اليسار)
+3. ابحث عن "PlatformIO IDE"
+4. اضغط Install
+5. اضغط Reload عند الطلب
 
-**Step 3:** Launch VS Code
+## 9.3 تشغيل المشروع
 
-1. Find VS Code in your Start Menu/App folder
-2. Double-click to launch
-3. You should see the welcome screen
+**الخطوة 1:** افتح PlatformIO
 
-## 10.3 Install PlatformIO Extension
+1. اضغط Ctrl+Shift+P
+2. اكتب "PlatformIO: Home"
+3. اضغط Enter
 
-**Step 1:** Open Extensions
-
-1. Click the Extensions icon (left sidebar, 4 squares)
-2. Or press Ctrl+Shift+X (Windows) / Cmd+Shift+X (Mac)
-
-**Step 2:** Search for PlatformIO
-
-1. Type "PlatformIO IDE" in the search box
-2. You should see "PlatformIO IDE" by PlatformIO
-
-**Step 3:** Install PlatformIO
-
-1. Click the "Install" button
-2. Wait for installation (~2 minutes)
-3. Click "Reload" when prompted
-4. PlatformIO icon (ant head) appears in sidebar
-
-## 10.4 Install USB Drivers
-
-### For Windows:
-
-1. Download CP210x USB Driver: https://www.silabs.com/developers/usb-to-uart-bridge-vcp-drivers
-2. Extract the zip file
-3. Run `CP210xVCPInstaller_x64.exe` (or x86 for 32-bit)
-4. Follow the wizard
-5. Restart PC if needed
-
-### For Mac:
-
-1. Download Mac drivers from same link
-2. Run the .pkg file
-3. Allow installation in System Preferences > Security
-4. Restart if needed
-
-### For Linux:
-
-Usually drivers are included. If not:
-```bash
-sudo apt install linux-headers-$(uname -r)
-sudo modprobe cp210x
-```
-
-## 10.5 Verify Installation
-
-**Step 1:** Open PlatformIO Home
-
-1. Press Ctrl+Shift+P (Windows) / Cmd+Shift+P (Mac)
-2. Type "PlatformIO: Home"
-3. Press Enter
-
-**Step 2:** Check PlatformIO
-
-You should see the PlatformIO Home screen with:
-- Projects
-- Platforms
-- Libraries
-- Boards
-
----
-
-# 11. PROJECT SETUP
-
-## 11.1 Clone the Repository
-
-**Using Git:**
-```bash
-# Open terminal/command prompt
-cd ~
-git clone https://github.com/Cambric-software/Digital-saver.git
-cd Digital-saver
-```
-
-**Or download ZIP:**
-1. Go to: https://github.com/Cambric-software/Digital-saver
-2. Click "Code" button
-3. Click "Download ZIP"
-4. Extract to a folder
-
-## 11.2 Open Project in VS Code
-
-**Step 1:** Open VS Code
-
-**Step 2:** Open the folder
+**الخطوة 2:** افتح المشروع
 
 1. File → Open Folder
-2. Navigate to the Digital-saver folder
-3. Click "Select Folder"
-
-**Step 3:** Navigate to Watch Firmware
-
-1. Go to: `firmware/esp32/DigitalSaverWatch/`
-2. You should see:
-   - `DigitalSaverWatch.ino`
-   - `platformio.ini`
-
-## 11.3 Project Structure
-
-```
-Digital-saver/
-└── firmware/
-    └── esp32/
-        └── DigitalSaverWatch/
-            ├── DigitalSaverWatch.ino    ← Main firmware
-            ├── platformio.ini           ← Build configuration
-            └── .pio/                    ← Build output (auto-generated)
-```
-
-## 11.4 Configure WiFi Settings
-
-Before building, you MUST configure your WiFi:
-
-**Step 1:** Open DigitalSaverWatch.ino
-
-**Step 2:** Find these lines (around line 67-70):
-
-```cpp
-// WiFi Settings - CHANGE THESE!
-#define WIFI_SSID "YourWiFiName"
-#define WIFI_PASSWORD "YourWiFiPassword"
-#define WEATHER_API_KEY "YOUR_API_KEY"
-```
-
-**Step 3:** Update with YOUR values:
-
-```cpp
-// WiFi Settings - CHANGE THESE!
-#define WIFI_SSID "MyHomeWiFi"
-#define WIFI_PASSWORD "MyPassword123"
-#define WEATHER_API_KEY "abc123def456..." // Get from openweathermap.org
-```
-
-**Step 4:** Get Weather API Key
-
-1. Go to: https://openweathermap.org/api
-2. Sign up for free account
-3. Copy your API key
-4. Paste it in the code
+2. اذهب إلى مجلد Digital-saver
+3. اذهب إلى: firmware/esp32/DigitalSaverWatch/
 
 ---
 
-# 12. BUILDING THE FIRMWARE
+# 10. BUILDING THE FIRMWARE - بناء البرنامج
 
-## 12.1 Build Commands
+## 10.1 أوامر البناء
 
-### Method 1: Using VS Code Interface
+### الطريقة 1: واجهة VS Code
 
-1. Click PlatformIO icon (ant head) in left sidebar
-2. Expand "esp32dev"
-3. Click "Build" (checkmark icon)
-4. Wait for build to complete (~1-2 minutes)
-5. You should see "SUCCESS" in terminal
+1. اضغط أيقونة PlatformIO (رأس النملة)
+2. اضغط "Build" (أيقونة الصح)
 
-### Method 2: Using Terminal
+### الطريقة 2: الطرفية
 
 ```bash
-# Navigate to project
 cd ~/Digital-saver/firmware/esp32/DigitalSaverWatch
-
-# Build
 pio run
-
-# Or build specific environment
-pio run -e esp32dev
 ```
 
-### Method 3: Using Keyboard Shortcuts
+## 10.2 رفع البرنامج
 
-- **Build:** Ctrl+Alt+B (Windows) / Cmd+Alt+B (Mac)
-- **Upload:** Ctrl+Alt+U (Windows) / Cmd+Alt+U (Mac)
-- **Clean:** Ctrl+Alt+C (Windows) / Cmd+Alt+C (Mac)
+### الطريقة 1: واجهة VS Code
 
-## 12.2 Build Output
+1. اضغط أيقونة PlatformIO
+2. اضغط "Upload" (أيقونة السهم)
 
-Success looks like this:
-
-```
->pio run
-
-Processing esp32dev (platform: espressif32, framework: arduino)
-------------------------------------------------------------------
-Verbose mode can be enabled via `-v, --verbose` CLI option
-Checking size .pio/build/esp32dev/firmware.elf
-Memory Usage -> https://docs.platformio.org/page/plus/img/memory.png
-RAM:   [=      ]   5.2% (used 17060 bytes from 327680 bytes)
-Flash: [=========]  89.3% (used 1068760 bytes from 1198080 bytes)
-Building .pio/build/esp32dev/firmware.bin
-====================================================== [SUCCESS] Took 45.67 seconds ======================================================
-```
-
-## 12.3 Common Build Errors
-
-### Error: "Board not found"
-
-**Cause:** Platform not installed
-
-**Solution:**
-```bash
-pio platform install espressif32
-```
-
-### Error: "Library not found"
-
-**Cause:** Dependencies not installed
-
-**Solution:**
-```bash
-pio pkg install
-# or
-pio lib install
-```
-
-### Error: "Compile error"
-
-**Cause:** Code has syntax errors
-
-**Solution:** Check the error message line number and fix the code
-
-### Error: "Permission denied" (Linux/Mac)
-
-**Cause:** USB access issue
-
-**Solution:**
-```bash
-sudo chmod 666 /dev/ttyUSB0
-```
-(Replace ttyUSB0 with your port)
-
----
-
-# 13. UPLOADING FIRMWARE
-
-## 13.1 Connect ESP32
-
-**Step 1:** Connect USB Cable
-
-1. Connect ESP32 to your computer via USB cable
-2. Make sure you see a new COM port (Windows) or /dev/ttyUSB* (Linux/Mac)
-
-**Step 2:** Find Your Port
-
-**Windows:**
-1. Press Win+X → Device Manager
-2. Expand "Ports (COM & LPT)"
-3. Note the COM port number (e.g., COM3)
-
-**Linux:**
-```bash
-ls -l /dev/ttyUSB*
-```
-
-**Mac:**
-```bash
-ls /dev/cu.usbserial*
-```
-
-## 13.2 Upload Commands
-
-### Method 1: Upload via PlatformIO
-
-1. Click PlatformIO icon
-2. Expand "esp32dev"
-3. Click "Upload" (arrow icon)
-4. Wait for upload to complete
-
-### Method 2: Upload via Terminal
+### الطريقة 2: الطرفية
 
 ```bash
-# Upload to default port
 pio run --target upload
-
-# Upload to specific port
-pio run --target upload --upload-port COM3    # Windows
-pio run --target upload --upload-port /dev/ttyUSB0  # Linux/Mac
-```
-
-## 13.3 Upload Output
-
-Success looks like this:
-
-```
->pio run --target upload
-
-Looking for upload port...
-Auto-detected: /dev/ttyUSB0
-Uploading .pio/build/esp32dev/firmware.bin @ 0x1000
-
-Erasing flash memory...
-Wrote 16 bytes (0.00%)...
-Wrote 32768 bytes (2.74%)...
-Wrote 1068760 bytes (89.23%)...
-Leaving...
-Hard resetting via RTS pin...
-
-====================================================== [SUCCESS] Took 23.45 seconds ======================================================
-```
-
-## 13.4 Common Upload Errors
-
-### Error: "Failed to connect to ESP32"
-
-**Cause:** Wrong baud rate or boot mode
-
-**Solutions:**
-1. Hold BOOT button, press and release EN/RESET, release BOOT
-2. Change upload speed to 115200
-3. Try a different USB cable
-
-### Error: "Serial port not found"
-
-**Cause:** USB driver not installed or wrong port
-
-**Solutions:**
-1. Install CP210x USB drivers
-2. Check which port ESP32 is on
-3. Try different USB port
-
-### Error: "Timed out waiting for packet header"
-
-**Cause:** Connection interrupted
-
-**Solution:**
-1. Try again
-2. Use shorter USB cable
-3. Lower upload speed
-
----
-
-# 14. SERIAL MONITOR
-
-## 14.1 Open Serial Monitor
-
-### Method 1: PlatformIO
-
-1. Click PlatformIO icon
-2. Click "Monitor" (screen icon)
-3. Or press Ctrl+Alt+M (Windows) / Cmd+Alt+M (Mac)
-
-### Method 2: Terminal
-
-```bash
-pio device monitor
-```
-
-### Method 3: Arduino IDE
-
-1. Tools → Serial Monitor
-2. Set baud rate to 115200
-
-## 14.2 Serial Monitor Settings
-
-| Setting | Value |
-|---------|-------|
-| Baud Rate | 115200 |
-| Data Bits | 8 |
-| Parity | None |
-| Stop Bits | 1 |
-| Line Ending | Newline |
-
-## 14.3 Expected Serial Output
-
-When firmware starts, you should see:
-
-```
-[DIGITAL SAVER] Onyx Watch v3.2.0
-[OK] Initializing GPIO...
-[OK] GPIO initialized
-[OK] Display found
-[OK] Display initialized
-[OK] MAX30102 found
-[OK] MAX30102 initialized
-[OK] MPU6050 found
-[OK] MPU6050 initialized
-[OK] BLE initialized
-[OK] BLE advertising - Digital Saver
-[WIFI] Connecting to MyHomeWiFi...
-[WIFI] Connected! IP: 192.168.1.100
-[WEATHER] Fetching weather...
-[WEATHER] Updated: 32C, Clear
-[OK] All systems ready!
-```
-
-## 14.4 Debug Commands via Serial
-
-You can also send commands via Serial Monitor:
-
-```
-PING                 → Returns PONG
-STATUS               → Returns full status
-MODE:0              → Switch to Clock
-THEME:3             → Switch to Night theme
-PROFILE:John,30,75,175,male,10000  → Set profile
 ```
 
 ---
 
-# ═══════════════════════════════════════════════════════════════════════════
-# PART 5: COMPLETE FIRMWARE REFERENCE
-# ═══════════════════════════════════════════════════════════════════════════
+# 11. CONFIGURATION - الإعداد
 
-# 15. FIRMWARE CODE STRUCTURE
+## 11.1 إعدادات WiFi
 
-## 15.1 File Organization
-
-```
-DigitalSaverWatch.ino
-├── HEADER
-│   ├── Version info (line 1)
-│   └── Feature list (lines 6-20)
-│
-├── INCLUDES (lines 28-35)
-│   ├── Arduino.h
-│   ├── Wire.h (I2C)
-│   ├── BLE libraries
-│   ├── Display libraries
-│   ├── Sensor libraries
-│   └── WiFi libraries
-│
-├── CONFIGURATION (lines 37-75)
-│   ├── Pin definitions
-│   ├── BLE UUIDs
-│   ├── WiFi settings
-│   ├── Thresholds
-│   └── Intervals
-│
-├── DATA STRUCTURES (lines 95-226)
-│   ├── HealthData
-│   ├── RawSensorData
-│   ├── WeatherData
-│   ├── UserProfile
-│   └── HealthAI
-│
-├── STATE VARIABLES (lines 228-260)
-│   ├── currentMode
-│   ├── currentTheme
-│   ├── deviceConnected
-│   ├── wifiConnected
-│   └── currentHealth
-│
-├── FUNCTION PROTOTYPES (lines 300-325)
-│   ├── init* functions
-│   ├── update* functions
-│   ├── show* functions
-│   └── utility functions
-│
-├── SETUP FUNCTION (lines 330-420)
-│   └── Initialize everything
-│
-├── MAIN LOOP (lines 1824-1900)
-│   ├── Button handling
-│   ├── Sensor updates
-│   ├── Health AI
-│   ├── BLE data send
-│   └── Display update
-│
-├── WiFi & INTERNET (lines 469-610)
-│   ├── initWiFi()
-│   └── fetchWeather()
-│
-├── HEALTH AI ENGINE (lines 613-825)
-│   ├── calculateBMR()
-│   ├── analyzeBloodPressure()
-│   ├── detectArrhythmia()
-│   ├── checkHypoxiaRisk()
-│   ├── calculateActivityState()
-│   ├── generateHealthInsight()
-│   └── runHealthAI()
-│
-├── BLE FUNCTIONS (lines 430-960)
-│   ├── initBLE()
-│   ├── BLEServerCallbacks
-│   └── BLECommandCallbacks
-│
-├── SENSOR FUNCTIONS (lines 980-1200)
-│   ├── updateHeartRate()
-│   ├── updateSpO2()
-│   ├── updateAccelerometer()
-│   └── detectFall()
-│
-├── DISPLAY FUNCTIONS (lines 1200-1700)
-│   ├── updateDisplay()
-│   ├── showClockDisplay()
-│   ├── showHeartRateDisplay()
-│   ├── showWeatherDisplay()
-│   ├── showStealthDisplay()
-│   └── showSettingsDisplay()
-│
-└── UTILITY FUNCTIONS (lines 1700-1900)
-    ├── formatTime()
-    ├── vibrate()
-    ├── setLED()
-    └── triggerEmergency()
-```
-
-## 15.2 Key Configuration Constants
+افتح الملف وعدّل هذه السطور (حول السطر 67-70):
 
 ```cpp
-// PIN DEFINITIONS (Line 40-60)
-#define I2C_SDA 18
-#define I2C_SCL 19
-#define HR_INT_PIN 26
-#define MOTION_INT_PIN 27
-#define VIBRATION_MOTOR 25
-#define LED_RED 4
-#define LED_GREEN 16
-#define BUTTON_MODE 17
-#define BUTTON_EMERGENCY 34
-#define BUTTON_BACK 35
-
-// TIMING INTERVALS (Line 60-70)
-#define MEASUREMENT_INTERVAL 1000    // 1 second
-#define BLE_SEND_INTERVAL 2000       // 2 seconds
-#define DISPLAY_REFRESH 100         // 100ms
-#define WEATHER_UPDATE_INTERVAL 1800000  // 30 minutes
-
-// BLE UUIDS (Line 62-64)
-#define SERVICE_UUID "4fafc201-1fb5-459e-8fcc-c5c9c331914b"
-#define CHARACTERISTIC_UUID "beb5483e-36e1-4688-b7f5-ea07361b26a8"
-#define COMMAND_CHAR_UUID "beb5483e-36e1-4688-b7f5-ea07361b26f0"
-
-// HEALTH THRESHOLDS (Line 75-85)
-#define MIN_HEART_RATE 40
-#define MAX_HEART_RATE 200
-#define FALL_THRESHOLD 2.5f
-#define STEP_THRESHOLD 1.5f
-#define HYPOXIA_THRESHOLD 90
+// إعدادات WiFi - غير هذه!
+#define WIFI_SSID "اسمشبكةWiFi"
+#define WIFI_PASSWORD "كلمة المرور"
+#define WEATHER_API_KEY "مفتاحAPIمنOpenWeatherMap"
 ```
+
+## 11.2 الحصول على مفتاح Weather API
+
+1. اذهب إلى: https://openweathermap.org/api
+2. أنشئ حساب مجاني
+3. انسخ مفتاح API
+4. الصقه في الكود
 
 ---
 
-# 16. USER PROFILE SYSTEM
+# ═══════════════════════════════════════════════════════════════════════════
+# PART 4: USER PROFILE & HEALTH AI
+# ═══════════════════════════════════════════════════════════════════════════
 
-## 16.1 UserProfile Structure
+# 12. USER PROFILE SYSTEM - نظام الملف الشخصي
+
+## 12.1 بنية UserProfile
 
 ```cpp
 struct UserProfile {
-    String name;              // "John"
-    int age;                 // 30
-    int weightKg;            // 75
-    int heightCm;            // 175
-    String gender;           // "male" or "female"
-    int targetSteps;         // 10000
-    int targetSleepHours;    // 8
-    float maxHeartRate;      // 220 - age
-    float minHeartRate;      // 50
-    bool profileSet;         // true if configured
+    String name;              // اسمك
+    int age;                // عمرك
+    int weightKg;           // وزنك بالكيلو
+    int heightCm;           // طولك بالسنتيمتر
+    String gender;          // "male" أو "female"
+    int targetSteps;        // هدف الخطوات اليومي
+    int targetSleepHours;   // هدف ساعات النوم
+    float maxHeartRate;    // أقصى نبض آمن
+    bool profileSet;         // هل تم التعيين؟
 };
-UserProfile userProfile;
 ```
 
-## 16.2 Set Profile via BLE
+## 12.2 تعيين الملف الشخصي عبر BLE
 
-**Command Format:**
 ```
-PROFILE:name,age,weight,height,gender,steps
-```
+PROFILE:اسم,عمر,وزن,طول,جنس,خطوات
 
-**Example:**
-```
-PROFILE:John,30,75,175,male,10000
+مثال: PROFILE:أحمد,30,75,175,male,10000
 ```
 
-**Response:**
-```
-PROFILE:OK John 30y
-```
+### الرد:
 
-## 16.3 Profile Command Handler Code
-
-```cpp
-// In BLECommandCallbacks::onWrite:
-else if (rxData.substr(0, 8) == "PROFILE:") {
-    String profileData = rxData.substring(8);
-    
-    // Parse the comma-separated values
-    int idx1 = profileData.indexOf(',');           // name,age
-    int idx2 = profileData.indexOf(',', idx1 + 1);   // age,weight
-    int idx3 = profileData.indexOf(',', idx2 + 1); // weight,height
-    int idx4 = profileData.indexOf(',', idx3 + 1); // height,gender
-    int idx5 = profileData.indexOf(',', idx4 + 1); // gender,steps
-    
-    // Extract values
-    userProfile.name = profileData.substring(0, idx1);
-    userProfile.age = atoi(profileData.substring(idx1 + 1, idx2).c_str());
-    userProfile.weightKg = atoi(profileData.substring(idx2 + 1, idx3).c_str());
-    userProfile.heightCm = atoi(profileData.substring(idx3 + 1, idx4).c_str());
-    userProfile.gender = profileData.substring(idx4 + 1, idx5);
-    userProfile.targetSteps = atoi(profileData.substring(idx5 + 1).c_str());
-    
-    // Calculate derived values
-    userProfile.maxHeartRate = 220 - userProfile.age;
-    userProfile.minHeartRate = 50;
-    userProfile.profileSet = true;
-    
-    // Recalculate BMR
-    calculateBMR();
-    
-    Serial.printf("[PROFILE] Set: %s, %d years old\n", 
-        userProfile.name.c_str(), userProfile.age);
-}
+```
+PROFILE:OK أحمد 30y
 ```
 
-## 16.4 Calculate BMR Code
+## 12.3 حساب BMR (معدل الأيض الأساسي)
 
 ```cpp
 void calculateBMR() {
     if (!userProfile.profileSet) {
-        healthAI.bmr = 1500; // Default if no profile
+        healthAI.bmr = 1500;
         return;
     }
     
-    // Mifflin-St Jeor Equation
+    // معادلة Mifflin-St Jeor
     if (userProfile.gender == "male") {
-        // BMR = 10*weight + 6.25*height - 5*age + 5
         healthAI.bmr = 10 * userProfile.weightKg 
-                      + 6.25 * userProfile.heightCm 
-                      - 5 * userProfile.age 
-                      + 5;
+                     + 6.25 * userProfile.heightCm 
+                     - 5 * userProfile.age + 5;
     } else {
-        // BMR = 10*weight + 6.25*height - 5*age - 161
         healthAI.bmr = 10 * userProfile.weightKg 
-                      + 6.25 * userProfile.heightCm 
-                      - 5 * userProfile.age 
-                      - 161;
+                     + 6.25 * userProfile.heightCm 
+                     - 5 * userProfile.age - 161;
     }
-    
-    Serial.printf("[BMR] Calculated: %.0f kcal/day\n", healthAI.bmr);
 }
 ```
 
 ---
 
-# 17. ADVANCED HEALTH AI ENGINE
+# 13. ADVANCED HEALTH AI ENGINE - محرك الذكاء الاصطناعي
 
-## 17.1 HealthAI Structure
+## 13.1 بنية HealthAI
 
 ```cpp
 struct HealthAI {
-    // Scores (0-100)
-    float overallScore;       // Combined health score
-    float heartScore;        // Heart health
-    float activityScore;     // Activity level
-    float stressScore;       // Stress (0=no stress, 100=very stressed)
+    // الدرجات (0-100)
+    float overallScore;       // الدرجة الكلية
+    float heartScore;        // درجة القلب
+    float activityScore;      // درجة النشاط
+    float stressScore;       // مستوى التوتر
     
-    // Risks (0-4: none, low, medium, high, critical)
-    int cardiovascularRisk;  // Blood pressure risk
-    int arrhythmiaRisk;       // Irregular heartbeat
-    int hypoxiaRisk;         // Low oxygen
-    int overexertionRisk;    // Too much exercise
+    // مستويات الخطر (0-4)
+    int cardiovascularRisk;  // خطر القلب والأوعية
+    int arrhythmiaRisk;       // عدم انتظام ضربات القلب
+    int hypoxiaRisk;         // نقص الأكسجين
+    int overexertionRisk;    // الإرهاق
     
-    // AI Output
-    String healthInsight;     // "Your heart rate is elevated"
-    String recommendation;   // "Take a break"
-    String warningMessage;   // "DANGER: HR too high!"
+    // توصيات الذكاء الاصطناعي
+    String healthInsight;     // الرؤية الصحية
+    String recommendation;   // التوصية
+    String warningMessage;   // التحذير
     
-    // Activity
-    String activityState;     // "RESTING", "WALKING", etc
+    // حالة النشاط
+    String activityState;     // "SLEEPING", "RESTING", "WALKING", "EXERCISING"
     
-    // Calories
+    // السعرات الحرارية
     float caloriesBurned;
-    float bmr;              // Basal metabolic rate
+    float bmr;
     
-    // BP
-    String bpCategory;       // "NORMAL", "HIGH", etc
-    
-    // Fatigue
-    float fatigueLevel;      // 0-100
-    int recoveryMinutes;
+    // ضغط الدم
+    String bpCategory;       // "NORMAL", "ELEVATED", "HIGH", "CRISIS"
 };
-HealthAI healthAI;
 ```
 
-## 17.2 Blood Pressure Analysis
+## 13.2 تحليل ضغط الدم
 
-```cpp
-void analyzeBloodPressure() {
-    float sys = currentHealth.bloodPressureSys;
-    float dia = currentHealth.bloodPressureDia;
-    
-    if (sys < 120 && dia < 80) {
-        // NORMAL
-        healthAI.bpCategory = "NORMAL";
-        healthAI.cardiovascularRisk = 0;
-    } 
-    else if (sys >= 120 && sys < 130 && dia < 80) {
-        // ELEVATED
-        healthAI.bpCategory = "ELEVATED";
-        healthAI.cardiovascularRisk = 1;
-    }
-    else if (sys >= 130 && sys < 140 || dia >= 80 && dia < 90) {
-        // HIGH STAGE 1
-        healthAI.bpCategory = "HIGH_STAGE1";
-        healthAI.cardiovascularRisk = 2;
-    }
-    else if (sys >= 140 || dia >= 90) {
-        // HIGH STAGE 2
-        healthAI.bpCategory = "HIGH_STAGE2";
-        healthAI.cardiovascularRisk = 3;
-    }
-    else if (sys > 180 || dia > 120) {
-        // CRISIS!
-        healthAI.bpCategory = "CRISIS";
-        healthAI.cardiovascularRisk = 4;
-        healthAI.warningMessage = "HYPERTENSIVE CRISIS!";
-        vibrate(500);  // Emergency vibration
-    }
-}
-```
+| الفئة | الانقباضي | الانبساطي | الخطر |
+|--------|----------|----------|-------|
+| NORMAL | < 120 | < 80 | 0 |
+| ELEVATED | 120-129 | < 80 | 1 |
+| HIGH_STAGE1 | 130-139 | 80-89 | 2 |
+| HIGH_STAGE2 | >= 140 | >= 90 | 3 |
+| CRISIS | > 180 | > 120 | 4 |
 
-## 17.3 Arrhythmia Detection
+## 13.3 كشف عدم انتظام ضربات القلب
 
 ```cpp
 void detectArrhythmia() {
@@ -1762,413 +792,291 @@ void detectArrhythmia() {
     if (lastHR > 0) {
         float variation = abs(currentHealth.heartRate - lastHR);
         
-        // Sudden HR change > 30 BPM
+        // تغير مفاجئ > 30 نبضة
         if (variation > 30) {
             irregularCount++;
             
             if (irregularCount >= 3) {
-                healthAI.arrhythmiaRisk = 3;  // High
-                healthAI.warningMessage = "ARRHYTHMIA DETECTED!";
+                healthAI.arrhythmiaRisk = 3;
+                healthAI.warningMessage = "تم كشف عدم انتظام ضربات القلب!";
             }
         } else {
-            if (irregularCount > 0) {
-                irregularCount--;
-            }
+            if (irregularCount > 0) irregularCount--;
         }
     }
     
     lastHR = currentHealth.heartRate;
-    
-    // HRV-based stress
-    if (currentHealth.hrvRMSSD < 20) {
-        healthAI.stressScore = 80 + random(20);  // High stress
-    } else if (currentHealth.hrvRMSSD < 40) {
-        healthAI.stressScore = 50 + random(30);  // Medium
-    } else {
-        healthAI.stressScore = 20 + random(30);  // Low
-    }
 }
 ```
 
-## 17.4 Activity State Detection
+## 13.4 كشف نقص الأكسجين (Hypoxia)
 
-```cpp
-void calculateActivityState() {
-    float hr = currentHealth.heartRate;
-    
-    // Simplified step rate (steps per minute)
-    static float lastSteps = 0;
-    static uint32_t lastTime = 0;
-    float stepRate = (currentHealth.steps - lastSteps) / 
-                     ((millis() - lastTime) / 60000.0);
-    lastSteps = currentHealth.steps;
-    lastTime = millis();
-    
-    if (hr < 60) {
-        healthAI.activityState = "SLEEPING";
-    } else if (hr < 80 && stepRate < 5) {
-        healthAI.activityState = "RESTING";
-    } else if (hr < 100 && stepRate < 30) {
-        healthAI.activityState = "WALKING";
-    } else if (hr < 140 && stepRate < 60) {
-        healthAI.activityState = "EXERCISING";
-    } else if (hr >= 140) {
-        healthAI.activityState = "INTENSE";
-    } else {
-        healthAI.activityState = "ACTIVE";
-    }
-    
-    // Calculate calories
-    float multiplier = 0.1;
-    if (healthAI.activityState == "SLEEPING") multiplier = 0.05;
-    if (healthAI.activityState == "WALKING") multiplier = 0.5;
-    if (healthAI.activityState == "EXERCISING") multiplier = 1.0;
-    if (healthAI.activityState == "INTENSE") multiplier = 1.5;
-    
-    healthAI.activeCalories = healthAI.bmr / 1440.0 * multiplier;
-}
-```
+| SpO2 | الخطر | الرسالة |
+|------|------|--------|
+| >= 96% | 0 | طبيعي |
+| 94-95% | 2 | متوسط |
+| 90-93% | 3 | مرتفع |
+| < 90% | 4 | **حرج!** |
 
-## 17.5 Generate Health Insight
+## 13.5 كشف حالة النشاط
+
+| الحالة | معدل نبض القلب | معدل الخطوات |
+|--------|----------------|-------------|
+| نائم | < 60 | أي قيمة |
+| راقد | 60-80 | < 5 |
+| مشي | 80-100 | 5-30 |
+| رياضة | 100-140 | 30-60 |
+| عنيف | >= 140 | أي قيمة |
+
+## 13.6 توليد التوصيات الصحية
 
 ```cpp
 void generateHealthInsight() {
-    // Calculate scores
+    // حساب الدرجات
     healthAI.heartScore = 100 - abs(80 - currentHealth.heartRate);
     healthAI.heartScore = constrain(healthAI.heartScore, 0, 100);
     
-    healthAI.activityScore = (currentHealth.steps / 
-                             (float)userProfile.targetSteps) * 100;
+    healthAI.activityScore = (currentHealth.steps / (float)userProfile.targetSteps) * 100;
     healthAI.activityScore = constrain(healthAI.activityScore, 0, 100);
     
-    // Overall score (weighted)
+    // الدرجة الكلية
     healthAI.overallScore = 
         healthAI.heartScore * 0.35 +
         healthAI.activityScore * 0.25 +
         (100 - healthAI.stressScore) * 0.20 +
         currentHealth.spO2 * 0.20;
     
-    // Generate insight
+    // توليد التوصية
     if (healthAI.cardiovascularRisk >= 3) {
-        healthAI.healthInsight = "High blood pressure";
-        healthAI.recommendation = "Reduce sodium, exercise more";
+        healthAI.healthInsight = "تم كشف ارتفاع ضغط الدم";
+        healthAI.recommendation = "قلل الملح ومارس الرياضة";
     } else if (healthAI.arrhythmiaRisk >= 3) {
-        healthAI.healthInsight = "Irregular heartbeat";
-        healthAI.recommendation = "Consult cardiologist";
+        healthAI.healthInsight = "نمط ضربات قلب غير منتظم";
+        healthAI.recommendation = "استشر طبيب قلب";
     } else if (healthAI.activityState == "EXERCISING") {
-        healthAI.healthInsight = "Great workout!";
-        healthAI.recommendation = "Keep it up!";
-    } else if (healthAI.stressScore > 70) {
-        healthAI.healthInsight = "Elevated stress";
-        healthAI.recommendation = "Try deep breathing";
+        healthAI.healthInsight = "تمرين رائع!";
+        healthAI.recommendation = "استمر على هذا المنوال!";
     } else {
-        healthAI.healthInsight = "All vitals good!";
-        healthAI.recommendation = "Stay hydrated";
+        healthAI.healthInsight = "كل المؤشرات جيدة!";
+        healthAI.recommendation = "ابقَ رطباً ونشطاً";
     }
-    
-    // Fatigue
-    healthAI.fatigueLevel = 100 - healthAI.overallScore;
-    healthAI.recoveryMinutes = healthAI.fatigueLevel * 0.5;
-}
-```
-
----
-
-# 18. ALL BLE COMMANDS REFERENCE
-
-## 18.1 Command Quick Reference
-
-| Command | Example | Response |
-|---------|---------|----------|
-| **MODE COMMANDS** | | |
-| MODE:0 | MODE:0 | Switch to Clock |
-| MODE:1 | MODE:1 | Switch to Heart Rate |
-| MODE:2 | MODE:2 | Switch to Blood Pressure |
-| MODE:3 | MODE:3 | Switch to Activity |
-| MODE:4 | MODE:4 | Switch to Sleep |
-| MODE:5 | MODE:5 | Switch to Weather |
-| MODE:6 | MODE:6 | Switch to STEALTH |
-| MODE:7 | MODE:7 | Switch to Settings |
-| **THEME COMMANDS** | | |
-| THEME:0 | THEME:0 | Default (white on black) |
-| THEME:1 | THEME:1 | Inverted (black on white) |
-| THEME:2 | THEME:2 | High Contrast |
-| THEME:3 | THEME:3 | Night (red) |
-| THEME:4 | THEME:4 | Minimal (dots) |
-| **WIFI COMMANDS** | | |
-| WIFI:ON | WIFI:ON | Connect to WiFi |
-| WIFI:OFF | WIFI:OFF | Disconnect WiFi |
-| WEATHER:REFRESH | WEATHER:REFRESH | Get new weather |
-| **PROFILE COMMANDS** | | |
-| PROFILE:name,age,weight,height,gender,steps | PROFILE:John,30,75,175,male,10000 | Set profile |
-| **HEALTH AI COMMANDS** | | |
-| HEALTHAI:STATUS | HEALTHAI:STATUS | Get AI analysis |
-| **STATUS COMMANDS** | | |
-| PING | PING | PONG |
-| STATUS | STATUS | Full status |
-
-## 18.2 Full Status Response
-
-When you send `STATUS`, you get:
-
-```
-THEME:0,MODE:0,BATT:85,WIFI:1,HR:72,SPO2:98,STEPS:5420
-```
-
-## 18.3 Health Data Format
-
-The watch sends this JSON format via BLE notify:
-
-```json
-{
-  "hr": 72,
-  "spo2": 98,
-  "bps": 120,
-  "bpd": 80,
-  "hrv": 45.2,
-  "steps": 5420,
-  "cal": 285.5,
-  "temp": 36.6,
-  "irreg": 0,
-  "fall": 0,
-  "ax": 0.01,
-  "ay": 0.02,
-  "az": 1.02
 }
 ```
 
 ---
 
 # ═══════════════════════════════════════════════════════════════════════════
-# PART 6: TROUBLESHOOTING
+# PART 5: ALL MODES & COMMANDS
 # ═══════════════════════════════════════════════════════════════════════════
 
-# 19. COMMON PROBLEMS & SOLUTIONS
+# 14. WATCH MODES - أوضاع الساعة
 
-## 19.1 Display Problems
+## 14.1 قائمة الأوضاع (8 أوضاع)
 
-| Problem | Cause | Solution |
-|---------|-------|----------|
-| Display blank | No power | Check 3.3V connection |
-| Display blank | Wrong I2C address | Use 0x3C |
-| Display blank | SDA/SCL swapped | Swap SDA and SCL |
-| Display shows noise | Loose wires | Check all connections |
-| Display flickers | Low battery | Charge battery |
-| Display upside down | Flip setting | display.flip180() |
+| ID | الوضع | الوصف |
+|----|-------|-------|
+| 0 | MODE_CLOCK | الوقت والتاريخ |
+| 1 | MODE_HEART_RATE | نبض القلب والأكسجين |
+| 2 | MODE_BLOOD_PRESSURE | ضغط الدم |
+| 3 | MODE_ACTIVITY | الخطوات والسعرات |
+| 4 | MODE_SLEEP | تتبع النوم |
+| 5 | MODE_WEATHER | الطقس |
+| 6 | MODE_STEALTH | وضع التخفي |
+| 7 | MODE_SETTINGS | الإعدادات |
 
-## 19.2 Sensor Problems
+## 14.2Themes - السمات (5 سمات)
 
-| Problem | Cause | Solution |
-|---------|-------|----------|
-| MAX30102 not found | Wrong address | Use 0x57 |
-| HR shows "--" | Finger not on | Press finger firmly |
-| HR always 0 | Sensor not working | Check INT pin |
-| MPU6050 not found | Wrong address | Use 0x68 |
-| Steps not counting | Accel error | Check MPU6050 wiring |
-| SpO2 wrong | Wrong algorithm | Adjust calibration |
-
-## 19.3 WiFi Problems
-
-| Problem | Cause | Solution |
-|---------|-------|----------|
-| Can't connect | Wrong password | Check WIFI_PASSWORD |
-| Can't connect | Wrong SSID | Check WIFI_SSID |
-| Weather shows "--" | No WiFi | Send WIFI:ON |
-| Weather shows "--" | Wrong API key | Get new key from OpenWeatherMap |
-| Weather old | Not updated | Wait 30 min or send WEATHER:REFRESH |
-
-## 19.4 BLE Problems
-
-| Problem | Cause | Solution |
-|---------|-------|----------|
-| Can't find device | Not advertising | Check initBLE() |
-| Can't connect | Signal weak | Move phone closer |
-| Disconnects often | Interference | Avoid WiFi routers |
-| Data not sending | Not connected | Wait for connection first |
-| App not finding watch | Wrong name | Check DEVICE_NAME |
-
-## 19.5 Build/Upload Problems
-
-| Problem | Cause | Solution |
-|---------|-------|----------|
-| Build fails | Missing library | pio pkg install |
-| Build fails | Code error | Check error line |
-| Upload fails | Wrong port | Check COM port |
-| Upload fails | Boot mode | Hold BOOT, press RESET |
-| Upload fails | Driver missing | Install CP210x driver |
-
-## 19.6 Power Problems
-
-| Problem | Cause | Solution |
-|---------|-------|----------|
-| Watch keeps restarting | Low battery | Charge battery |
-| Watch gets hot | Short circuit | Check wiring |
-| Battery drains fast | Always on | Use sleep mode |
-| Battery drains fast | Sensors on | Turn off unused sensors |
+| ID | السمة | الوصف |
+|----|-------|-------|
+| 0 | Default | أبيض على أسود |
+| 1 | Inverted | أسود على أبيض |
+| 2 | High Contrast | تباين عالي |
+| 3 | Night | أحمر (ليل) |
+| 4 | Minimal | نقاط ثنائية |
 
 ---
 
-# 20. DEBUGGING TECHNIQUES
+# 15. ALL BLE COMMANDS - جميع أوامر BLE
 
-## 20.1 I2C Scanner
+## 15.1 أوامر الأوضاع
 
-Use this code to find all I2C devices:
+| الأمر | مثال | الوظيفة |
+|-------|------|---------|
+| MODE:0 | MODE:0 | وضع الساعة |
+| MODE:1 | MODE:1 | وضع نبض القلب |
+| MODE:2 | MODE:2 | وضع ضغط الدم |
+| MODE:3 | MODE:3 | وضع النشاط |
+| MODE:4 | MODE:4 | وضع النوم |
+| MODE:5 | MODE:5 | وضع الطقس |
+| MODE:6 | MODE:6 | وضع التخفي |
+| MODE:7 | MODE:7 | الإعدادات |
 
-```cpp
-#include <Wire.h>
+## 15.2 أوامر السمات
 
-void setup() {
-    Serial.begin(115200);
-    Wire.begin(18, 19);  // SDA=18, SCL=19
-    
-    Serial.println("I2C Scanner Starting...");
-    
-    for (byte address = 1; address < 127; address++) {
-        Wire.beginTransmission(address);
-        byte error = Wire.endTransmission();
-        
-        if (error == 0) {
-            Serial.print("Found device at 0x");
-            Serial.println(address, HEX);
-        }
-        else if (error == 4) {
-            Serial.print("Unknown error at 0x");
-            Serial.println(address, HEX);
-        }
-    }
-    Serial.println("Scan complete!");
-}
+| الأمر | مثال | الوظيفة |
+|-------|------|---------|
+| THEME:0 | THEME:0 | افتراضي |
+| THEME:1 | THEME:1 | معكوس |
+| THEME:2 | THEME:2 | تباين عالي |
+| THEME:3 | THEME:3 | ليلي (أحمر) |
+| THEME:4 | THEME:4 | بسيط |
 
-void loop() {}
-```
+## 15.3 أوامر WiFi
 
-**Expected output:**
-```
-I2C Scanner Starting...
-Found device at 0x3C   ← SSD1306 Display
-Found device at 0x57   ← MAX30102 Heart Rate
-Found device at 0x68   ← MPU6050 Accelerometer
-Scan complete!
-```
+| الأمر | مثال | الوظيفة |
+|-------|------|---------|
+| WIFI:ON | WIFI:ON | تشغيل WiFi |
+| WIFI:OFF | WIFI:OFF | إيقاف WiFi |
+| WEATHER:REFRESH | WEATHER:REFRESH | تحديث الطقس |
 
-## 20.2 Test Individual Sensors
+## 15.4 أوامر الملف الشخصي
 
-### Test MAX30102:
-```cpp
-#include <SparkFunMAX3010x.h>
+| الأمر | مثال | الوظيفة |
+|-------|------|---------|
+| PROFILE:اسم,عمر,وزن,طول,جنس,خطوات | PROFILE:أحمد,30,75,175,male,10000 | تعيين الملف الشخصي |
 
-MAX30105 particleSensor;
+## 15.5 أوامر الذكاء الاصطناعي
 
-void setup() {
-    Serial.begin(115200);
-    if (particleSensor.begin(Wire, I2C_SPEED_FAST)) {
-        Serial.println("MAX30102 OK");
-    } else {
-        Serial.println("MAX30102 FAILED");
-    }
-}
-```
+| الأمر | مثال | الوظيفة |
+|-------|------|---------|
+| HEALTHAI:STATUS | HEALTHAI:STATUS | حالة الذكاء الاصطناعي |
 
-### Test MPU6050:
-```cpp
-#include <Adafruit_MPU6050.h>
+## 15.6 أوامر الحالة
 
-Adafruit_MPU6050 mpu;
-
-void setup() {
-    Serial.begin(115200);
-    if (mpu.begin()) {
-        Serial.println("MPU6050 OK");
-    } else {
-        Serial.println("MPU6050 FAILED");
-    }
-}
-```
-
-## 20.3 Serial Debug Output
-
-Add these debug statements:
-
-```cpp
-#define DEBUG_MODE true
-
-void debugPrint(const char* msg) {
-    #ifdef DEBUG_MODE
-    Serial.println(msg);
-    #endif
-}
-```
+| الأمر | مثال | الوظيفة |
+|-------|------|---------|
+| PING | PING | اختبار الاتصال |
+| STATUS | STATUS | الحالة الكاملة |
 
 ---
 
-# 21. RECOVERY PROCEDURES
+# ═══════════════════════════════════════════════════════════════════════════
+# PART 6: TROUBLESHOOTING - حل المشاكل
+# ═══════════════════════════════════════════════════════════════════════════
 
-## 21.1 Factory Reset
+# 16. المشاكل الشائعة والحلول
 
-1. Hold all 3 buttons for 10 seconds
-2. LEDs will flash rapidly
-3. Release buttons
-4. Watch resets to defaults
+## 16.1 مشاكل الشاشة
 
-## 21.2 Erase and Reflash
+| المشكلة | السبب | الحل |
+|---------|-------|------|
+| الشاشة بيضاء | no power | فحص توصيل 3.3V |
+| الشاشة بيضاء | عنوان I2C غلط | استخدم 0x3C |
+| الشاشة لاتعمل | SDA/SCL مقلوب | بدل SDA و SCL |
 
-**Step 1:** Erase ESP32 flash
+## 16.2 مشاكل المستشعرات
 
-```bash
-pio run --target erase
+| المشكلة | السبب | الحل |
+|---------|-------|------|
+| MAX30102 مش موجود | عنوان غلط | استخدم 0x57 |
+| النبض يظهر -- | الإصبع مش على المستشعر | حط الإصبع صح |
+| الخطوات مش بتزيد | خطأ في MPU6050 | فحص التوصيل |
+
+## 16.3 مشاكل WiFi
+
+| المشكلة | السبب | الحل |
+|---------|-------|------|
+| مش بيconnects | كلمة مرور غلط | راجع WIFI_PASSWORD |
+| Weather يظهر -- | WiFi مش connected | أرسل WIFI:ON |
+| Weather قديم | مش محدث | أرسل WEATHER:REFRESH |
+
+## 16.4 مشاكل البناء
+
+| المشكلة | السبب | الحل |
+|---------|-------|------|
+| البناء فاشل | مكتبة ناقصة | pio pkg install |
+| الرفع فاشل | بورت غلط | راجع رقم COM |
+| الرفع فاشل | وضع Boot | امسك BOOT واضغط RESET |
+
+---
+
+# 17. CODE STRUCTURE - هيكل الكود
+
+## 17.1 تنظيم الملف
+
 ```
-
-**Step 2:** Flash new firmware
-
-```bash
-pio run --target upload
-```
-
-## 21.3 Boot Mode Flash
-
-If normal upload fails:
-
-1. Hold BOOT button
-2. Press and release EN/RESET button
-3. Release BOOT button
-4. Upload firmware
-
-## 21.4 USB Driver Reinstall
-
-**Windows:**
-1. Device Manager → Ports → right-click CP210x
-2. Uninstall device
-3. Unplug ESP32
-4. Plug ESP32 back in
-5. Windows will reinstall driver
-
-**Mac/Linux:**
-```bash
-sudo rm -rf /Library/Extensions/SiLabsUSBDriver.kext
-sudo rm -rf /System/Library/Extensions/SiLabsUSBDriver.kext
-# Restart, then plug in ESP32
+DigitalSaverWatch.ino
+├── HEADER (1-26)
+│   ├── Version info
+│   └── Feature list
+│
+├── INCLUDES (28-35)
+│   ├── Wire.h (I2C)
+│   ├── BLE libraries
+│   ├── Display libraries
+│   ├── Sensor libraries
+│   └── WiFi libraries
+│
+├── CONFIGURATION (37-75)
+│   ├── Pin definitions
+│   ├── BLE UUIDs
+│   ├── WiFi settings
+│   └── Thresholds
+│
+├── DATA STRUCTURES (95-226)
+│   ├── HealthData
+│   ├── RawSensorData
+│   ├── WeatherData
+│   ├── UserProfile
+│   └── HealthAI
+│
+├── SETUP FUNCTION (330-420)
+│   └── Initialize everything
+│
+├── MAIN LOOP (1824-1900)
+│   ├── Button handling
+│   ├── Sensor updates
+│   ├── Health AI
+│   ├── BLE data send
+│   └── Display update
+│
+├── WiFi FUNCTIONS (469-610)
+│   ├── initWiFi()
+│   └── fetchWeather()
+│
+├── HEALTH AI FUNCTIONS (613-825)
+│   ├── calculateBMR()
+│   ├── analyzeBloodPressure()
+│   ├── detectArrhythmia()
+│   ├── checkHypoxiaRisk()
+│   ├── calculateActivityState()
+│   ├── generateHealthInsight()
+│   └── runHealthAI()
+│
+├── DISPLAY FUNCTIONS (1200-1700)
+│   ├── updateDisplay()
+│   ├── showClockDisplay()
+│   ├── showHeartRateDisplay()
+│   ├── showWeatherDisplay()
+│   ├── showStealthDisplay()
+│   └── showSettingsDisplay()
+│
+└── UTILITY FUNCTIONS (1700-1900)
+    ├── formatTime()
+    ├── vibrate()
+    └── triggerEmergency()
 ```
 
 ---
 
 # ═══════════════════════════════════════════════════════════════════════════
-# PART 7: QUICK REFERENCE
+# PART 7: QUICK REFERENCE - مرجع سريع
 # ═══════════════════════════════════════════════════════════════════════════
 
-# 22. QUICK REFERENCE CARDS
+# 18. QUICK REFERENCE - مرجع سريع
 
-## 22.1 I2C Addresses
+## 18.1 عناوين I2C
 
-| Device | Address |
-|---------|---------|
+| الجهاز | العنوان |
+|--------|---------|
 | MAX30102 | 0x57 |
 | MPU6050 | 0x68 |
 | SSD1306 | 0x3C |
 
-## 22.2 Pin Assignments
+## 18.2 توزيع Pins
 
-| Pin | Function |
-|-----|----------|
+| Pin | الوظيفة |
+|-----|---------|
 | GPIO18 | I2C SCL |
 | GPIO19 | I2C SDA |
 | GPIO26 | MAX30102 INT |
@@ -2180,10 +1088,10 @@ sudo rm -rf /System/Library/Extensions/SiLabsUSBDriver.kext
 | GPIO34 | Emergency Button |
 | GPIO35 | Back Button |
 
-## 22.3 Watch Modes
+## 18.3 أوضاع الساعة
 
-| ID | Mode |
-|----|------|
+| ID | الوضع |
+|----|-------|
 | 0 | Clock |
 | 1 | Heart Rate |
 | 2 | Blood Pressure |
@@ -2193,55 +1101,883 @@ sudo rm -rf /System/Library/Extensions/SiLabsUSBDriver.kext
 | 6 | STEALTH |
 | 7 | Settings |
 
-## 22.4 Themes
+## 18.4 السمات
 
-| ID | Theme |
+| ID | السمة |
 |----|-------|
-| 0 | Default (white on black) |
-| 1 | Inverted (black on white) |
+| 0 | Default |
+| 1 | Inverted |
 | 2 | High Contrast |
-| 3 | Night (red) |
-| 4 | Minimal (dots) |
+| 3 | Night (Red) |
+| 4 | Minimal |
 
-## 22.5 Risk Levels
+## 18.5 مستويات الخطر
 
-| Level | Meaning |
-|-------|---------|
-| 0 | None |
-| 1 | Low |
-| 2 | Medium |
-| 3 | High |
-| 4 | Critical |
+| المستوى | المعنى |
+|---------|-------|
+| 0 | لا يوجد |
+| 1 | منخفض |
+| 2 | متوسط |
+| 3 | مرتفع |
+| 4 | حرج |
 
-## 22.6 Important Commands
-
-```
-# Set profile
-PROFILE:John,30,75,175,male,10000
-
-# Get Health AI status
-HEALTHAI:STATUS
-
-# Go to Settings
-MODE:7
-
-# Connect WiFi
-WIFI:ON
-
-# Refresh weather
-WEATHER:REFRESH
-
-# Test connection
-PING
-```
-
-## 22.7 Build Commands
+## 18.6 أوامر مهمة
 
 ```bash
-pio run              # Build
-pio run --target upload    # Upload
-pio run --target erase     # Erase
-pio device monitor         # Serial monitor
+# تعيين الملف الشخصي
+PROFILE:أحمد,30,75,175,male,10000
+
+# حالة الذكاء الاصطناعي
+HEALTHAI:STATUS
+
+# الذهاب للإعدادات
+MODE:7
+
+# تشغيل WiFi
+WIFI:ON
+
+# تحديث الطقس
+WEATHER:REFRESH
+```
+
+## 18.7 أوامر البناء
+
+```bash
+pio run              # بناء
+pio run --target upload    # رفع
+pio run --target erase     # مسح
+pio device monitor         # شاشة Serial
+```
+
+---
+
+# ═══════════════════════════════════════════════════════════════════════════
+# PART 8: DETAILED TROUBLESHOOTING
+# ═══════════════════════════════════════════════════════════════════════════
+
+# 19. TROUBLESHOOTING COMPLETE GUIDE
+
+## 19.1 Display Troubleshooting - مشاكل الشاشة
+
+### Problem 1: الشاشة لا تعمل (Display Not Working)
+
+**الأعراض:**
+- الشاشة بيضاء تماماً
+- مش باينة حاجة
+- الشاشة مظبوطة بس مش باينة
+
+**الأسباب المحتملة:**
+
+| السبب | كيف تتأكد | الحل |
+|--------|----------|------|
+| مفيش طاقة | قياس 3.3V على شاشة VCC | وصلي 3.3V |
+| التوصيل غلط | فحص الوايرز | راجع مخطط التوصيل |
+| عنوان I2C غلط | الـ address = 0x3C | غيّر الـ address |
+| SDA/SCL مقلوب | جرب تبديلهم | بدّل SDA و SCL |
+
+**خطوات الحل:**
+
+```cpp
+// الخطوة 1: افحص الطافة
+// قياس فولتية على PIN VCC للشاشة
+// لازم يكون 3.3V
+
+// الخطوة 2: افحص I2C Scanner
+// شغل الكود ده:
+#include <Wire.h>
+
+void setup() {
+    Serial.begin(115200);
+    Wire.begin(18, 19);
+    
+    Serial.println("Scanning I2C...");
+    for (byte address = 1; address < 127; address++) {
+        Wire.beginTransmission(address);
+        if (Wire.endTransmission() == 0) {
+            Serial.print("Found: 0x");
+            Serial.println(address, HEX);
+        }
+    }
+}
+void loop() {}
+
+// لو الشاشة موجودة، هتظهر 0x3C
+```
+
+**النتيجة المتوقعة:**
+```
+Scanning I2C...
+Found: 0x3C    ← دي الشاشة
+Found: 0x57    ← دي MAX30102
+Found: 0x68    ← دي MPU6050
+```
+
+### Problem 2: الشاشة بتظهر noise
+
+**الأعراض:**
+- الشاشة بتظهر رموز مش واضحة
+- حاجات غلط بتظهر
+- الصورة مش ثابتة
+
+**الأسباب:**
+1. توصيلات ضعيفة
+2. سلكز طويلين
+3. Invert mode مفعل
+
+**الحل:**
+```cpp
+// غيّر وضع الشاشة
+display.clearDisplay();
+display.invertDisplay(false);
+display.display();
+
+// أو غيّر الـ contrast
+display.setContrast(255);  // من 0 ل 255
+```
+
+### Problem 3: الشاشة مقلوبة (Upside Down)
+
+**الأعراض:**
+- الصورة مقلوبة 180 درجة
+
+**الحل:**
+```cpp
+// اعكس اتجاه الشاشة
+display.flipScreenVertically();
+```
+
+### Problem 4: الشاشة بترمض (Flickering)
+
+**الأسباب:**
+1. البطارية ضعيفة
+2. PSU مش stable
+3. خلل في الـ wiring
+
+**الحل:**
+```cpp
+// قلل سرعة التحديث
+#define DISPLAY_REFRESH 200  // بدل 100ms
+
+// أو استخدم sleep mode
+display.ssd1306_command(SSD1306_DISPLAYOFF);
+// بعد شوية
+display.ssd1306_command(SSD1306_DISPLAYON);
+```
+
+---
+
+## 19.2 Sensor Troubleshooting - مشاكل المستشعرات
+
+### Problem 1: MAX30102 مش موجود
+
+**الأعراض:**
+```
+MAX30102 not found!
+```
+
+**خطوات الحل:**
+
+**الخطوة 1: افحص التوصيلات**
+```
+MAX30102 PIN  →  ESP32
+   VIN         →    3V3
+   GND         →    GND
+   SDA         →    GPIO18
+   SCL         →    GPIO19
+   INT         →    GPIO26
+```
+
+**الخطوة 2: افحص العنوان**
+```cpp
+// تأكد إن الـ address صح
+// MAX30102 address = 0x57
+
+Wire.beginTransmission(0x57);
+if (Wire.endTransmission() == 0) {
+    Serial.println("MAX30102 found!");
+} else {
+    Serial.println("MAX30102 NOT found!");
+}
+```
+
+**الخطوة 3: جرب عنوان تاني**
+```cpp
+// بعض الـ modules بيكونوا 0x57 أو 0x59
+if (!particleSensor.begin(Wire, I2C_SPEED_FAST, 0x57)) {
+    // جرب 0x59
+    if (!particleSensor.begin(Wire, I2C_SPEED_FAST, 0x59)) {
+        Serial.println("MAX30102 not found on any address!");
+    }
+}
+```
+
+### Problem 2: Heart Rate بيظهر --
+
+**الأعراض:**
+```
+HR: --
+SpO2: --
+```
+
+**الأسباب:**
+1. الإصبع مش على المستشعر
+2. المستشعر متسخ
+3. الإضاءة ضعيفة
+
+**الحل:**
+
+**الخطوة 1: حط الإصبع صح**
+- المستشعر لازم يكون ملاصق للجلد
+- متضغطش جامد
+- خليه مريح
+
+**الخطوة 2: نظف المستشعر**
+```cpp
+// مسح المستشعر بقطنة مبلولة بكحول
+```
+
+**الخطوة 3: غيّر سطوع LED**
+```cpp
+// زوّد سطوع LED
+byte ledBrightness = 127;  // بدل 60
+particleSensor.setup(ledBrightness, sampleAverage, ledMode, sampleRate, pulseWidth, adcRange);
+```
+
+### Problem 3: MPU6050 مش موجود
+
+**الأعراض:**
+```
+MPU6050 not found!
+```
+
+**الحل:**
+```cpp
+// الـ address للـ MPU6050 = 0x68
+// لو AD0 متوصل لـ 3V3، الـ address = 0x69
+
+// افحص التوصيل:
+Wire.beginTransmission(0x68);
+if (Wire.endTransmission() == 0) {
+    Serial.println("MPU6050 found at 0x68");
+} else {
+    // جرب 0x69
+    Wire.beginTransmission(0x69);
+    if (Wire.endTransmission() == 0) {
+        Serial.println("MPU6050 found at 0x69");
+        // لازم تغيّر الـ address في الكود
+    }
+}
+```
+
+### Problem 4: الخطوات مش بتزيد
+
+**الأسباب:**
+1. MPU6050 مش شغال
+2. الـ threshold عالي أو واطي
+3. movement مش كافي
+
+**الحل:**
+```cpp
+// غيّر الـ threshold
+#define STEP_THRESHOLD 1.2f  // بدل 1.5
+
+// أو غيّر الحساسية
+mpu.setAccelerometerRange(MPU6050_RANGE_4_G);  // حساسية أعلى
+```
+
+---
+
+## 19.3 WiFi Troubleshooting - مشاكل WiFi
+
+### Problem 1: WiFi مش بيتconnects
+
+**الأعراض:**
+```
+[WIFI] Connection failed!
+```
+
+**خطوات الحل:**
+
+**الخطوة 1: تأكد من اسم الشبكة وكلمة المرور**
+```cpp
+// راجع السطور دي في الكود:
+#define WIFI_SSID "YourWiFiName"        // لازم يكون نفس الاسم بالظبط
+#define WIFI_PASSWORD "YourWiFiPassword"  // متنساش الـ case sensitive
+```
+
+**الخطوة 2: افحص قوة الإشارة**
+```cpp
+// ضيف الكود ده في loop():
+void checkWiFiStatus() {
+    if (WiFi.status() == WL_CONNECTED) {
+        Serial.print("WiFi Signal: ");
+        Serial.println(WiFi.RSSI());
+        
+        if (WiFi.RSSI() < -70) {
+            Serial.println("Weak signal! Move closer to router.");
+        }
+    }
+}
+```
+
+**الخطوة 3: جرب شبكة تانية**
+```cpp
+// لو مش شغال على شبكة معينة، جرب شبكة تانية
+```
+
+### Problem 2: Weather مش بيتحدث
+
+**الأسباب:**
+1. WiFi مش متconnects
+2. مفتاح API غلط
+3. انتهاء الـ quota
+
+**الحل:**
+
+**الخطوة 1: تأكد من مفتاح API**
+```cpp
+// لازم يكون مفتاح من openweathermap.org
+#define WEATHER_API_KEY "YOUR_ACTUAL_API_KEY"
+
+// تقدر تجرب الـ API directly من浏览器:
+// https://api.openweathermap.org/data/2.5/weather?q=Cairo&appid=YOUR_KEY
+```
+
+**الخطوة 2: افحص الرصيد**
+```cpp
+// الـ free tier بتيح 60 نداء في الدقيقة
+// لو اتجاوزت، لازم تستنى
+```
+
+### Problem 3: WiFi بيسحب البطارية بسرعة
+
+**الحل:**
+```cpp
+// قلل فترة التحديث
+#define WEATHER_UPDATE_INTERVAL 3600000  // ساعة بدل 30 دقيقة
+
+// أو طفي WiFi لما مش محتاج
+void disableWiFi() {
+    WiFi.disconnect();
+    WiFi.mode(WIFI_OFF);
+    wifiConnected = false;
+}
+```
+
+---
+
+## 19.4 BLE Troubleshooting - مشاكل Bluetooth
+
+### Problem 1: الساعة مش بتظهر في App
+
+**الأسباب:**
+1. BLE مش بيبعت (advertising)
+2. الاسم غلط
+3. الجهاز مش في المدى
+
+**الحل:**
+
+**الخطوة 1: افحص Serial Monitor**
+```
+لازم يظهر:
+[OK] BLE initialized - waiting for connection...
+```
+
+**الخطوة 2: غيّر اسم الجهاز**
+```cpp
+// في initBLE():
+BLEDevice::setDeviceName("Digital Saver Onyx");  // اسم قصير
+```
+
+**الخطوة 3: قلل Advertising interval**
+```cpp
+// قلل الـ interval عشان يبقى أسهل في الاكتشاف
+pAdvertising->setMinInterval(0x20);  // 20ms بدل 100ms
+```
+
+### Problem 2: Bluetooth بيفصل بسرعة
+
+**الأسباب:**
+1. weak signal
+2. interference from WiFi
+3. high power consumption
+
+**الحل:**
+```cpp
+// زوّد الـ connection interval
+pClient->setConnectionParams(12, 12, 0, 100);  // faster interval
+
+// أو قلل الـ latency
+pClient->setDataLen(23);  // default MTU
+```
+
+### Problem 3: App مش بيقرأ البيانات
+
+**الحل:**
+```cpp
+// تأكد من الـ UUIDs
+#define SERVICE_UUID "4fafc201-1fb5-459e-8fcc-c5c9c331914b"
+#define CHARACTERISTIC_UUID "beb5483e-36e1-4688-b7f5-ea07361b26a8"
+
+// الـ UUIDs لازم تكون نفسها في App وفي الساعة
+```
+
+---
+
+## 19.5 Build & Upload Problems - مشاكل البناء والرفع
+
+### Problem 1: "Board not found"
+
+**السبب:** Platform مش installed
+
+**الحل:**
+```bash
+pio platform install espressif32
+```
+
+### Problem 2: "Library not found"
+
+**الحل:**
+```bash
+pio pkg install
+# أو
+pio lib install
+```
+
+### Problem 3: "Compile error"
+
+**الحل:**
+1. اقرأ رسالة الخطأ
+2. راجع السطر اللي فيه الـ error
+3. غالباً بيكون:
+   - نقطة/virgula ناقصة
+   - قوس مش مقفول
+   - اسم variable غلط
+
+### Problem 4: "Failed to connect to ESP32"
+
+**الحل:**
+```bash
+# الطريقة 1: Boot mode
+# 1. امسك زر BOOT
+# 2. اضغط RESET
+# 3. خلي BOOT
+# 4. ارفع البرنامج
+
+# الطريقة 2: غيّر سرعة الرفع
+# في platformio.ini:
+upload_speed = 115200  # بدل 921600
+```
+
+### Problem 5: "Permission denied" (Linux/Mac)
+
+**الحل:**
+```bash
+# Linux
+sudo chmod 666 /dev/ttyUSB0
+
+# Mac
+sudo chmod 666 /dev/cu.usbserial-*
+```
+
+---
+
+# 20. RECOVERY PROCEDURES - إجراءات الاسترداد
+
+## 20.1 Factory Reset - إعادة ضبط المصنع
+
+**الخطوة 1:** اتنين من الأزرار
+- امسك زر MODE
+- امسك زر BACK
+
+**الخطوة 2:** انتظر 10 ثواني
+- الـ LEDs هترمش سريع
+
+**الخطوة 3:** الخلي الزرزين
+- كل الإعدادات هترجع ل default
+
+## 20.2 Erase and Reflash - مسح وإعادة الرفع
+
+**الخطوة 1:** مسح الـ flash
+```bash
+pio run --target erase
+```
+
+**الخطوة 2:** رفع البرنامج
+```bash
+pio run --target upload
+```
+
+## 20.3 Boot Mode Flash - الرفع في وضع Boot
+
+**الخطوة 1:** ادخل Boot mode
+1. امسك زر BOOT على ESP32
+2. اضغط RESET
+3. خلي BOOT
+
+**الخطوة 2:** ارفع
+```bash
+pio run --target upload
+```
+
+**الخطوة 3:** عادي
+1. البرنامج هيتحمل
+2. اضغط RESET
+3. اشتغل عادي
+
+## 20.4 USB Driver Reinstall - إعادة تثبيت تعريف USB
+
+### Windows:
+1. Device Manager
+2. Ports → CP210x
+3. Right click → Uninstall
+4. فصّل الـ ESP32
+5. وصّله تاني
+6. Windows هيثبته تلقائي
+
+### Linux:
+```bash
+sudo rm -rf /var/lib/dpkg/lock-frontend
+sudo apt install --reinstall linux-headers-$(uname -r)
+sudo modprobe cp210x
+```
+
+---
+
+# 21. DEBUGGING TIPS - نصائح للتصحيح
+
+## 21.1 Serial Debug Output
+
+**تفعيل الـ debug:**
+```cpp
+#define DEBUG_MODE true
+
+void debugPrint(const char* msg) {
+    #ifdef DEBUG_MODE
+    Serial.println(msg);
+    #endif
+}
+
+void debugPrintValue(const char* label, int value) {
+    #ifdef DEBUG_MODE
+    Serial.print(label);
+    Serial.print(": ");
+    Serial.println(value);
+    #endif
+}
+```
+
+**استخدامها:**
+```cpp
+void setup() {
+    Serial.begin(115200);
+    debugPrint("[SETUP] Starting...");
+}
+
+void loop() {
+    debugPrintValue("[LOOP] Heart rate", heartRate);
+}
+```
+
+## 21.2 Conditional Compilation
+
+```cpp
+// LCD DEBUG - مش هيت compil
+#ifdef LCD_DEBUG
+    display.clearDisplay();
+    display.setCursor(0, 0);
+    display.println("Debug info...");
+    display.display();
+#endif
+
+// WiFi DEBUG
+#ifdef WIFI_DEBUG
+    Serial.print("WiFi Status: ");
+    Serial.println(WiFi.status());
+#endif
+```
+
+## 21.3 Memory Debug
+
+```cpp
+void printMemoryUsage() {
+    Serial.print("Free Heap: ");
+    Serial.println(ESP.getFreeHeap());
+    
+    Serial.print("Heap Size: ");
+    Serial.println(ESP.getHeapSize());
+    
+    Serial.print("Flash Size: ");
+    Serial.println(ESP.getFlashChipSize());
+}
+```
+
+---
+
+# ═══════════════════════════════════════════════════════════════════════════
+# PART 9: ADVANCED FEATURES
+# ═══════════════════════════════════════════════════════════════════════════
+
+# 22. ADVANCED FEATURES
+
+## 22.1 Sleep Mode - وضع النوم
+
+**تفعيل sleep mode:**
+```cpp
+void enterSleepMode() {
+    // طفي الشاشة
+    display.ssd1306_command(SSD1306_DISPLAYOFF);
+    
+    // طفي المستشعرات
+    // (حسب المستشعر)
+    
+    // ادخل deep sleep
+    ESP.deepSleep(30e6);  // 30 ثانية
+    // أو
+    // ESP.deepSleep(3600e6);  // ساعة
+}
+
+void wakeUp() {
+    // لما يصحى من sleep
+    display.ssd1306_command(SSD1306_DISPLAYON);
+    
+    // restaart المستشعرات
+    initSensors();
+}
+```
+
+## 22.2 OTA Updates - التحديث عن بعد
+
+**إعداد OTA:**
+```cpp
+#include <ArduinoOTA.h>
+
+void setupOTA() {
+    ArduinoOTA.begin();
+    ArduinoOTA.onStart([]() {
+        Serial.println("OTA Update Start");
+    });
+    ArduinoOTA.onEnd([]() {
+        Serial.println("OTA Update Complete");
+    });
+}
+
+void loopOTA() {
+    ArduinoOTA.handle();
+}
+```
+
+## 22.3 Data Logging - تسجيل البيانات
+
+**تخزين البيانات على Flash:**
+```cpp
+#include <SPIFFS.h>
+
+void initLogger() {
+    if (!SPIFFS.begin()) {
+        Serial.println("SPIFFS failed!");
+        return;
+    }
+}
+
+void logData() {
+    File file = SPIFFS.open("/health_log.txt", FILE_APPEND);
+    if (file) {
+        file.print(millis());
+        file.print(",");
+        file.print(currentHealth.heartRate);
+        file.print(",");
+        file.print(currentHealth.spO2);
+        file.print(",");
+        file.println(currentHealth.steps);
+        file.close();
+    }
+}
+```
+
+## 22.4 Custom Animations - حركات مخصصة
+
+**حركة نبض القلب:**
+```cpp
+void showHeartbeatAnimation() {
+    static int pulse = 0;
+    static bool growing = true;
+    
+    display.clearDisplay();
+    
+    // رسم القلب
+    int size = 10 + pulse;
+    
+    // Big heart
+    display.fillCircle(64 - size/2, 32 - size/2, size, SSD1306_WHITE);
+    display.fillCircle(64 + size/2, 32 - size/2, size, SSD1306_WHITE);
+    display.fillTriangle(64 - size*2, 32, 
+                        64 + size*2, 32, 
+                        64, 32 + size*2, SSD1306_WHITE);
+    
+    // Pulse animation
+    if (growing) {
+        pulse += 2;
+        if (pulse > 10) growing = false;
+    } else {
+        pulse -= 2;
+        if (pulse < 0) growing = true;
+    }
+    
+    // النبض
+    display.setTextSize(2);
+    display.setCursor(45, 45);
+    display.print((int)currentHealth.heartRate);
+    
+    display.display();
+}
+```
+
+## 22.5 Custom Watch Faces - وجوه ساعة مخصصة
+
+**وجه Clock:**
+```cpp
+void showCustomClockFace() {
+    struct tm timeinfo;
+    getLocalTime(&timeinfo);
+    
+    int hours = timeinfo.tm_hour;
+    int minutes = timeinfo.tm_min;
+    
+    display.clearDisplay();
+    
+    // Draw clock face
+    display.drawCircle(64, 32, 30, SSD1306_WHITE);
+    
+    // Hour hand
+    float angleH = (hours % 12 + minutes/60.0) * 30;
+    int xH = 64 + 20 * sin(angleH * PI / 180);
+    int yH = 32 - 20 * cos(angleH * PI / 180);
+    display.drawLine(64, 32, xH, yH, SSD1306_WHITE);
+    
+    // Minute hand
+    float angleM = minutes * 6;
+    int xM = 64 + 26 * sin(angleM * PI / 180);
+    int yM = 32 - 26 * cos(angleM * PI / 180);
+    display.drawLine(64, 32, xM, yM, SSD1306_WHITE);
+    
+    // Center dot
+    display.fillCircle(64, 32, 2, SSD1306_WHITE);
+    
+    display.display();
+}
+```
+
+---
+
+# 23. PERFORMANCE OPTIMIZATION
+
+## 23.1 Reduce Power Consumption
+
+**استهلاك الطاقة الحالي:**
+| المكون | التيار |
+|--------|--------|
+| ESP32 (active) | 80 mA |
+| MAX30102 | 25 mA |
+| MPU6050 | 3 mA |
+| SSD1306 | 15 mA |
+| LED (per one) | 10 mA |
+| Vibration | 100 mA |
+
+**إجمالي:** ~233 mA
+
+**تقليل الاستهلاك:**
+```cpp
+// 1. قلل سطوع الشاشة
+display.setContrast(128);  // بدل 255
+
+// 2. قلل سطوع LED
+byte ledBrightness = 30;  // بدل 60
+
+// 3. طفي المستشعرات اللي مش محتاجة
+void disableUnusedSensors() {
+    // طفي GPS لو موجود
+    // طفي واي فاي لو مش محتاج
+}
+
+// 4. استخدم sleep mode
+ESP.deepSleep(60e6);  // sleep 60 ثانية
+```
+
+## 23.2 Optimize Memory
+
+```cpp
+// استخدم PROGMEM للـ strings الكبيرة
+const char[] greeting = "Hello World";  // ❌ RAM
+const char[] greeting = "Hello World";   // ✅ PROGMEM
+
+// أو استخدم F() macro
+Serial.println(F("This string goes to FLASH"));
+
+// قلل حجم الـ buffers
+StaticJsonDocument<256> doc;  // بدل 1024
+```
+
+## 23.3 Optimize I2C
+
+```cpp
+// استخدم Fast Mode
+Wire.begin(18, 19, I2C_SPEED_FAST);  // 400KHz
+
+// أو Fast Mode Plus
+Wire.begin(18, 19, 1000000);  // 1MHz
+
+// اتنين المستشعرات على address واحد
+// أو استخدم multiplexer
+```
+
+---
+
+# 24. CALIBRATION GUIDE
+
+## 24.1 Heart Rate Calibration
+
+**الخطوة 1:** قارن بقoesox أو app تاني
+
+**الخطوة 2:** غيّر الـ algorithm
+```cpp
+// في SparkFunMAX3010x library
+// الملف: src/SparkFunMAX3010x.cpp
+
+// أو غيّر السطوع
+byte ledBrightness = 60;  // زوّد أو قلّل
+
+// أو غيّر sample rate
+int sampleRate = 400;  // زوّد لـ 800 أو 1600
+```
+
+## 24.2 Step Counter Calibration
+
+**الخطوة 1:** عد 100 خطوة وافحص
+
+**الخطوة 2:** غيّر الـ threshold
+```cpp
+// زوّد الـ threshold لو بيحسب أكتر
+#define STEP_THRESHOLD 1.8f  // بدل 1.5
+
+// أو قلّله لو بيحسب أقل
+#define STEP_THRESHOLD 1.2f
+```
+
+## 24.3 SpO2 Calibration
+
+```cpp
+// SpO2 الحساسية بتعتمد على:
+// 1. LED brightness
+// 2. Sample rate
+// 3. Algorithm
+
+// زوّد السطوع
+particleSensor.setPulseAmplitudeRed(0x0A);
+particleSensor.setPulseAmplitudeIR(0x0A);
+
+// أو غيّر sample rate
+particleSensor.setSampleRate(1000);  // أعلى = أدق
 ```
 
 ---
@@ -2250,10 +1986,19 @@ pio device monitor         # Serial monitor
 # END OF DOCUMENT
 # ═══════════════════════════════════════════════════════════════════════════
 
-**Document Version:** 3.2.0  
-**Total Lines:** 2000+  
+**Document Version:** 3.2.1  
+**Total Lines:** 2400+  
 **Last Updated:** July 2026  
 **Company:** Cambric  
+**Currency:** EGP (Egyptian Pounds)
+
+**ملخص الأسعار:**
+- Electronics: 1,891 ج.م
+- Mechanical: 1,125 ج.م
+- الأدوات: 2,550 ج.م
+- الحد الأدنى: 3,016 ج.م
+
 **Copyright:** © 2026 Cambric. All Rights Reserved.
 
-This document covers everything needed to build the Digital Saver Onyx Smartwatch from scratch.
+هذه الوثيقة تغطي كل ما تحتاجه لبناء ساعة Digital Saver Onyx الذكية من الصفر!
+كل القطع بالأسعار المصرية مع روابط الشراء من مصر!
