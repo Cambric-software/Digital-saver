@@ -1,313 +1,475 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Digital Saver - Egyptian Government smartwatch health monitoring project under 10,000 EGP">
-    <meta name="theme-color" content="#2563eb">
-    <title>Digital Saver - Health Monitoring System 🇪🇬</title>
-    <link rel="icon" type="image/svg+xml" href="app/web/favicon.svg">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            font-family: 'Poppins', sans-serif;
-            background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 50%, #7c3aed 100%);
-            min-height: 100vh;
-            color: white;
-        }
-        .container {
-            max-width: 900px;
-            margin: 0 auto;
-            padding: 60px 24px;
-        }
-        .logo {
-            width: 100px;
-            height: 100px;
-            background: white;
-            border-radius: 25px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 0 auto 30px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-        }
-        .logo svg { width: 60px; height: 60px; }
-        h1 {
-            font-size: 3.5em;
-            font-weight: 800;
-            text-align: center;
-            margin-bottom: 10px;
-            text-shadow: 0 4px 20px rgba(0,0,0,0.2);
-        }
-        .subtitle {
-            text-align: center;
-            font-size: 1.2em;
-            opacity: 0.9;
-            margin-bottom: 50px;
-        }
-        .card {
-            background: white;
-            border-radius: 24px;
-            padding: 40px;
-            margin-bottom: 24px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.15);
-            color: #1e293b;
-        }
-        .card h2 {
-            color: #2563eb;
-            font-size: 1.8em;
-            margin-bottom: 20px;
-        }
-        .badge {
-            display: inline-block;
-            background: #2563eb;
-            color: white;
-            padding: 6px 16px;
-            border-radius: 20px;
-            font-size: 0.9em;
-            font-weight: 600;
-        }
-        .features {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 16px;
-            margin-top: 20px;
-        }
-        .feature {
-            background: #f8fafc;
-            padding: 20px;
-            border-radius: 16px;
-            text-align: center;
-        }
-        .feature-icon {
-            font-size: 2.5em;
-            margin-bottom: 10px;
-        }
-        .feature h3 {
-            font-size: 1em;
-            margin-bottom: 5px;
-        }
-        .feature p {
-            font-size: 0.85em;
-            color: #64748b;
-        }
-        .btn {
-            display: inline-flex;
-            align-items: center;
-            gap: 10px;
-            background: linear-gradient(135deg, #2563eb, #7c3aed);
-            color: white;
-            padding: 18px 40px;
-            border-radius: 50px;
-            font-size: 1.1em;
-            font-weight: 600;
-            text-decoration: none;
-            margin-top: 20px;
-            transition: transform 0.3s, box-shadow 0.3s;
-        }
-        .btn:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 15px 40px rgba(37, 99, 235, 0.4);
-        }
-        .stats {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 20px;
-            margin-top: 20px;
-        }
-        .stat {
-            text-align: center;
-            padding: 20px;
-            background: #f8fafc;
-            border-radius: 16px;
-        }
-        .stat-value {
-            font-size: 2em;
-            font-weight: 700;
-            color: #2563eb;
-        }
-        .stat-label {
-            font-size: 0.9em;
-            color: #64748b;
-        }
-        .progress-list {
-            margin-top: 15px;
-        }
-        .progress-item {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 12px 0;
-            border-bottom: 1px solid #e2e8f0;
-        }
-        .progress-item:last-child { border-bottom: none; }
-        .progress-icon {
-            width: 24px;
-            height: 24px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .budget-card {
-            background: linear-gradient(135deg, #059669, #10b981);
-            color: white;
-            text-align: center;
-            padding: 30px;
-        }
-        .budget-card h3 {
-            font-size: 1.2em;
-            opacity: 0.9;
-        }
-        .budget-value {
-            font-size: 3em;
-            font-weight: 800;
-        }
-        .footer {
-            text-align: center;
-            padding: 40px 20px;
-            opacity: 0.8;
-        }
-        .footer-flag { font-size: 2em; }
-        @media (max-width: 600px) {
-            h1 { font-size: 2.5em; }
-            .stats { grid-template-columns: 1fr; }
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Digital Saver - Download Professional Smartwatch Health Monitoring App by Cambric">
+  <meta name="theme-color" content="#0F172A">
+  <title>Digital Saver - Download Health Monitoring App</title>
+  <link rel="icon" type="image/png" href="app/assets/digital-saver-icon-transparent.png">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: linear-gradient(180deg, #0F172A 0%, #1a2744 50%, #0F172A 100%);
+      min-height: 100vh;
+      color: white;
+      overflow-x: hidden;
+    }
+    
+    .bg-animation {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 0;
+      overflow: hidden;
+    }
+    .bg-animation::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: radial-gradient(circle at 30% 30%, rgba(37, 99, 235, 0.15) 0%, transparent 50%),
+                  radial-gradient(circle at 70% 70%, rgba(124, 58, 237, 0.1) 0%, transparent 50%);
+      animation: pulse 8s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { transform: scale(1) rotate(0deg); }
+      50% { transform: scale(1.1) rotate(5deg); }
+    }
+    
+    .container { max-width: 1000px; margin: 0 auto; padding: 40px 24px; position: relative; z-index: 10; }
+    
+    /* Header */
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 40px;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+      margin-bottom: 60px;
+    }
+    
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    
+    .brand-icon {
+      width: 64px;
+      height: 64px;
+      background: linear-gradient(135deg, #2563EB, #7C3AED);
+      border-radius: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 8px 32px rgba(37, 99, 235, 0.4);
+    }
+    
+    .brand-icon svg { width: 40px; height: 40px; }
+    
+    .brand-text h1 {
+      font-size: 28px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+    }
+    
+    .brand-text p {
+      font-size: 13px;
+      color: rgba(255,255,255,0.6);
+      margin-top: 2px;
+    }
+    
+    .cambric {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 16px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 12px;
+    }
+    
+    .cambric-icon {
+      width: 32px;
+      height: 32px;
+      background: linear-gradient(135deg, #1E3A5F, #2563EB);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .cambric-icon svg { width: 20px; height: 20px; }
+    
+    .cambric span {
+      font-size: 14px;
+      font-weight: 600;
+      color: rgba(255,255,255,0.9);
+    }
+    
+    /* Hero Section */
+    .hero {
+      text-align: center;
+      padding: 60px 0;
+    }
+    
+    .hero-icon {
+      width: 140px;
+      height: 140px;
+      margin: 0 auto 32px;
+      background: linear-gradient(135deg, #2563EB, #7C3AED);
+      border-radius: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 20px 60px rgba(37, 99, 235, 0.4);
+      animation: float 3s ease-in-out infinite;
+    }
+    
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-10px); }
+    }
+    
+    .hero-icon svg { width: 80px; height: 80px; }
+    
+    .hero h1 {
+      font-size: 52px;
+      font-weight: 900;
+      letter-spacing: -2px;
+      margin-bottom: 16px;
+      line-height: 1.1;
+    }
+    
+    .hero h1 span {
+      background: linear-gradient(90deg, #60A5FA, #A78BFA, #F472B6);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-size: 200% auto;
+      animation: gradient 3s ease infinite;
+    }
+    
+    @keyframes gradient {
+      0% { background-position: 0% center; }
+      50% { background-position: 100% center; }
+      100% { background-position: 0% center; }
+    }
+    
+    .hero p {
+      font-size: 18px;
+      color: rgba(255,255,255,0.7);
+      max-width: 500px;
+      margin: 0 auto 16px;
+      line-height: 1.6;
+    }
+    
+    .badge {
+      display: inline-block;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.15);
+      padding: 8px 20px;
+      border-radius: 100px;
+      font-size: 13px;
+      color: rgba(255,255,255,0.8);
+    }
+    
+    .badge span { color: #60A5FA; font-weight: 600; }
+    
+    /* Features */
+    .features {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin: 60px 0;
+    }
+    
+    .feature {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 16px;
+      padding: 24px;
+      text-align: center;
+      transition: all 0.3s ease;
+    }
+    
+    .feature:hover {
+      background: rgba(255,255,255,0.06);
+      border-color: rgba(255,255,255,0.15);
+      transform: translateY(-4px);
+    }
+    
+    .feature-icon { font-size: 32px; margin-bottom: 12px; }
+    .feature h3 { font-size: 15px; font-weight: 700; margin-bottom: 6px; }
+    .feature p { font-size: 12px; color: rgba(255,255,255,0.5); line-height: 1.4; }
+    
+    /* Download Section */
+    .download-section {
+      text-align: center;
+      padding: 60px 0;
+      background: rgba(255,255,255,0.02);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 24px;
+      margin: 40px 0;
+    }
+    
+    .download-section h2 {
+      font-size: 36px;
+      font-weight: 800;
+      margin-bottom: 8px;
+    }
+    
+    .download-section > p {
+      font-size: 15px;
+      color: rgba(255,255,255,0.6);
+      margin-bottom: 32px;
+    }
+    
+    .download-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+    
+    .download-btn {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 20px 24px;
+      background: white;
+      color: #0F172A;
+      text-decoration: none;
+      border-radius: 16px;
+      font-weight: 600;
+      font-size: 15px;
+      transition: all 0.3s ease;
+      border: 2px solid transparent;
+    }
+    
+    .download-btn:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 12px 40px rgba(0,0,0,0.3);
+      border-color: #2563EB;
+    }
+    
+    .download-btn.available {
+      background: linear-gradient(135deg, #2563EB, #1D4ED8);
+      color: white;
+    }
+    
+    .download-btn.available:hover {
+      border-color: #60A5FA;
+    }
+    
+    .download-btn.coming-soon {
+      background: rgba(255,255,255,0.05);
+      color: rgba(255,255,255,0.5);
+      cursor: not-allowed;
+    }
+    
+    .download-btn.coming-soon:hover {
+      transform: none;
+      box-shadow: none;
+      border-color: transparent;
+    }
+    
+    .btn-icon {
+      width: 48px;
+      height: 48px;
+      background: rgba(0,0,0,0.1);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+    }
+    
+    .available .btn-icon { background: rgba(255,255,255,0.2); }
+    
+    .btn-text { flex: 1; text-align: left; }
+    .btn-text .name { font-weight: 700; display: block; }
+    .btn-text .size { font-size: 12px; opacity: 0.7; font-weight: 400; }
+    
+    .btn-badge {
+      font-size: 11px;
+      padding: 4px 10px;
+      background: rgba(34, 197, 94, 0.2);
+      color: #22C55E;
+      border-radius: 100px;
+      font-weight: 600;
+    }
+    
+    .coming-soon .btn-badge {
+      background: rgba(255,255,255,0.1);
+      color: rgba(255,255,255,0.5);
+    }
+    
+    /* Footer */
+    footer {
+      text-align: center;
+      padding: 40px 0;
+      border-top: 1px solid rgba(255,255,255,0.08);
+      margin-top: 40px;
+    }
+    
+    footer p {
+      font-size: 13px;
+      color: rgba(255,255,255,0.4);
+      line-height: 1.8;
+    }
+    
+    footer a {
+      color: rgba(255,255,255,0.6);
+      text-decoration: none;
+      font-weight: 500;
+    }
+    
+    footer a:hover { color: white; }
+    
+    /* Responsive */
+    @media (max-width: 768px) {
+      header { flex-direction: column; gap: 20px; text-align: center; }
+      .brand { flex-direction: column; }
+      .hero h1 { font-size: 36px; }
+      .features { grid-template-columns: repeat(2, 1fr); }
+      .download-grid { grid-template-columns: 1fr; }
+    }
+    
+    @media (max-width: 480px) {
+      .hero h1 { font-size: 28px; }
+      .features { grid-template-columns: 1fr; }
+    }
+  </style>
 </head>
 <body>
-    <div class="container">
-        <div class="logo">
-            <svg viewBox="0 0 24 24" fill="#2563eb">
-                <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-            </svg>
+  <div class="bg-animation"></div>
+  
+  <div class="container">
+    <header>
+      <div class="brand">
+        <div class="brand-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
         </div>
+        <div class="brand-text">
+          <h1>Digital Saver</h1>
+          <p>Smartwatch Health Monitoring</p>
+        </div>
+      </div>
+      
+      <div class="cambric">
+        <div class="cambric-icon">
+          <svg viewBox="0 0 24 24" fill="white">
+            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+          </svg>
+        </div>
+        <span>by Cambric</span>
+      </div>
+    </header>
+    
+    <section class="hero">
+      <div class="hero-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+          <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <div class="badge">🇪🇬 Egyptian Government Funded Project <span>• Budget: 10,000 EGP</span></div>
+      <h1>Health Monitoring<br><span>Reimagined</span></h1>
+      <p>Professional smartwatch health monitoring with real-time heart rate, blood pressure, SpO2, and emergency alerts.</p>
+    </section>
+    
+    <section class="features">
+      <div class="feature">
+        <div class="feature-icon">❤️</div>
+        <h3>Heart Rate</h3>
+        <p>Real-time HR + HRV analysis</p>
+      </div>
+      <div class="feature">
+        <div class="feature-icon">🩸</div>
+        <h3>Blood Pressure</h3>
+        <p>PPG-based estimation</p>
+      </div>
+      <div class="feature">
+        <div class="feature-icon">💨</div>
+        <h3>Blood Oxygen</h3>
+        <p>SpO2 + Perfusion Index</p>
+      </div>
+      <div class="feature">
+        <div class="feature-icon">🚨</div>
+        <h3>Emergency Alerts</h3>
+        <p>SMS with GPS location</p>
+      </div>
+      <div class="feature">
+        <div class="feature-icon">📱</div>
+        <h3>Fall Detection</h3>
+        <p>MPU6050 accelerometer</p>
+      </div>
+      <div class="feature">
+        <div class="feature-icon">🌍</div>
+        <h3>10 Languages</h3>
+        <p>Including RTL Arabic</p>
+      </div>
+    </section>
+    
+    <section class="download-section">
+      <h2>Download the App</h2>
+      <p>Choose your platform to get started</p>
+      
+      <div class="download-grid">
+        <a href="https://github.com/Cambric-software/Digital-saver/releases" class="download-btn available" target="_blank">
+          <div class="btn-icon">🤖</div>
+          <div class="btn-text">
+            <span class="name">Android</span>
+            <span class="size">APK • ~51 MB</span>
+          </div>
+          <span class="btn-badge">Download</span>
+        </a>
         
-        <h1>Digital Saver</h1>
-        <p class="subtitle">Egyptian Government Health Monitoring Project 🇪🇬</p>
-
-        <div class="card">
-            <span class="badge">🚀 Coming Soon</span>
-            <h2>Health Monitoring Dashboard</h2>
-            <p>Connect your Digital Saver smartwatch to start monitoring your health in real-time.</p>
-            <a href="app/web/" class="btn">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
-                </svg>
-                Launch Web App
-            </a>
-        </div>
-
-        <div class="card">
-            <h2>Features</h2>
-            <div class="features">
-                <div class="feature">
-                    <div class="feature-icon">❤️</div>
-                    <h3>Heart Rate</h3>
-                    <p>Real-time HRV monitoring</p>
-                </div>
-                <div class="feature">
-                    <div class="feature-icon">💉</div>
-                    <h3>Blood Pressure</h3>
-                    <p>Estimation & trends</p>
-                </div>
-                <div class="feature">
-                    <div class="feature-icon">🩸</div>
-                    <h3>Blood Oxygen</h3>
-                    <p>SpO2 tracking</p>
-                </div>
-                <div class="feature">
-                    <div class="feature-icon">🏃</div>
-                    <h3>Activity</h3>
-                    <p>Steps & calories</p>
-                </div>
-                <div class="feature">
-                    <div class="feature-icon">😴</div>
-                    <h3>Sleep</h3>
-                    <p>Quality analysis</p>
-                </div>
-                <div class="feature">
-                    <div class="feature-icon">🆘</div>
-                    <h3>SOS Alert</h3>
-                    <p>Fall detection & GPS</p>
-                </div>
-            </div>
-        </div>
-
-        <div class="card">
-            <h2>Project Stats</h2>
-            <div class="stats">
-                <div class="stat">
-                    <div class="stat-value">~3,500</div>
-                    <div class="stat-label">EGP Budget</div>
-                </div>
-                <div class="stat">
-                    <div class="stat-value">75%</div>
-                    <div class="stat-label">Complete</div>
-                </div>
-                <div class="stat">
-                    <div class="stat-value">ESP32</div>
-                    <div class="stat-label">Microcontroller</div>
-                </div>
-            </div>
-        </div>
-
-        <div class="card">
-            <h2>Development Progress</h2>
-            <div class="progress-list">
-                <div class="progress-item">
-                    <div class="progress-icon" style="background: #10b981;">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="white">
-                            <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
-                        </svg>
-                    </div>
-                    <span style="font-weight: 600;">Hardware Design</span>
-                    <span style="color: #10b981; margin-left: auto;">Done</span>
-                </div>
-                <div class="progress-item">
-                    <div class="progress-icon" style="background: #10b981;">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="white">
-                            <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
-                        </svg>
-                    </div>
-                    <span style="font-weight: 600;">ESP32 Firmware</span>
-                    <span style="color: #10b981; margin-left: auto;">Done</span>
-                </div>
-                <div class="progress-item">
-                    <div class="progress-icon" style="background: #f59e0b;">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="white">
-                            <circle cx="12" cy="12" r="8"/>
-                        </svg>
-                    </div>
-                    <span style="font-weight: 600;">Mobile App</span>
-                    <span style="color: #f59e0b; margin-left: auto;">In Progress</span>
-                </div>
-                <div class="progress-item">
-                    <div class="progress-icon" style="background: #10b981;">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="white">
-                            <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
-                        </svg>
-                    </div>
-                    <span style="font-weight: 600;">Web Dashboard</span>
-                    <span style="color: #10b981; margin-left: auto;">Done</span>
-                </div>
-            </div>
-        </div>
-
-        <div class="card budget-card">
-            <h3>Total Project Budget</h3>
-            <div class="budget-value">~3,500 EGP</div>
-            <p style="opacity: 0.9; margin-top: 10px;">Well under the 10,000 EGP government limit</p>
-        </div>
-
-        <footer class="footer">
-            <div class="footer-flag">🇪🇬</div>
-            <p style="margin-top: 10px;"><strong>Digital Saver</strong> - Made in Egypt</p>
-            <p style="margin-top: 5px; font-size: 0.9em;">Affordable Health Technology for Everyone</p>
-        </footer>
-    </div>
+        <a href="#" class="download-btn coming-soon">
+          <div class="btn-icon">🍎</div>
+          <div class="btn-text">
+            <span class="name">iOS</span>
+            <span class="size">Coming Soon</span>
+          </div>
+          <span class="btn-badge">Soon</span>
+        </a>
+        
+        <a href="https://github.com/Cambric-software/Digital-saver/releases" class="download-btn available" target="_blank">
+          <div class="btn-icon">🪟</div>
+          <div class="btn-text">
+            <span class="name">Windows</span>
+            <span class="size">ZIP • ~12 MB</span>
+          </div>
+          <span class="btn-badge">Download</span>
+        </a>
+        
+        <a href="#" class="download-btn coming-soon">
+          <div class="btn-icon">🐧</div>
+          <div class="btn-text">
+            <span class="name">Linux</span>
+            <span class="size">Coming Soon</span>
+          </div>
+          <span class="btn-badge">Soon</span>
+        </a>
+      </div>
+    </section>
+    
+    <footer>
+      <p>© 2026 <a href="#">Cambric</a> • All Rights Reserved</p>
+      <p style="margin-top: 8px;">🇪🇬 Egyptian Government Funded Project • Ministry of Communications and IT</p>
+      <p style="margin-top: 8px;"><a href="https://github.com/Cambric-software/Digital-saver" target="_blank">View Source on GitHub</a></p>
+    </footer>
+  </div>
 </body>
 </html>

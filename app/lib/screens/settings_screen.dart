@@ -1293,7 +1293,7 @@ class _DownloadCard extends StatelessWidget {
             iconWidget: ClipRRect(
               borderRadius: BorderRadius.circular(6),
               child: Image.asset(
-                'assets/digital-saver-icon.png',
+                'assets/digital-saver-icon-transparent.png',
                 width: 24,
                 height: 24,
                 fit: BoxFit.cover,
