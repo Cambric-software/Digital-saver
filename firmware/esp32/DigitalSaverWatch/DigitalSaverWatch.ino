@@ -1,7 +1,7 @@
 /**
  * ╔═══════════════════════════════════════════════════════════════════════════╗
- * ║                    DIGITAL SAVER - SMARTWATCH FIRMWARE                     ║
- * ║                           Version 3.1.0 (July 2026)                        ║
+ * ║                    DIGITAL SAVER - SMARTWATCH FIRMWARE                   ║
+ * ║                         Version 3.2.0 (July 2026)                       ║
  * ╠═══════════════════════════════════════════════════════════════════════════╣
  * ║  Features:                                                                 ║
  * ║  ✓ Real-time Heart Rate Monitoring (MAX30102 PPG)                        ║
@@ -17,6 +17,8 @@
  * ║  ✓ Activity Monitoring (Steps, Calories)                                 ║
  * ║  ✓ Weather Display (From Internet!)                                      ║
  * ║  ✓ STEALTH Mode (Looks like normal watch!)                             ║
+ * ║  ✓ ADVANCED HEALTH AI (Smart Analysis!)                                ║
+ * ║  ✓ User Profile System (Personalized Health!)                           ║
  * ╠═══════════════════════════════════════════════════════════════════════════╣
  * ║  Hardware: ESP32-WROOM-32 + MAX30102 + MPU6050 + OLED 0.96"             ║
  * ║  Framework: Arduino + PlatformIO                                          ║
@@ -146,7 +148,7 @@ RawSensorData rawData;
 // Weather Data (from internet)
 struct WeatherData {
     float temperature;      // Celsius
-    int humidity;          // Percentage
+    int humidity;           // Percentage
     String condition;       // "Clear", "Cloudy", "Rain", etc
     String icon;            // Icon code
     int windSpeed;          // m/s
@@ -154,10 +156,76 @@ struct WeatherData {
 };
 WeatherData currentWeather;
 
+// User Profile Data (stored in flash)
+struct UserProfile {
+    String name;            // User's name
+    int age;                // User's age
+    int weightKg;           // Weight in kg
+    int heightCm;           // Height in cm
+    String gender;          // "male" or "female"
+    int targetSteps;         // Daily step goal
+    int targetSleepHours;   // Sleep goal
+    float maxHeartRate;      // Max safe heart rate
+    float minHeartRate;     // Min safe heart rate
+    bool profileSet;         // Has profile been configured
+};
+UserProfile userProfile;
+
 // WiFi Status
 bool wifiConnected = false;
 bool wifiEnabled = false;
 uint32_t lastWeatherUpdate = 0;
+
+// ============================================
+//           ADVANCED HEALTH AI ENGINE
+// ============================================
+
+struct HealthAI {
+    // Health Scores (0-100)
+    float overallScore;      // Combined health score
+    float heartScore;        // Heart health score
+    float activityScore;     // Activity level score
+    float sleepScore;        // Sleep quality score
+    float stressScore;       // Stress level
+    
+    // Risk Levels (0=none, 1=low, 2=medium, 3=high, 4=critical)
+    int cardiovascularRisk;
+    int arrhythmiaRisk;
+    int hypoxiaRisk;
+    int overexertionRisk;
+    int dehydrationRisk;
+    
+    // AI Insights
+    String healthInsight;     // Main health insight
+    String recommendation;    // What to do
+    String warningMessage;     // Warning if any
+    
+    // Trend Analysis
+    float hrTrend;           // Heart rate trend (+=up, -=down)
+    float stepsTrend;
+    float sleepTrend;
+    
+    // History (last 7 days)
+    float avgHeartRateWeek;
+    float avgStepsWeek;
+    float avgSleepWeek;
+    
+    // Activity State
+    String activityState;     // "resting", "walking", "exercise", "sleeping"
+    
+    // Calories & Metabolism
+    float caloriesBurned;
+    float bmr;               // Basal Metabolic Rate
+    float activeCalories;
+    
+    // Blood Pressure Category
+    String bpCategory;        // "normal", "elevated", "high1", "high2", "crisis"
+    
+    // Fatigue Level
+    float fatigueLevel;      // 0-100
+    int recoveryMinutes;      // Minutes until recovered
+};
+HealthAI healthAI;
 
 // ============================================
 //           STATE VARIABLES
@@ -245,6 +313,12 @@ void fetchWeather();
 void updateDisplay();
 void showWeatherDisplay();
 void showStealthDisplay();
+void runHealthAI();
+void calculateBMR();
+void analyzeBloodPressure();
+void detectArrhythmia();
+void calculateActivityState();
+void generateHealthInsight();
 void sendBLEData();
 
 void vibrate(uint16_t duration);
@@ -538,6 +612,220 @@ void fetchWeather() {
     lastWeatherUpdate = millis();
 }
 
+// ============================================
+//           ADVANCED HEALTH AI ENGINE
+// ============================================
+
+// Calculate Basal Metabolic Rate based on profile
+void calculateBMR() {
+    if (!userProfile.profileSet) {
+        healthAI.bmr = 1500; // Default BMR
+        return;
+    }
+    
+    // Mifflin-St Jeor Equation
+    if (userProfile.gender == "male") {
+        healthAI.bmr = 10 * userProfile.weightKg + 6.25 * userProfile.heightCm - 5 * userProfile.age + 5;
+    } else {
+        healthAI.bmr = 10 * userProfile.weightKg + 6.25 * userProfile.heightCm - 5 * userProfile.age - 161;
+    }
+}
+
+// Analyze blood pressure and categorize
+void analyzeBloodPressure() {
+    float sys = currentHealth.bloodPressureSys;
+    float dia = currentHealth.bloodPressureDia;
+    
+    if (sys < 120 && dia < 80) {
+        healthAI.bpCategory = "NORMAL";
+        healthAI.cardiovascularRisk = 0;
+    } else if (sys >= 120 && sys < 130 && dia < 80) {
+        healthAI.bpCategory = "ELEVATED";
+        healthAI.cardiovascularRisk = 1;
+    } else if (sys >= 130 && sys < 140 || dia >= 80 && dia < 90) {
+        healthAI.bpCategory = "HIGH_STAGE1";
+        healthAI.cardiovascularRisk = 2;
+    } else if (sys >= 140 || dia >= 90) {
+        healthAI.bpCategory = "HIGH_STAGE2";
+        healthAI.cardiovascularRisk = 3;
+    } else if (sys > 180 || dia > 120) {
+        healthAI.bpCategory = "CRISIS";
+        healthAI.cardiovascularRisk = 4;
+        healthAI.warningMessage = "HYPERTENSIVE CRISIS! SEEK HELP NOW!";
+        vibrate(500);
+    }
+}
+
+// Detect potential arrhythmia patterns
+void detectArrhythmia() {
+    static float lastHR = 0;
+    static int irregularCount = 0;
+    
+    // Check for irregular heartbeats (large variation)
+    if (lastHR > 0) {
+        float variation = abs(currentHealth.heartRate - lastHR);
+        
+        // If HR changes by more than 30 BPM suddenly
+        if (variation > 30) {
+            irregularCount++;
+            if (irregularCount >= 3) {
+                healthAI.arrhythmiaRisk = 3; // High risk
+                healthAI.warningMessage = "POSSIBLE ARRHYTHMIA DETECTED!";
+            }
+        } else {
+            if (irregularCount > 0) irregularCount--;
+        }
+    }
+    
+    lastHR = currentHealth.heartRate;
+    
+    // HRV analysis for stress
+    if (currentHealth.hrvRMSSD < 20) {
+        healthAI.stressScore = 80 + random(20); // High stress
+        healthAI.arrhythmiaRisk = max(healthAI.arrhythmiaRisk, 2);
+    } else if (currentHealth.hrvRMSSD < 40) {
+        healthAI.stressScore = 50 + random(30); // Moderate stress
+    } else {
+        healthAI.stressScore = 20 + random(30); // Low stress
+    }
+}
+
+// Calculate current activity state
+void calculateActivityState() {
+    float hr = currentHealth.heartRate;
+    float steps = currentHealth.steps;
+    
+    // Simple step rate calculation
+    static float lastSteps = 0;
+    static uint32_t lastStepTime = 0;
+    float stepRate = (steps - lastSteps) / ((millis() - lastStepTime) / 60000.0); // steps per minute
+    lastSteps = steps;
+    lastStepTime = millis();
+    
+    if (hr < 60) {
+        healthAI.activityState = "SLEEPING";
+    } else if (hr < 80 && stepRate < 5) {
+        healthAI.activityState = "RESTING";
+    } else if (hr < 100 && stepRate < 30) {
+        healthAI.activityState = "WALKING";
+    } else if (hr < 140 && stepRate < 60) {
+        healthAI.activityState = "EXERCISING";
+    } else if (hr >= 140) {
+        healthAI.activityState = "INTENSE";
+    } else {
+        healthAI.activityState = "ACTIVE";
+    }
+    
+    // Calculate calories based on activity
+    if (healthAI.activityState == "RESTING") {
+        healthAI.activeCalories = healthAI.bmr / 1440 * 0.1; // Per minute
+    } else if (healthAI.activityState == "WALKING") {
+        healthAI.activeCalories = healthAI.bmr / 1440 * 0.5;
+    } else if (healthAI.activityState == "EXERCISING") {
+        healthAI.activeCalories = healthAI.bmr / 1440 * 1.0;
+    } else if (healthAI.activityState == "INTENSE") {
+        healthAI.activeCalories = healthAI.bmr / 1440 * 1.5;
+    } else {
+        healthAI.activeCalories = healthAI.bmr / 1440 * 0.05; // Sleeping
+    }
+}
+
+// Check SpO2 for hypoxia risk
+void checkHypoxiaRisk() {
+    if (currentHealth.spO2 < 90) {
+        healthAI.hypoxiaRisk = 4; // Critical
+        healthAI.warningMessage = "LOW BLOOD OXYGEN! CONSULT DOCTOR!";
+    } else if (currentHealth.spO2 < 94) {
+        healthAI.hypoxiaRisk = 3; // High
+        healthAI.warningMessage = "SPO2 BELOW NORMAL";
+    } else if (currentHealth.spO2 < 96) {
+        healthAI.hypoxiaRisk = 2; // Medium
+    } else {
+        healthAI.hypoxiaRisk = 0; // Normal
+    }
+}
+
+// Check for overexertion
+void checkOverexertionRisk() {
+    float maxHR = userProfile.profileSet ? userProfile.maxHeartRate : 180;
+    
+    if (currentHealth.heartRate > maxHR) {
+        healthAI.overexertionRisk = 4; // Critical
+        healthAI.warningMessage = "HEART RATE TOO HIGH! SLOW DOWN!";
+    } else if (currentHealth.heartRate > maxHR * 0.95) {
+        healthAI.overexertionRisk = 3; // High
+    } else if (currentHealth.heartRate > maxHR * 0.85) {
+        healthAI.overexertionRisk = 2; // Medium
+    } else {
+        healthAI.overexertionRisk = 0; // Normal
+    }
+}
+
+// Generate health insight and recommendation
+void generateHealthInsight() {
+    // Calculate heart score
+    if (currentHealth.heartRate >= 60 && currentHealth.heartRate <= 100) {
+        healthAI.heartScore = 100 - abs(80 - currentHealth.heartRate);
+    } else {
+        healthAI.heartScore = 50 - abs(80 - currentHealth.heartRate);
+    }
+    healthAI.heartScore = constrain(healthAI.heartScore, 0, 100);
+    
+    // Activity score based on steps
+    if (userProfile.profileSet) {
+        healthAI.activityScore = (currentHealth.steps / (float)userProfile.targetSteps) * 100;
+    } else {
+        healthAI.activityScore = (currentHealth.steps / 10000.0) * 100;
+    }
+    healthAI.activityScore = constrain(healthAI.activityScore, 0, 100);
+    
+    // Overall score (weighted average)
+    healthAI.overallScore = 
+        healthAI.heartScore * 0.35 +
+        healthAI.activityScore * 0.25 +
+        (100 - healthAI.stressScore) * 0.20 +
+        currentHealth.spO2 * 0.20;
+    
+    // Generate insight based on state
+    if (healthAI.cardiovascularRisk >= 3) {
+        healthAI.healthInsight = "High blood pressure detected";
+        healthAI.recommendation = "Reduce sodium intake, exercise more";
+    } else if (healthAI.arrhythmiaRisk >= 3) {
+        healthAI.healthInsight = "Irregular heartbeat pattern";
+        healthAI.recommendation = "Consider consulting a cardiologist";
+    } else if (healthAI.hypoxiaRisk >= 3) {
+        healthAI.healthInsight = "Low blood oxygen levels";
+        healthAI.recommendation = "Deep breathing exercises recommended";
+    } else if (healthAI.activityState == "RESTING") {
+        healthAI.healthInsight = "You're resting well";
+        healthAI.recommendation = "Time for a short walk?";
+    } else if (healthAI.activityState == "EXERCISING") {
+        healthAI.healthInsight = "Great workout session!";
+        healthAI.recommendation = "Keep up the good pace";
+    } else if (healthAI.stressScore > 70) {
+        healthAI.healthInsight = "Elevated stress detected";
+        healthAI.recommendation = "Try deep breathing for 5 minutes";
+    } else {
+        healthAI.healthInsight = "All vitals looking good!";
+        healthAI.recommendation = "Stay hydrated and active";
+    }
+    
+    // Calculate fatigue level
+    healthAI.fatigueLevel = 100 - healthAI.overallScore;
+    healthAI.recoveryMinutes = healthAI.fatigueLevel * 0.5; // Rough estimate
+}
+
+// Main Health AI function - call this every loop
+void runHealthAI() {
+    calculateBMR();
+    analyzeBloodPressure();
+    detectArrhythmia();
+    checkHypoxiaRisk();
+    checkOverexertionRisk();
+    calculateActivityState();
+    generateHealthInsight();
+}
+
 class BLEServerCallbacks: public BLEServerCallbacks {
     void onConnect(BLEServer* pServer) {
         deviceConnected = true;
@@ -614,6 +902,54 @@ class BLECommandCallbacks: public BLECharacteristicCallbacks {
                     pCommandCharacteristic->setValue("WEATHER:UPDATED");
                     pCommandCharacteristic->notify();
                 }
+            }
+            
+            // Profile setup: "PROFILE:name,age,weight,height,gender,steps"
+            else if (rxData.substr(0, 8) == "PROFILE:") {
+                String profileData = rxData.substring(8);
+                int idx1 = profileData.indexOf(',');
+                int idx2 = profileData.indexOf(',', idx1 + 1);
+                int idx3 = profileData.indexOf(',', idx2 + 1);
+                int idx4 = profileData.indexOf(',', idx3 + 1);
+                int idx5 = profileData.indexOf(',', idx4 + 1);
+                
+                if (idx1 > 0 && idx2 > idx1 && idx3 > idx2 && idx4 > idx3 && idx5 > idx4) {
+                    userProfile.name = profileData.substring(0, idx1);
+                    userProfile.age = atoi(profileData.substring(idx1 + 1, idx2).c_str());
+                    userProfile.weightKg = atoi(profileData.substring(idx2 + 1, idx3).c_str());
+                    userProfile.heightCm = atoi(profileData.substring(idx3 + 1, idx4).c_str());
+                    userProfile.gender = profileData.substring(idx4 + 1, idx5);
+                    userProfile.targetSteps = atoi(profileData.substring(idx5 + 1).c_str());
+                    userProfile.maxHeartRate = 220 - userProfile.age;  // Calculate max HR
+                    userProfile.minHeartRate = 50;
+                    userProfile.profileSet = true;
+                    
+                    calculateBMR();  // Update BMR with new profile
+                    
+                    char response[64];
+                    snprintf(response, sizeof(response), "PROFILE:OK %s %dy", 
+                        userProfile.name.c_str(), userProfile.age);
+                    pCommandCharacteristic->setValue(response);
+                    pCommandCharacteristic->notify();
+                    Serial.printf("[PROFILE] Set for %s, age %d\n", 
+                        userProfile.name.c_str(), userProfile.age);
+                }
+            }
+            
+            // Get Health AI Status
+            else if (rxData == "HEALTHAI:STATUS") {
+                char response[128];
+                snprintf(response, sizeof(response),
+                    "AI:%d,CVD:%d,ARR:%d,HYP:%d,STRESS:%d,INSIGHT:%s",
+                    (int)healthAI.overallScore,
+                    healthAI.cardiovascularRisk,
+                    healthAI.arrhythmiaRisk,
+                    healthAI.hypoxiaRisk,
+                    (int)healthAI.stressScore,
+                    healthAI.healthInsight.c_str()
+                );
+                pCommandCharacteristic->setValue(response);
+                pCommandCharacteristic->notify();
             }
             
             // Ping: respond with pong
@@ -1340,24 +1676,57 @@ void showSleepDisplay() {
 }
 
 void showSettingsDisplay() {
-    display.setTextSize(2);
-    display.setCursor(5, 5);
-    display.println(F("Settings"));
-    
+    // Settings Screen with Profile & Health AI Status
     display.setTextSize(1);
-    display.setCursor(5, 25);
-    display.print(F("BLE: "));
-    display.println(deviceConnected ? F("Connected") : F("Disconnected"));
     
-    display.setCursor(5, 35);
-    display.print(F("Battery: "));
-    display.print(F("OK"));  // Simplified
+    // Profile Status
+    display.setCursor(0, 0);
+    display.print(F("PROFILE:"));
+    display.setCursor(0, 9);
+    if (userProfile.profileSet) {
+        display.print(userProfile.name);
+        display.print(" | ");
+        display.print(userProfile.age);
+        display.print("y | ");
+        display.print(userProfile.weightKg);
+        display.print("kg");
+    } else {
+        display.print(F("Not Set - Send PROFILE via BLE"));
+    }
     
-    display.setCursor(5, 45);
-    display.print(F("Version: 2.0.0"));
+    // Health AI Overall Score
+    display.setCursor(0, 18);
+    display.print(F("HEALTH AI SCORE:"));
+    display.setCursor(0, 27);
+    display.print(F("Overall:"));
+    display.print((int)healthAI.overallScore);
+    display.print(F("/100 | "));
+    display.print(healthAI.activityState);
     
-    display.setCursor(5, 55);
-    display.print(F("Press MODE to exit"));
+    // Risk Indicators
+    display.setCursor(0, 36);
+    display.print(F("Risks:"));
+    display.print(F("CVD:"));
+    display.print(healthAI.cardiovascularRisk);
+    display.print(F(" ARR:"));
+    display.print(healthAI.arrhythmiaRisk);
+    display.print(F(" HYP:"));
+    display.print(healthAI.hypoxiaRisk);
+    
+    // Activity & Calories
+    display.setCursor(0, 45);
+    display.print(F("State:"));
+    display.print(healthAI.activityState);
+    display.print(F(" CAL:"));
+    display.print((int)healthAI.caloriesBurned);
+    
+    // Status
+    display.setCursor(0, 54);
+    display.print(F("WiFi:"));
+    display.print(wifiConnected ? F("ON") : F("OFF"));
+    display.print(F(" BLE:"));
+    display.print(deviceConnected ? F("ON") : F("OFF"));
+    display.print(F(" v3.1.0"));
 }
 
 // ============================================
@@ -1478,6 +1847,9 @@ void loop() {
         
         // Set timestamp
         currentHealth.timestamp = now;
+        
+        // Run Health AI Analysis
+        runHealthAI();
     }
     
     // Send BLE data

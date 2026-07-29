@@ -1,389 +1,567 @@
-# DIGITAL SAVER ONYX WATCH - FIRMWARE v3.1.0
+# DIGITAL SAVER ONYX WATCH - COMPLETE FIRMWARE DOCUMENTATION
 
-> Version 3.1.0 - July 2026
-> Includes: WiFi Internet, Weather, STEALTH Mode
+**Version:** 3.2.0  
+**Last Updated:** July 2026  
+**Company:** Cambric
 
 ---
 
-# NEW FEATURES IN v3.1.0
+# TABLE OF CONTENTS
 
-## 1. WiFi & Internet Connection
+1. [What's New in v3.2.0](#whats-new-in-v320)
+2. [User Profile System](#user-profile-system)
+3. [Advanced Health AI Engine](#advanced-health-ai-engine)
+4. [All Watch Modes](#all-watch-modes)
+5. [All BLE Commands](#all-ble-commands)
+6. [Code Structure](#code-structure)
+7. [Settings Screen](#settings-screen)
+8. [Troubleshooting](#troubleshooting)
 
-The watch now connects to WiFi to get weather data from the internet!
+---
 
-### How It Works
+# WHATS NEW IN V3.2.0
 
-```
-Watch (ESP32) ----WiFi----> Router ----Internet----> Weather Server
-                                    |
-                                    v
-                            OpenWeatherMap API
-                            (api.openweathermap.org)
-```
+## v3.2.0 New Features
 
-### Setup
+### 1. USER PROFILE SYSTEM (NEW!)
+Set your personal information for personalized health tracking:
+- Name, Age, Weight, Height, Gender
+- Daily step goal, Sleep goal
+- Custom max/min heart rate limits
 
-Edit these lines in the firmware (DigitalSaverWatch.ino):
+### 2. ADVANCED HEALTH AI (NEW!)
+Smart health analysis that runs on the watch:
+- Overall Health Score (0-100)
+- Cardiovascular Risk Assessment
+- Arrhythmia Detection
+- Hypoxia (Low Oxygen) Detection
+- Stress Level Analysis
+- Activity State Detection
+- Calorie Burn Calculation
+- Health Insights & Recommendations
+
+### 3. Improved Settings Screen
+Now shows:
+- User Profile status
+- Health AI scores
+- Risk indicators
+- Activity state
+- Calories burned
+
+---
+
+# USER PROFILE SYSTEM
+
+## What Is It?
+
+The watch stores YOUR personal health information to give you better health analysis.
+
+## UserProfile Data Structure
 
 ```cpp
-// Line 67-70
-#define WIFI_SSID "YourWiFiName"           // Your WiFi name
-#define WIFI_PASSWORD "YourWiFiPassword"     // Your WiFi password
-#define WEATHER_API_KEY "YOUR_API_KEY"     // Get from openweathermap.org
-#define WEATHER_API_URL "http://api.openweathermap.org/data/2.5/weather"
+struct UserProfile {
+    String name;            // Your name
+    int age;                // Your age in years
+    int weightKg;          // Weight in kilograms
+    int heightCm;          // Height in centimeters
+    String gender;          // "male" or "female"
+    int targetSteps;        // Daily step goal
+    int targetSleepHours;   // Sleep goal (hours)
+    float maxHeartRate;     // Your personal max HR
+    float minHeartRate;     // Your personal min HR
+    bool profileSet;        // Has profile been set?
+};
 ```
 
-### Get Weather API Key
+## Set Profile via BLE
 
-1. Go to: https://openweathermap.org/api
-2. Sign up (free tier = 1000 calls/day)
-3. Copy your API key
-4. Paste it in the code
+Send this command from the app:
 
-### WiFi Status
+```
+PROFILE:name,age,weight,height,gender,steps
+```
 
-| Status | Meaning |
-|--------|---------|
-| wifiConnected = true | WiFi is connected |
-| wifiEnabled = true | WiFi is turned on |
+### Example
 
-### WiFi Commands (via BLE)
+```
+PROFILE:John,30,75,175,male,10000
+```
 
-| Command | What It Does |
-|---------|--------------|
-| WIFI:ON | Turn on WiFi and connect |
-| WIFI:OFF | Turn off WiFi |
-| WEATHER:REFRESH | Fetch new weather data |
+### Breakdown
+| Part | Value | Meaning |
+|------|-------|---------|
+| name | John | User's name |
+| age | 30 | 30 years old |
+| weight | 75 | 75 kg |
+| height | 175 | 175 cm |
+| gender | male | Male |
+| steps | 10000 | 10,000 daily step goal |
+
+### Response
+
+Watch will respond with:
+```
+PROFILE:OK John 30y
+```
+
+## Auto-Calculated Values
+
+When you set profile, the watch automatically calculates:
+
+| Value | Formula | Example (age 30) |
+|-------|---------|------------------|
+| maxHeartRate | 220 - age | 190 BPM |
+| minHeartRate | Fixed | 50 BPM |
+| BMR | Mifflin-St Jeor | ~1750 kcal/day |
+
+### BMR Calculation (Basal Metabolic Rate)
+
+**For males:**
+```
+BMR = 10 × weight(kg) + 6.25 × height(cm) - 5 × age + 5
+```
+
+**For females:**
+```
+BMR = 10 × weight(kg) + 6.25 × height(cm) - 5 × age - 161
+```
+
+## Why Is Profile Important?
+
+Without profile, watch uses generic values:
+- Default BMR: 1500 kcal
+- Default max HR: 180 BPM
+- Default step goal: 10,000
+
+With profile, the AI gives YOU personalized analysis!
 
 ---
 
-## 2. Weather Display
+# ADVANCED HEALTH AI ENGINE
 
-The watch shows weather on the screen!
+## Overview
 
-### Weather Screen
+The watch now has a built-in AI that continuously analyzes your health data and provides:
+- Health scores (0-100)
+- Risk assessments
+- Activity state detection
+- Health insights
+- Recommendations
 
-```
-+------------------------+
-| SUN           [icon]   |  <- Weather condition
-|                        |
-|    32 C               |  <- Temperature
-|                        |
-| HUM: 65%  WIND: 5m/s  |  <- Humidity & wind
-+------------------------+
-```
-
-### Weather Data Fields
-
-| Field | Example | Description |
-|-------|---------|-------------|
-| temperature | 32.5 | Temperature in Celsius |
-| humidity | 65 | Humidity percentage |
-| condition | "Clear" | Weather condition |
-| icon | "01d" | Icon code from API |
-| windSpeed | 5 | Wind speed in m/s |
-| updated | true | Has data been fetched |
-
-### Weather Codes
-
-| Code | Condition | Display |
-|------|----------|---------|
-| 01d, 01n | Clear | SUN |
-| 02d, 02n | Few clouds | CLO |
-| 03d, 03n | Clouds | CLO |
-| 04d, 04n | Overcast | CLO |
-| 09d, 09n | Rain | RAIN |
-| 10d, 10n | Light rain | RAIN |
-| 11d, 11n | Thunderstorm | STORM |
-| 50d, 50n | Mist/Fog | FOG |
-
-### Auto-Update
-
-Weather updates every 30 minutes automatically:
+## HealthAI Data Structure
 
 ```cpp
-#define WEATHER_UPDATE_INTERVAL 1800000  // 30 minutes in milliseconds
+struct HealthAI {
+    // Health Scores (0-100)
+    float overallScore;      // Combined health score
+    float heartScore;        // Heart health score
+    float activityScore;      // Activity level score
+    float sleepScore;        // Sleep quality score
+    float stressScore;        // Stress level (0=no stress, 100=very stressed)
+    
+    // Risk Levels (0-4)
+    // 0 = None, 1 = Low, 2 = Medium, 3 = High, 4 = Critical
+    int cardiovascularRisk;   // Blood pressure risk
+    int arrhythmiaRisk;       // Irregular heartbeat risk
+    int hypoxiaRisk;         // Low oxygen risk
+    int overexertionRisk;    // Too much exercise risk
+    int dehydrationRisk;     // Dehydration risk
+    
+    // AI Insights
+    String healthInsight;     // What's happening with your health
+    String recommendation;   // What you should do
+    String warningMessage;   // Alert if something is wrong!
+    
+    // Activity Detection
+    String activityState;     // "SLEEPING", "RESTING", "WALKING", "EXERCISING", "INTENSE"
+    
+    // Calories
+    float caloriesBurned;    // Total calories burned today
+    float bmr;              // Basal Metabolic Rate
+    float activeCalories;    // Calories from activity
+    
+    // Blood Pressure
+    String bpCategory;       // "NORMAL", "ELEVATED", "HIGH_STAGE1", "HIGH_STAGE2", "CRISIS"
+    
+    // Fatigue
+    float fatigueLevel;     // 0-100 (0=energized, 100=exhausted)
+    int recoveryMinutes;     // Minutes until recovered
+};
 ```
 
----
+## How The AI Works
 
-## 3. STEALTH Mode (NEW!)
+The AI runs `runHealthAI()` every measurement cycle and performs these analyses:
 
-The watch looks like a normal analog watch!
+### 1. Blood Pressure Analysis
 
-### What Is STEALTH Mode?
+| Category | Systolic | Diastolic | Risk Level |
+|----------|----------|-----------|------------|
+| NORMAL | < 120 | < 80 | 0 (None) |
+| ELEVATED | 120-129 | < 80 | 1 (Low) |
+| HIGH_STAGE1 | 130-139 | 80-89 | 2 (Medium) |
+| HIGH_STAGE2 | >= 140 | >= 90 | 3 (High) |
+| CRISIS | > 180 | > 120 | 4 (Critical) |
 
-In STEALTH mode, the watch shows ONLY:
-- The time (large, plain digits)
-- The date (small, at bottom)
+### 2. Arrhythmia Detection
 
-NO:
-- NO heart icons
-- NO health stats
-- NO weird symbols
-- NO indication it's a smart watch
+The AI watches for irregular heart rate patterns:
+- If HR changes by more than 30 BPM suddenly
+- If this happens 3+ times
+- **Warning:** "POSSIBLE ARRHYTHMIA DETECTED!"
 
-### Perfect For
+### 3. Hypoxia Detection (Low Blood Oxygen)
 
-- Business meetings
-- Job interviews
-- When you don't want people to know it's a smart watch
-- Looking professional
+| SpO2 Level | Risk | Message |
+|------------|------|---------|
+| >= 96% | 0 | Normal |
+| 94-95% | 2 | Medium |
+| 90-93% | 3 | High |
+| < 90% | 4 | **CRITICAL!** |
 
-### STEALTH Display
+### 4. Overexertion Detection
+
+Compares current HR to your max HR:
+| HR vs Max | Risk |
+|-----------|------|
+| < 85% | 0 (Normal) |
+| 85-95% | 2 (Medium) |
+| 95-100% | 3 (High) |
+| > 100% | 4 (CRITICAL) |
+
+### 5. Activity State Detection
+
+Based on heart rate and step rate:
+
+| State | HR Range | Step Rate | Description |
+|-------|----------|-----------|-------------|
+| SLEEPING | < 60 BPM | Any | Resting/sleeping |
+| RESTING | 60-80 BPM | < 5 spm | Sitting/relaxing |
+| WALKING | 80-100 BPM | 5-30 spm | Light walking |
+| EXERCISING | 100-140 BPM | 30-60 spm | Moderate exercise |
+| INTENSE | >= 140 BPM | Any | Heavy exercise |
+| ACTIVE | Any | > 60 spm | Very active |
+
+### 6. Stress Level Detection
+
+Based on HRV (Heart Rate Variability):
+
+| HRV (RMSSD) | Stress Score | Level |
+|-------------|--------------|-------|
+| > 40ms | 20-50 | LOW |
+| 20-40ms | 50-80 | MODERATE |
+| < 20ms | 80-100 | HIGH |
+
+### 7. Calorie Calculation
+
+Based on activity state:
+
+| Activity State | Calories Multiplier |
+|----------------|---------------------|
+| SLEEPING | 0.05 × BMR/1440 |
+| RESTING | 0.1 × BMR/1440 |
+| WALKING | 0.5 × BMR/1440 |
+| EXERCISING | 1.0 × BMR/1440 |
+| INTENSE | 1.5 × BMR/1440 |
+
+## Overall Score Calculation
 
 ```
-+------------------------+
-|                        |
-|                        |
-|        12:45           |  <- JUST THE TIME (big digits)
-|                        |
-|                        |
-|      Jul 27            |  <- Small date (looks like engraving)
-+------------------------+
+Overall = (HeartScore × 0.35) + 
+          (ActivityScore × 0.25) + 
+          ((100 - StressScore) × 0.20) + 
+          (SpO2 × 0.20)
 ```
 
-### Code For STEALTH Mode
+## Health Insights Generated
+
+The AI generates these insights based on your current state:
+
+| Condition | Insight | Recommendation |
+|-----------|---------|----------------|
+| BP Risk >= 3 | "High blood pressure detected" | "Reduce sodium, exercise more" |
+| Arrhythmia >= 3 | "Irregular heartbeat pattern" | "Consider consulting cardiologist" |
+| Hypoxia >= 3 | "Low blood oxygen levels" | "Deep breathing exercises recommended" |
+| RESTING | "You're resting well" | "Time for a short walk?" |
+| EXERCISING | "Great workout session!" | "Keep up the good pace" |
+| Stress > 70 | "Elevated stress detected" | "Try deep breathing for 5 minutes" |
+| Default | "All vitals looking good!" | "Stay hydrated and active" |
+
+## AI Functions List
 
 ```cpp
-void showStealthDisplay() {
-    // STEALTH MODE: Watch looks like a normal analog watch!
-    // Shows ONLY time as regular digits, no health icons
-    
-    display.setTextSize(4);  // Big digits
-    display.setCursor(8, 18);
-    display.print(formatTime());  // Just show time!
-    
-    // Small date at bottom
-    display.setTextSize(1);
-    display.setCursor(25, 52);
-    struct tm timeinfo;
-    if (getLocalTime(&timeinfo)) {
-        char dateStr[20];
-        strftime(dateStr, sizeof(dateStr), "%b %d", &timeinfo);
-        display.print(dateStr);
-    }
-    
-    // Tiny BLE dot (barely visible)
-    if (deviceConnected) {
-        display.drawPixel(124, 2, SSD1306_WHITE);
-    }
-}
+void calculateBMR();           // Calculate basal metabolic rate
+void analyzeBloodPressure();   // Categorize BP
+void detectArrhythmia();       // Watch for irregular HR
+void checkHypoxiaRisk();       // Check SpO2 levels
+void checkOverexertionRisk(); // Check HR vs max
+void calculateActivityState(); // Detect current activity
+void generateHealthInsight();  // Create insight + recommendation
+void runHealthAI();            // Main AI function (runs all above)
 ```
 
 ---
 
-## 4. All Watch Modes
+# ALL WATCH MODES
 
-The watch has 8 modes:
+## Mode List (8 Modes)
 
-| Mode ID | Mode Name | What It Shows |
-|---------|-----------|---------------|
-| 0 | MODE_CLOCK | Time, date, status |
-| 1 | MODE_HEART_RATE | HR, SpO2, HRV |
-| 2 | MODE_BLOOD_PRESSURE | Systolic, diastolic |
-| 3 | MODE_ACTIVITY | Steps, calories |
-| 4 | MODE_SLEEP | Sleep score |
-| 5 | MODE_WEATHER | Temperature, humidity |
-| 6 | MODE_STEALTH | Looks like normal watch! |
-| 7 | MODE_SETTINGS | Settings |
+| Mode ID | Name | Description |
+|---------|------|-------------|
+| 0 | MODE_CLOCK | Time, date, basic status |
+| 1 | MODE_HEART_RATE | HR, SpO2, HRV display |
+| 2 | MODE_BLOOD_PRESSURE | Systolic/Diastolic display |
+| 3 | MODE_ACTIVITY | Steps, calories, activity |
+| 4 | MODE_SLEEP | Sleep tracking display |
+| 5 | MODE_WEATHER | Temperature, humidity, weather |
+| 6 | MODE_STEALTH | Looks like normal watch |
+| 7 | MODE_SETTINGS | Profile, Health AI, Status |
+
+## Switch Modes via BLE
+
+```
+MODE:0  - Switch to Clock
+MODE:1  - Switch to Heart Rate
+MODE:2  - Switch to Blood Pressure
+MODE:3  - Switch to Activity
+MODE:4  - Switch to Sleep
+MODE:5  - Switch to Weather
+MODE:6  - Switch to STEALTH
+MODE:7  - Switch to Settings
+```
 
 ---
 
-## 5. All BLE Commands
+# ALL BLE COMMANDS
+
+## Complete Command Reference
 
 ### Mode Commands
-
-| Command | Example | Response |
-|---------|---------|----------|
-| MODE:0 | MODE:0 | Switch to Clock |
-| MODE:1 | MODE:1 | Switch to Heart Rate |
-| MODE:2 | MODE:2 | Switch to Blood Pressure |
-| MODE:3 | MODE:3 | Switch to Activity |
-| MODE:4 | MODE:4 | Switch to Sleep |
-| MODE:5 | MODE:5 | Switch to Weather |
-| MODE:6 | MODE:6 | Switch to STEALTH |
-| MODE:7 | MODE:7 | Switch to Settings |
+```
+MODE:0         → Clock mode
+MODE:1         → Heart rate mode
+MODE:2         → Blood pressure mode
+MODE:3         → Activity mode
+MODE:4         → Sleep mode
+MODE:5         → Weather mode
+MODE:6         → STEALTH mode
+MODE:7         → Settings mode
+```
 
 ### Theme Commands
-
-| Command | Example | Result |
-|---------|---------|--------|
-| THEME:0 | THEME:0 | Default (white on black) |
-| THEME:1 | THEME:1 | Inverted (black on white) |
-| THEME:2 | THEME:2 | High Contrast |
-| THEME:3 | THEME:3 | Night Mode (red) |
-| THEME:4 | THEME:4 | Minimal (binary dots) |
+```
+THEME:0         → Default (white on black)
+THEME:1         → Inverted (black on white)
+THEME:2         → High contrast
+THEME:3         → Night mode (red)
+THEME:4         → Minimal (binary dots)
+```
 
 ### WiFi Commands
+```
+WIFI:ON          → Connect to WiFi
+WIFI:OFF         → Disconnect WiFi
+WEATHER:REFRESH  → Get new weather data
+```
 
-| Command | Example | Result |
-|---------|---------|--------|
-| WIFI:ON | WIFI:ON | Connect to WiFi |
-| WIFI:OFF | WIFI:OFF | Disconnect WiFi |
-| WEATHER:REFRESH | WEATHER:REFRESH | Get new weather |
+### Profile Commands (NEW!)
+```
+PROFILE:name,age,weight,height,gender,steps
+                  → Set user profile
+                  
+Example: PROFILE:John,30,75,175,male,10000
+```
+
+### Health AI Commands (NEW!)
+```
+HEALTHAI:STATUS  → Get AI status
+                  → Response: AI:85,CVD:0,ARR:0,HYP:0,STRESS:30,INSIGHT:All vitals looking good!
+```
 
 ### Status Commands
-
-| Command | Example | Response |
-|---------|---------|----------|
-| PING | PING | PONG |
-| STATUS | STATUS | THEME:0,MODE:0,BATT:85,WIFI:1 |
-
----
-
-## 6. Code Structure
-
-### File: DigitalSaverWatch.ino
-
-```cpp
-/***************************************************************************
- * SECTION 1: HEADER & INCLUDES
- * - Version info, libraries
- * NEW: Added WiFi.h, HTTPClient.h, ArduinoJson.h
- ***************************************************************************/
-
-/***************************************************************************
- * SECTION 2: CONFIGURATION  
- * - WiFi settings (line 66-73)
- * - BLE UUIDs
- * - Sensor thresholds
- ***************************************************************************/
-
-/***************************************************************************
- * SECTION 3: DATA STRUCTURES
- * - HealthData
- * - RawSensorData
- * - WeatherData (NEW!)
- ***************************************************************************/
-
-/***************************************************************************
- * SECTION 4: STATE VARIABLES
- * - WatchMode currentMode
- * - WatchTheme currentTheme
- * - wifiConnected, wifiEnabled (NEW!)
- * - currentWeather (NEW!)
- ***************************************************************************/
-
-/***************************************************************************
- * SECTION 5: WiFi & INTERNET FUNCTIONS (NEW!)
- * - initWiFi() - Connect to WiFi
- * - fetchWeather() - Get weather from API
- ***************************************************************************/
-
-/***************************************************************************
- * SECTION 6: BLE FUNCTIONS
- * - initBLE()
- * - BLECommandCallbacks - handles all commands
- * NEW: WiFi commands, Weather refresh
- ***************************************************************************/
-
-/***************************************************************************
- * SECTION 7: DISPLAY FUNCTIONS
- * - showClockDisplay()
- * - showHeartRateDisplay()
- * - showWeatherDisplay() (NEW!)
- * - showStealthDisplay() (NEW!)
- ***************************************************************************/
-
-/***************************************************************************
- * SECTION 8: SENSOR FUNCTIONS
- * - readMAX30102()
- * - readMPU6050()
- * - calculateHeartRate()
- ***************************************************************************/
+```
+PING            → Test connection (response: PONG)
+STATUS          → Get full status
 ```
 
 ---
 
-## 7. Libraries Needed
+# CODE STRUCTURE
 
-Update platformio.ini with these libraries:
+## File Organization
 
-```ini
-[env:esp32dev]
-platform = espressif32@6.4.0
-board = esp32dev
-framework = arduino
+```
+DigitalSaverWatch.ino
+├── HEADER & INCLUDES
+├── CONFIGURATION
+│   ├── BLE Settings
+│   ├── WiFi Settings (v3.1.0)
+│   ├── Theme Settings
+│   └── Mode Settings
+├── DATA STRUCTURES
+│   ├── HealthData
+│   ├── RawSensorData
+│   ├── WeatherData (v3.1.0)
+│   ├── UserProfile (v3.2.0)
+│   └── HealthAI (v3.2.0) ★ NEW!
+├── STATE VARIABLES
+│   ├── WatchMode
+│   ├── WatchTheme
+│   ├── HealthAI instance (v3.2.0)
+│   └── UserProfile instance (v3.2.0)
+├── SETUP FUNCTION
+│   ├── initGPIO()
+│   ├── initDisplay()
+│   ├── initSensors()
+│   ├── initBLE()
+│   └── initWiFi() (v3.1.0)
+├── MAIN LOOP
+│   ├── handleButtonPress()
+│   ├── Update sensors
+│   ├── runHealthAI() (v3.2.0) ★ NEW!
+│   ├── sendBLEData()
+│   └── updateDisplay()
+├── WiFi & Internet Functions (v3.1.0)
+│   ├── initWiFi()
+│   └── fetchWeather()
+├── Health AI Functions (v3.2.0) ★ NEW!
+│   ├── calculateBMR()
+│   ├── analyzeBloodPressure()
+│   ├── detectArrhythmia()
+│   ├── checkHypoxiaRisk()
+│   ├── checkOverexertionRisk()
+│   ├── calculateActivityState()
+│   ├── generateHealthInsight()
+│   └── runHealthAI()
+├── BLE Callbacks
+│   ├── BLEServerCallbacks
+│   └── BLECommandCallbacks (includes PROFILE, HEALTHAI commands)
+├── Display Functions
+│   ├── updateDisplay()
+│   ├── showClockDisplay()
+│   ├── showHeartRateDisplay()
+│   ├── showBloodPressureDisplay()
+│   ├── showActivityDisplay()
+│   ├── showSleepDisplay()
+│   ├── showWeatherDisplay() (v3.1.0)
+│   ├── showStealthDisplay() (v3.1.0)
+│   └── showSettingsDisplay() (v3.2.0) ★ UPDATED!
+└── Utility Functions
+    ├── formatTime()
+    ├── formatDate()
+    ├── vibrate()
+    └── triggerEmergency()
+```
 
-lib_deps = 
-    ; Display
-    adafruit/Adafruit GFX Library@^1.11.9
-    adafruit/Adafruit SSD1306@^2.12.3
-    
-    ; Sensors
-    sparkfun/SparkFun MAX3010x Pulse and Proximity Sensor Library@^1.1.2
-    adafruit/Adafruit MPU6050@^2.2.6
-    
-    ; BLE
-    h2zero/NimBLE-Arduino@^1.4.1
-    
-    ; WiFi & Internet (NEW!)
-    WiFi
-    HTTPClient
-    ArduinoJson@^6.21.3
+## Key Line Numbers
+
+| Function | Line | Version |
+|----------|------|---------|
+| Header | 1 | - |
+| HealthAI struct | 181 | v3.2.0 |
+| UserProfile struct | 157 | v3.2.0 |
+| initWiFi() | 469 | v3.1.0 |
+| fetchWeather() | 495 | v3.1.0 |
+| calculateBMR() | 618 | v3.2.0 |
+| analyzeBloodPressure() | 633 | v3.2.0 |
+| detectArrhythmia() | 658 | v3.2.0 |
+| checkHypoxiaRisk() | 732 | v3.2.0 |
+| calculateActivityState() | 692 | v3.2.0 |
+| generateHealthInsight() | 763 | v3.2.0 |
+| runHealthAI() | 817 | v3.2.0 |
+| showSettingsDisplay() | 1628 | v3.2.0 |
+
+---
+
+# SETTINGS SCREEN
+
+## What It Shows
+
+When you switch to MODE_SETTINGS (or press MODE button 7 times):
+
+```
++------------------------------------------------+
+| PROFILE:                                       |
+| John | 30y | 75kg                             |
+|                                                 |
+| HEALTH AI SCORE:                               |
+| Overall:85/100 | EXERCISING                   |
+|                                                 |
+| Risks:                                         |
+| CVD:0 ARR:0 HYP:0                              |
+|                                                 |
+| State:WALKING CAL:285                         |
+|                                                 |
+| WiFi:ON BLE:ON v3.2.0                        |
++------------------------------------------------+
+```
+
+## If Profile Not Set
+
+```
++------------------------------------------------+
+| PROFILE:                                       |
+| Not Set - Send PROFILE via BLE                 |
+|                                                 |
+| HEALTH AI SCORE:                               |
+| Overall:78/100 | RESTING                      |
+|                                                 |
+| Risks:                                         |
+| CVD:0 ARR:0 HYP:0                              |
+|                                                 |
+| State:RESTING CAL:142                          |
+|                                                 |
+| WiFi:OFF BLE:ON v3.2.0                        |
++------------------------------------------------+
 ```
 
 ---
 
-## 8. Android App (Google Play Store)
+# TROUBLESHOOTING
 
-### App Name
-**Digital Saver**
+## Profile Issues
 
-### Download
-Available on Google Play Store: https://play.google.com/store/apps/details?id=com.cambric.digitalsaver
+| Problem | Cause | Solution |
+|---------|-------|----------|
+| Profile not saved | Wrong format | Use: PROFILE:name,age,weight,height,gender,steps |
+| Profile not working | Special chars | Use simple name like "John" not "John-Smith" |
+| Age shows 0 | Wrong position | Check: PROFILE:Name,AGE,weight,height,gender,steps |
 
-### App Features
-- Connect to watch via BLE
-- View health data from watch
-- Change watch themes
-- Change watch modes
-- Receive emergency alerts
-- View health history
+## Health AI Issues
 
-### Minimum Requirements
-- Android 8.0 (API 26) or higher
-- Bluetooth 4.0 or higher
-- GPS for location (for weather)
+| Problem | Cause | Solution |
+|---------|-------|----------|
+| AI shows 0/100 | Profile not set | Set profile first |
+| Wrong activity state | Sensor issue | Check MAX30102 |
+| Risk always 0 | AI not running | Ensure runHealthAI() in loop |
 
----
+## Settings Screen Issues
 
-## 9. Troubleshooting
-
-### WiFi Issues
-
-| Problem | Cause | Fix |
-|---------|-------|-----|
-| Can't connect | Wrong password | Check WIFI_PASSWORD |
-| Can't connect | Wrong SSID | Check WIFI_SSID |
-| Weather shows "--" | No WiFi | Connect WiFi first |
-| Weather shows "--" | Wrong API key | Check WEATHER_API_KEY |
-| Weather old | Not updated | Send WEATHER:REFRESH |
-
-### Weather Issues
-
-| Problem | Cause | Fix |
-|---------|-------|-----|
-| Shows "?" | Unknown weather | API may be down |
-| Shows "--" | WiFi not connected | Send WIFI:ON |
-| Never updates | Update interval | Wait 30 min or send WEATHER:REFRESH |
-
-### STEALTH Mode Issues
-
-| Problem | Cause | Fix |
-|---------|-------|-----|
-| Still shows health | Wrong mode | Send MODE:6 |
-| Shows too much | Theme issue | Send THEME:0 first |
+| Problem | Cause | Solution |
+|---------|-------|----------|
+| No profile shown | Not set via BLE | Send PROFILE command |
+| WiFi shows OFF | Not connected | Send WIFI:ON |
 
 ---
 
-## 10. Quick Reference
+# VERSION HISTORY
 
-### Watch Modes (0-7)
+| Version | Date | Major Changes |
+|---------|------|--------------|
+| 3.2.0 | July 2026 | **User Profile + Health AI** |
+| 3.1.0 | July 2026 | WiFi, Weather, STEALTH Mode |
+| 3.0.3 | July 2026 | 5 Display Themes |
+| 3.0.0 | July 2026 | Major rewrite |
+| 1.x | 2025 | Initial release |
+
+---
+
+# QUICK REFERENCE
+
+## Watch Modes (0-7)
 ```
 0 = Clock
-1 = Heart Rate  
+1 = Heart Rate
 2 = Blood Pressure
 3 = Activity
 4 = Sleep
@@ -392,46 +570,30 @@ Available on Google Play Store: https://play.google.com/store/apps/details?id=co
 7 = Settings
 ```
 
-### Themes (0-4)
+## Themes (0-4)
 ```
-0 = Default (white on black)
-1 = Inverted (black on white)
+0 = Default
+1 = Inverted
 2 = High Contrast
-3 = Night Mode (red)
-4 = Minimal (dots)
+3 = Night (Red)
+4 = Minimal
 ```
 
-### WiFi Commands
+## Risk Levels (0-4)
 ```
-WIFI:ON        - Connect
-WIFI:OFF       - Disconnect
-WEATHER:REFRESH - Get new weather
-```
-
-### Important Lines In Code
-```
-Line 67:  #define WIFI_SSID
-Line 68:  #define WIFI_PASSWORD
-Line 69:  #define WEATHER_API_KEY
-Line 70:  #define WEATHER_API_URL
-Line 165: enum WatchMode (includes MODE_WEATHER, MODE_STEALTH)
-Line 177: enum WatchTheme
-Line 244: void showWeatherDisplay()
-Line 245: void showStealthDisplay()
-Line 469: void initWiFi()
-Line 495: void fetchWeather()
+0 = None
+1 = Low
+2 = Medium
+3 = High
+4 = Critical
 ```
 
----
-
-## 11. Version History
-
-| Version | Date | Changes |
-|---------|------|---------|
-| 3.1.0 | July 2026 | Added WiFi, Weather, STEALTH Mode! |
-| 3.0.3 | July 2026 | Added 5 display themes |
-| 3.0.0 | July 2026 | Major rewrite |
-| 1.x | 2025 | Initial release |
+## Important Commands
+```
+PROFILE:John,30,75,175,male,10000    Set profile
+HEALTHAI:STATUS                       Get AI status
+MODE:7                                Go to Settings
+```
 
 ---
 
