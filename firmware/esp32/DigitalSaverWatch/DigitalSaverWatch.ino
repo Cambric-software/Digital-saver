@@ -1,7 +1,7 @@
 /**
  * ╔═══════════════════════════════════════════════════════════════════════════╗
  * ║                    DIGITAL SAVER - SMARTWATCH FIRMWARE                     ║
- * ║                           Version 3.0.0 (July 2026)                                    ║
+ * ║                           Version 3.0.3 (July 2026)                        ║
  * ╠═══════════════════════════════════════════════════════════════════════════╣
  * ║  Features:                                                                 ║
  * ║  ✓ Real-time Heart Rate Monitoring (MAX30102 PPG)                        ║
@@ -10,10 +10,11 @@
  * ║  ✓ Fall Detection (MPU6050 accelerometer)                               ║
  * ║  ✓ Heart Rate Variability (HRV) Analysis                                ║
  * ║  ✓ Bluetooth Low Energy (BLE) Communication                              ║
- * ║  ✓ OLED Display Interface                                                ║
+ * ║  ✓ OLED Display Interface (5 Themes!)                                   ║
  * ║  ✓ Emergency Alert System                                                 ║
  * ║  ✓ Sleep Tracking                                                         ║
  * ║  ✓ Activity Monitoring                                                    ║
+ * ║  ✓ Customizable Themes (via BLE)                                         ║
  * ╠═══════════════════════════════════════════════════════════════════════════╣
  * ║  Hardware: ESP32-WROOM-32 + MAX30102 + MPU6050 + OLED 0.96"             ║
  * ║  Framework: Arduino + PlatformIO                                          ║
@@ -57,6 +58,7 @@
 // BLE Settings
 #define SERVICE_UUID "4fafc201-1fb5-459e-8fcc-c5c9c331914b"
 #define CHARACTERISTIC_UUID "beb5483e-36e1-4688-b7f5-ea07361b26a8"
+#define COMMAND_CHAR_UUID "beb5483e-36e1-4688-b7f5-ea07361b26f0"  // Command characteristic
 
 // Health Thresholds
 #define MIN_HEART_RATE 40
@@ -141,6 +143,19 @@ enum WatchMode {
     MODE_SETTINGS
 };
 WatchMode currentMode = MODE_CLOCK;
+
+// Theme settings
+enum WatchTheme {
+    THEME_DEFAULT,     // White text on black
+    THEME_INVERTED,    // Black text on white
+    THEME_HIGH_CONTRAST, // Bold white
+    THEME_NIGHT,       // Red text for night mode
+    THEME_MINIMAL      // Minimal dots only
+};
+WatchTheme currentTheme = THEME_DEFAULT;
+
+// BLE Command characteristic
+BLECharacteristic* pCommandCharacteristic = NULL;
 
 // Measurement states
 bool isMeasuring = false;
@@ -393,6 +408,13 @@ void initBLE() {
     // Add descriptor
     pCharacteristic->addDescriptor(new BLE2902());
     
+    // Create Command Characteristic for receiving settings
+    pCommandCharacteristic = pService->createCharacteristic(
+        COMMAND_CHAR_UUID,
+        BLECharacteristic::PROPERTY_WRITE
+    );
+    pCommandCharacteristic->setCallbacks(new BLECommandCallbacks());
+    
     // Start service
     pService->start();
     
@@ -418,6 +440,62 @@ class BLEServerCallbacks: public BLEServerCallbacks {
         deviceConnected = false;
         setLED(true, false);  // Red = disconnected
         Serial.println("[BLE] Device disconnected");
+    }
+};
+
+// Command callback handler
+class BLECommandCallbacks: public BLECharacteristicCallbacks {
+    void onWrite(BLECharacteristic* pCharacteristic) {
+        std::string rxData = pCharacteristic->getValue();
+        if (rxData.length() > 0) {
+            Serial.print("[CMD] Received: ");
+            Serial.println(rxData.c_str());
+            
+            // Parse command: "THEME:X" where X is 0-4
+            if (rxData.substr(0, 6) == "THEME:") {
+                int themeId = atoi(rxData.substr(6).c_str());
+                switch (themeId) {
+                    case 0: currentTheme = THEME_DEFAULT; break;
+                    case 1: currentTheme = THEME_INVERTED; break;
+                    case 2: currentTheme = THEME_HIGH_CONTRAST; break;
+                    case 3: currentTheme = THEME_NIGHT; break;
+                    case 4: currentTheme = THEME_MINIMAL; break;
+                    default: currentTheme = THEME_DEFAULT; break;
+                }
+                Serial.printf("[THEME] Set to theme %d\n", themeId);
+                vibrate(50);  // Confirm with vibration
+            }
+            
+            // Parse mode: "MODE:X" where X is 0-5
+            else if (rxData.substr(0, 5) == "MODE:") {
+                int modeId = atoi(rxData.substr(5).c_str());
+                switch (modeId) {
+                    case 0: currentMode = MODE_CLOCK; break;
+                    case 1: currentMode = MODE_HEART_RATE; break;
+                    case 2: currentMode = MODE_BLOOD_PRESSURE; break;
+                    case 3: currentMode = MODE_ACTIVITY; break;
+                    case 4: currentMode = MODE_SLEEP; break;
+                    case 5: currentMode = MODE_SETTINGS; break;
+                }
+                Serial.printf("[MODE] Set to mode %d\n", modeId);
+            }
+            
+            // Ping: respond with pong
+            else if (rxData == "PING") {
+                pCommandCharacteristic->setValue("PONG");
+                pCommandCharacteristic->notify();
+                Serial.println("[CMD] PING -> PONG");
+            }
+            
+            // Get status
+            else if (rxData == "STATUS") {
+                char status[64];
+                snprintf(status, sizeof(status), "THEME:%d,MODE:%d,BATT:%d", 
+                    currentTheme, currentMode, getBatteryLevel());
+                pCommandCharacteristic->setValue(status);
+                pCommandCharacteristic->notify();
+            }
+        }
     }
 };
 
@@ -757,9 +835,49 @@ void updateSleep() {
 //           DISPLAY FUNCTIONS
 // ============================================
 
+// Helper to get theme colors
+uint16_t getThemeColor(bool isBackground) {
+    switch (currentTheme) {
+        case THEME_DEFAULT:
+            return isBackground ? SSD1306_BLACK : SSD1306_WHITE;
+        case THEME_INVERTED:
+            return isBackground ? SSD1306_WHITE : SSD1306_BLACK;
+        case THEME_HIGH_CONTRAST:
+            return isBackground ? SSD1306_BLACK : SSD1306_WHITE;
+        case THEME_NIGHT:
+            return isBackground ? SSD1306_BLACK : SSD1306_RED;  // Red for night mode
+        case THEME_MINIMAL:
+            return isBackground ? SSD1306_BLACK : SSD1306_WHITE;
+        default:
+            return isBackground ? SSD1306_BLACK : SSD1306_WHITE;
+    }
+}
+
 void updateDisplay() {
     display.clearDisplay();
-    display.setTextColor(SSD1306_WHITE);
+    
+    // Apply theme-based colors
+    uint16_t textColor = getThemeColor(false);
+    uint16_t bgColor = getThemeColor(true);
+    
+    // For inverted theme, fill with white first
+    if (currentTheme == THEME_INVERTED) {
+        display.fillScreen(SSD1306_WHITE);
+    }
+    
+    // For minimal theme, show only essential dots
+    if (currentTheme == THEME_MINIMAL) {
+        showMinimalDisplay();
+        display.display();
+        return;
+    }
+    
+    // For night theme, red text
+    if (currentTheme == THEME_NIGHT) {
+        display.setTextColor(SSD1306_RED);
+    } else {
+        display.setTextColor(textColor);
+    }
     
     switch (currentMode) {
         case MODE_CLOCK:
@@ -783,6 +901,44 @@ void updateDisplay() {
     }
     
     display.display();
+}
+
+void showMinimalDisplay() {
+    // Minimal mode: show only time as dots
+    struct tm timeinfo;
+    if (!getLocalTime(&timeinfo)) return;
+    
+    int hours = timeinfo.tm_hour;
+    int minutes = timeinfo.tm_min;
+    
+    // Show battery level as top dots
+    for (int i = 0; i < 5; i++) {
+        if (i < getBatteryLevel() / 20) {
+            display.drawPixel(120 + i * 2, 2, SSD1306_WHITE);
+        }
+    }
+    
+    // Show time dots (binary-ish)
+    // Hours tens
+    int h1 = hours / 10;
+    for (int i = 0; i < 4; i++) {
+        if (h1 & (1 << i)) display.drawPixel(10 + i * 4, 10, SSD1306_WHITE);
+    }
+    // Hours units
+    int h2 = hours % 10;
+    for (int i = 0; i < 4; i++) {
+        if (h2 & (1 << i)) display.drawPixel(30 + i * 4, 10, SSD1306_WHITE);
+    }
+    // Minutes tens
+    int m1 = minutes / 10;
+    for (int i = 0; i < 4; i++) {
+        if (m1 & (1 << i)) display.drawPixel(50 + i * 4, 10, SSD1306_WHITE);
+    }
+    // Minutes units
+    int m2 = minutes % 10;
+    for (int i = 0; i < 4; i++) {
+        if (m2 & (1 << i)) display.drawPixel(70 + i * 4, 10, SSD1306_WHITE);
+    }
 }
 
 void showClockDisplay() {

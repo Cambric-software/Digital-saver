@@ -1,6 +1,6 @@
 # Digital Saver Onyx Watch - Complete Firmware Documentation
 
-> **Document Version:** 1.0.0  
+> **Document Version:** 3.0.3  
 > **Last Updated:** July 2026  
 > **Watch Model:** Onyx (Digital Saver Smartwatch)  
 > **Company:** Cambric  
@@ -8,23 +8,49 @@
 
 ---
 
-## Table of Contents
+## 📋 Table of Contents
 
-1. [Hardware Overview](#1-hardware-overview)
-2. [Pin Configuration](#2-pin-configuration)
-3. [I2C Communication](#3-i2c-communication)
-4. [Sensor Specifications](#4-sensor-specifications)
-5. [BLE Protocol](#5-ble-protocol)
-6. [Firmware Architecture](#6-firmware-architecture)
-7. [Power Management](#7-power-management)
-8. [Emergency System](#8-emergency-system)
-9. [Display System](#9-display-system)
-10. [Build & Flash Instructions](#10-build--flash-instructions)
-11. [Troubleshooting](#11-troubleshooting)
+1. [Overview](#1-overview)
+2. [Hardware](#2-hardware)
+3. [Pin Configuration](#3-pin-configuration)
+4. [Sensors](#4-sensors)
+5. [BLE Communication](#5-ble-communication)
+6. [Display & Themes](#6-display--themes)
+7. [Watch Modes](#7-watch-modes)
+8. [Commands Reference](#8-commands-reference)
+9. [Build & Flash](#9-build--flash)
+10. [Troubleshooting](#10-troubleshooting)
 
 ---
 
-## 1. Hardware Overview
+## 1. Overview
+
+The Digital Saver Onyx is a health monitoring smartwatch built with ESP32. It features real-time heart rate monitoring, SpO2 tracking, blood pressure estimation, and fall detection.
+
+### Key Features
+
+| Feature | Description |
+|---------|-------------|
+| **Heart Rate** | Real-time PPG-based heart rate monitoring |
+| **SpO2** | Blood oxygen saturation measurement |
+| **Blood Pressure** | Estimated BP from PPG waveform analysis |
+| **Fall Detection** | Accelerometer-based fall detection |
+| **Sleep Tracking** | Automatic sleep monitoring |
+| **Activity** | Step counting and calorie tracking |
+| **5 Display Themes** | Customizable watch display (v3.0.3+) |
+| **BLE Sync** | Connects to Digital Saver app |
+
+### Version History
+
+| Version | Date | Changes |
+|---------|------|---------|
+| 3.0.3 | July 2026 | Added 5 display themes, BLE command support |
+| 3.0.0 | July 2026 | Major rewrite with new architecture |
+| 1.x | 2025 | Initial release |
+
+---
+
+## 2. Hardware
 
 ### System Block Diagram
 
@@ -51,8 +77,8 @@
 │  └────────┬────────┘  └──────┬──────┘  └───────────────┘          │
 │           │                  │                                      │
 │           │  I2C Bus         │                                      │
-│           │  GPIO21 (SDA)    │                                      │
-│           │  GPIO22 (SCL)    │                                      │
+│           │  GPIO18 (SDA)   │                                      │
+│           │  GPIO19 (SCL)   │                                      │
 │           │                  │                                      │
 │  ┌────────▼────────┐  ┌──────▼──────┐  ┌───────────────────┐       │
 │  │   Power System  │  │   LEDs      │  │   Vibration       │       │
@@ -78,824 +104,416 @@
 
 ---
 
-## 2. Pin Configuration
+## 3. Pin Configuration
 
-### ESP32 Pinout
-
-```
-┌────────────────────────────────────────────┐
-│              ESP32-WROOM-32               │
-├────────────────────────────────────────────┤
-│                                            │
-│  3V3  ──────────────────────  (Power)       │
-│  GND  ──────────────────────  (Ground)     │
-│                                            │
-│  GPIO21  ──────────────────  I2C SDA      │
-│  GPIO22  ──────────────────  I2C SCL      │
-│                                            │
-│  GPIO5   ──────────────────  (Unused)       │
-│  GPIO17  ──────────────────  (Unused)     │
-│                                            │
-│  GPIO35  ──────────────────  (ADC Battery) │
-│                                            │
-│  GPIO0   ──────────────────  (Boot Mode)   │
-│  EN     ──────────────────  (Enable)      │
-│                                            │
-└────────────────────────────────────────────┘
-```
-
-### I2C Bus Connections
+### ESP32-WROOM-32 Pinout
 
 ```
-ESP32 GPIO21 (SDA) ──┬── MAX30102 SDA
-                     │
-                     ├── MPU6050 SDA  
-                     │
-                     └── OLED SSD1306 SDA
-
-ESP32 GPIO22 (SCL) ──┬── MAX30102 SCL
-                     │
-                     ├── MPU6050 SCL
-                     │
-                     └── OLED SSD1306 SCL
-
-3V3 ─────────────────┬── MAX30102 VCC
-                     ├── MPU6050 VCC
-                     └── OLED VCC
-
-GND ─────────────────┬── MAX30102 GND
-                     ├── MPU6050 GND
-                     └── OLED GND
+                    ESP32-WROOM-32
+                   ┌────────────────┐
+    3V3       ────│ 1          38  │──── GPIO37
+    GND       ────│ 2          37  │──── GPIO38
+    GPIO36    ────│ 3          35  │──── GPIO34 (BUTTON_BACK)
+    GPIO39    ────│ 4          32  │──── GPIO33
+    GPIO34    ────│ 5          25  │──── GPIO25 (VIB_MOTOR)
+    GPIO35    ────│ 6          26  │──── GPIO26 (HR_INT)
+    GPIO4     ────│ 7          27  │──── GPIO27 (MOTION_INT)
+    GPIO0     ────│ 8          14  │──── GPIO14
+    GPIO2     ────│ 9          12  │──── GPIO12
+    GPIO15    ────│ 10         13  │──── GPIO13
+    GND       ────│ 11         15  │──── GPIO15
+    GPIO16    ────│ 12         16  │──── GPIO16
+    GPIO17    ────│ 13         17  │──── GPIO17 (EMERGENCY)
+    GPIO5     ────│ 14         18  │──── GPIO18 (SCL)
+    GPIO19    ────│ 15         19  │──── GPIO19 (SDA)
+                   └────────────────┘
 ```
 
-### Power System
+### Pin Assignments
 
-```
-Battery (3.7V LiPo) ──── TP4056 IN+ / IN-
-                          │
-                          ├─────── Battery Level ADC (GPIO35)
-                          │
-                          └─────── ESP32 3V3 (via LDO regulator)
-```
+| Pin | Name | Type | Description |
+|-----|------|------|-------------|
+| GPIO18 | I2C_SCL | Output | I2C clock line |
+| GPIO19 | I2C_SDA | Output | I2C data line |
+| GPIO26 | HR_INT | Input | MAX30102 interrupt |
+| GPIO27 | MOTION_INT | Input | MPU6050 interrupt |
+| GPIO25 | VIB_MOTOR | Output | Vibration motor |
+| GPIO4 | LED_RED | Output | Red status LED |
+| GPIO16 | LED_GREEN | Output | Green status LED |
+| GPIO17 | BUTTON_MODE | Input | Mode button |
+
+### I2C Device Addresses
+
+| Device | Address | Notes |
+|--------|---------|-------|
+| MAX30102 | 0x57 | PPG sensor |
+| MPU6050 | 0x68 | Accelerometer |
+| SSD1306 | 0x3C | OLED display |
 
 ---
 
-## 3. I2C Communication
-
-### I2C Address Map
-
-| Device | I2C Address | Notes |
-|--------|-------------|-------|
-| MAX30102 | 0x57 | Heart rate + SpO2 |
-| MPU6050 | 0x68 | Accelerometer + Gyro |
-| SSD1306 | 0x3C | OLED Display |
-
-### I2C Initialization Code
-
-```cpp
-#include <Wire.h>
-
-// I2C pins
-#define I2C_SDA 21
-#define I2C_SCL 22
-
-void setupI2C() {
-  Wire.begin(I2C_SDA, I2C_SCL);
-  Wire.setClock(400000); // 400kHz Fast Mode
-  
-  // Initialize sensors
-  initMAX30102();
-  initMPU6050();
-  initOLED();
-}
-```
-
-### I2C Scanning Code
-
-```cpp
-void scanI2CDevices() {
-  Serial.println("Scanning I2C devices...");
-  
-  for (byte address = 1; address < 127; address++) {
-    Wire.beginTransmission(address);
-    byte error = Wire.endTransmission();
-    
-    if (error == 0) {
-      Serial.print("Device found at 0x");
-      Serial.println(address, HEX);
-    }
-  }
-}
-```
-
----
-
-## 4. Sensor Specifications
+## 4. Sensors
 
 ### MAX30102 PPG Sensor
 
-#### Features
-- Heart rate measurement (30-210 BPM)
-- SpO2 measurement (70-100%)
-- Red LED (660nm) + IR LED (880nm)
-- I2C interface
-- Low power consumption
+| Parameter | Value |
+|-----------|-------|
+| Supply Voltage | 1.8V - 3.3V |
+| LED Current | 0mA - 50mA |
+| Sample Rate | 100Hz - 3200Hz |
+| ADC Resolution | 18 bits |
+| I2C Address | 0x57 |
 
-#### Register Map (Key Registers)
-
-| Register | Address | Function |
-|----------|---------|----------|
-| MODE_CONFIG | 0x09 | Mode selection |
-| SpO2_CONFIG | 0x0A | LED pulse rate, width |
-| LED_RED_PA | 0x0C | Red LED pulse amplitude |
-| LED_IR_PA | 0x0D | IR LED pulse amplitude |
-| FIFO_DATA | 0x07 | FIFO read pointer |
-| FIFO_WR_PTR | 0x04 | FIFO write pointer |
-
-#### MAX30102 Code
-
-```cpp
-#include <MAX30105.h>
-#include <heartRate.h>
-
-MAX30105 particleSensor;
-
-void initMAX30102() {
-  if (!particleSensor.begin(Wire, I2C_SPEED_FAST)) {
-    Serial.println("MAX30105 not found!");
-    while (1);
-  }
-  
-  particleSensor.setup();
-  particleSensor.setPulseAmplitudeRed(0x0A);
-  particleSensor.setPulseAmplitudeGreen(0);
-  particleSensor.setPulseAmplitudeIR(0x0A);
-}
-
-void readHeartRate() {
-  long irValue = particleSensor.getIR();
-  
-  if (checkForBeat(irValue) == true) {
-    // Calculate BPM
-    float delta = millis() - lastBeat;
-    lastBeat = millis();
-    float bpm = 60 / (delta / 1000.0);
-    
-    if (bpm > 30 && bpm < 210) {
-      Serial.print("BPM: ");
-      Serial.println(bpm);
-    }
-  }
-}
-```
+**Key Registers:**
+- `FIFO_DATA` (0x05) - Read sensor data
+- `MODE_CONFIG` (0x0A) - Control operating mode
+- `LED_CONFIG` (0x09) - LED pulse amplitude
+- `SPO2_CONFIG` (0x06) - SpO2 settings
 
 ### MPU6050 Accelerometer
 
-#### Features
-- 3-axis accelerometer
-- 3-axis gyroscope
-- Digital output
-- I2C interface
-- Low power
+| Parameter | Value |
+|-----------|-------|
+| Supply Voltage | 3.3V |
+| Accelerometer | ±2g to ±16g |
+| Gyroscope | ±250°/s to ±2000°/s |
+| I2C Address | 0x68 |
 
-#### MPU6050 Code
+**Key Registers:**
+- `PWR_MGMT_1` (0x6B) - Power management
+- `ACCEL_XOUT_H` (0x3B) - Accelerometer data
+- `INT_STATUS` (0x3A) - Interrupt status
 
-```cpp
-#include <MPU6050.h>
+### SSD1306 OLED Display
 
-MPU6050 mpu;
-
-void initMPU6050() {
-  mpu.initialize();
-  
-  if (!mpu.testConnection()) {
-    Serial.println("MPU6050 connection failed!");
-    while (1);
-  }
-  
-  // Configure accelerometer
-  mpu.setFullScaleAccelRange(MPU6050_ACCEL_FS_2);
-  mpu.setFullScaleGyroRange(MPU6050_GYRO_FS_250);
-}
-
-void readAccelerometer() {
-  int16_t ax, ay, az;
-  mpu.getAcceleration(&ax, &ay, &az);
-  
-  // Convert to g
-  float accelX = ax / 16384.0;
-  float accelY = ay / 16384.0;
-  float accelZ = az / 16384.0;
-  
-  // Calculate total acceleration
-  float totalAccel = sqrt(accelX*accelX + accelY*accelY + accelZ*accelZ);
-  
-  Serial.print("Total Accel: ");
-  Serial.println(totalAccel);
-}
-
-void detectFall() {
-  int16_t ax, ay, az;
-  mpu.getAcceleration(&ax, &ay, &az);
-  
-  // Calculate g-force
-  float gForce = sqrt(ax*ax + ay*ay + az*az) / 16384.0;
-  
-  // Fall threshold: > 2.5g for 100ms
-  if (gForce > 2.5) {
-    fallDetected = true;
-    triggerEmergency();
-  }
-}
-```
+| Parameter | Value |
+|-----------|-------|
+| Resolution | 128 x 64 pixels |
+| Supply Voltage | 3.3V |
+| I2C Address | 0x3C |
+| Max Current | 25mA |
 
 ---
 
-## 5. BLE Protocol
+## 5. BLE Communication
 
-### Service Configuration
+### Service & Characteristics
 
-| Property | Value |
-|----------|-------|
-| Device Name | `Digital Saver` |
-| Service UUID | `4fafc201-1fb5-459e-8fcc-c5c9c331914b` |
-| Characteristic UUID | `beb5483e-36e1-4688-b7f5-ea07361b26a8` |
-| Data Format | JSON string |
-| Update Rate | 1 Hz (every second) |
+| Type | UUID | Properties |
+|------|------|------------|
+| **Service** | `4fafc201-1fb5-459e-8fcc-c5c9c331914b` | Primary |
+| **Data Characteristic** | `beb5483e-36e1-4688-b7f5-ea07361b26a8` | Read/Notify |
+| **Command Characteristic** | `beb5483e-36e1-4688-b7f5-ea07361b26f0` | Write |
 
-### BLE Initialization
+### Data Format (Notify)
 
-```cpp
-#include <BLEDevice.h>
-#include <BLEServer.h>
-#include <BLEUtils.h>
-#include <BLE2902.h>
-
-#define SERVICE_UUID        "4fafc201-1fb5-459e-8fcc-c5c9c331914b"
-#define CHARACTERISTIC_UUID "beb5483e-36e1-4688-b7f5-ea07361b26a8"
-
-BLEServer* pServer;
-BLEService* pService;
-BLECharacteristic* pCharacteristic;
-
-void initBLE() {
-  BLEDevice::init("Digital Saver");
-  
-  pServer = BLEDevice::createServer();
-  pService = pServer->createService(SERVICE_UUID);
-  
-  pCharacteristic = pService->createCharacteristic(
-    CHARACTERISTIC_UUID,
-    BLECharacteristic::PROPERTY_NOTIFY
-  );
-  
-  pCharacteristic->addDescriptor(new BLE2902());
-  pService->start();
-  
-  pServer->getAdvertising()->start();
-}
-```
-
-### JSON Data Format
-
-```cpp
-void sendHealthData() {
-  StaticJsonDocument<256> doc;
-  
-  doc["hr"] = currentHeartRate;        // Heart rate (BPM)
-  doc["spo2"] = currentSpO2;          // Blood oxygen (%)
-  doc["bps"] = systolicBP;             // Systolic BP (mmHg)
-  doc["bpd"] = diastolicBP;           // Diastolic BP (mmHg)
-  doc["hrv"] = hrvRMSSD;              // HRV RMSSD (ms)
-  doc["steps"] = stepCount;            // Step count
-  doc["cal"] = caloriesBurned;         // Calories
-  doc["temp"] = bodyTemperature;       // Temperature (°C)
-  doc["irreg"] = irregularHeartbeat;   // 0 or 1
-  doc["fall"] = fallDetected;          // 0 or 1
-  doc["ax"] = accelX;                 // Accelerometer X
-  doc["ay"] = accelY;                 // Accelerometer Y
-  doc["az"] = accelZ;                 // Accelerometer Z
-  
-  char jsonBuffer[256];
-  serializeJson(doc, jsonBuffer);
-  
-  pCharacteristic->setValue(jsonBuffer);
-  pCharacteristic->notify();
-}
-```
-
-### Example JSON Packet
+Health data sent from watch to app:
 
 ```json
 {
-  "hr": 72,
-  "spo2": 98,
-  "bps": 118,
-  "bpd": 76,
-  "hrv": 45.2,
-  "steps": 6234,
-  "cal": 312.5,
-  "temp": 36.7,
-  "irreg": 0,
-  "fall": 0,
-  "ax": 0.01,
-  "ay": 0.02,
-  "az": 0.98
+  "hr": 72,           // Heart rate (BPM)
+  "spo2": 98,        // SpO2 (%)
+  "bps": 120,        // Systolic BP
+  "bpd": 80,         // Diastolic BP
+  "hrv": 45.2,       // HRV (ms)
+  "steps": 5420,     // Step count
+  "cal": 285.5,      // Calories burned
+  "temp": 36.6,      // Temperature
+  "irreg": 0,        // Irregular heartbeat flag
+  "fall": 0,         // Fall detected flag
+  "ax": 0.01,        // Accelerometer X
+  "ay": 0.02,        // Accelerometer Y
+  "az": 1.02         // Accelerometer Z
 }
+```
+
+### Connection Parameters
+
+| Parameter | Value |
+|-----------|-------|
+| Connection Interval | 100ms |
+| Slave Latency | 0 |
+| Supervision Timeout | 4000ms |
+| MTU Size | 512 bytes |
+| Device Name | "Digital Saver" |
+
+---
+
+## 6. Display & Themes
+
+### Watch Themes (v3.0.3+)
+
+The watch supports 5 display themes that can be changed via BLE commands:
+
+| Theme ID | Name | Description |
+|----------|------|-------------|
+| 0 | **Default** | White text on black background |
+| 1 | **Inverted** | Black text on white background |
+| 2 | **High Contrast** | Bold white text |
+| 3 | **Night Mode** | Red text on black (easy on eyes in dark) |
+| 4 | **Minimal** | Binary time display (dots only) |
+
+### Theme Mapping from App
+
+When you select a theme in the Digital Saver app, it syncs to the watch:
+
+| App Theme | Watch Theme |
+|-----------|-------------|
+| Gradient Blue | Default (0) |
+| Ocean Blue | Inverted (1) |
+| Royal Purple | High Contrast (2) |
+| Nature Green | Default (0) |
+| Clean White | Inverted (1) |
+| Night Dark | Night Mode (3) |
+
+### Display Screens
+
+#### Clock Mode
+```
+┌────────────────────────┐
+│    ●              ▮    │  <- BLE, Battery
+│                        │
+│        12:45           │  <- Large time
+│                        │
+│     Mon, Jan 15        │  <- Date
+│                        │
+└────────────────────────┘
+```
+
+#### Heart Rate Mode
+```
+┌────────────────────────┐
+│  HR                BPM │
+│      ┌────────┐        │
+│      │   72   │        │  <- Heart rate
+│      └────────┘        │
+│                        │
+│  SpO2: 98%             │
+│  HRV:  45ms            │
+└────────────────────────┘
+```
+
+#### Minimal Mode (Binary Time)
+```
+┌────────────────────────┐
+│         ●●●●           │  <- Battery (5 dots)
+│                        │
+│  ●●  ●●  ●●  ●●       │  <- Binary digits
+│  H1  H2  M1  M2       │     (4 bits each)
+│                        │
+└────────────────────────┘
 ```
 
 ---
 
-## 6. Firmware Architecture
+## 7. Watch Modes
 
-### Main Loop Structure
+| Mode | Display | Key Function |
+|------|---------|--------------|
+| `MODE_CLOCK` | Time, date, status | Default display |
+| `MODE_HEART_RATE` | HR, SpO2, HRV | Heart monitoring |
+| `MODE_BLOOD_PRESSURE` | Systolic, diastolic | BP tracking |
+| `MODE_ACTIVITY` | Steps, calories | Activity tracking |
+| `MODE_SLEEP` | Sleep score | Sleep monitoring |
+| `MODE_SETTINGS` | Config options | Settings display |
 
-```cpp
-unsigned long lastSensorRead = 0;
-unsigned long lastBLESend = 0;
-const int SENSOR_INTERVAL = 100;      // 100ms
-const int BLE_INTERVAL = 1000;         // 1000ms (1Hz)
+### Mode Navigation
 
-void loop() {
-  unsigned long currentMillis = millis();
-  
-  // Read sensors every 100ms
-  if (currentMillis - lastSensorRead >= SENSOR_INTERVAL) {
-    lastSensorRead = currentMillis;
-    readSensors();
-    updateDisplay();
-  }
-  
-  // Send BLE data every 1 second
-  if (currentMillis - lastBLESend >= BLE_INTERVAL) {
-    lastBLESend = currentMillis;
-    sendHealthData();
-  }
-  
-  // Check for button press
-  checkButtons();
-  
-  // Power management
-  handleSleepMode();
-}
+- **Mode Button**: Cycle through modes
+- **Back Button**: Return to previous mode
+- **BLE Command**: Can switch modes remotely
+
+---
+
+## 8. Commands Reference
+
+### BLE Commands (Write to Command Characteristic)
+
+Send commands from app to watch via `COMMAND_CHAR_UUID`:
+
+#### Set Theme
+```
+Command: THEME:<0-4>
+Example: THEME:3
+Response: Vibration confirmation
+```
+Changes the watch display theme.
+
+#### Set Mode
+```
+Command: MODE:<0-5>
+Example: MODE:1
+Response: Mode switch
+```
+Switches watch display mode.
+
+#### Ping
+```
+Command: PING
+Response: PONG
+```
+Tests connectivity.
+
+#### Get Status
+```
+Command: STATUS
+Response: THEME:<id>,MODE:<id>,BATT:<percent>
+Example Response: THEME:0,MODE:0,BATT:85
 ```
 
-### Sensor Reading Functions
+### Command Flow
 
-```cpp
-struct HealthData {
-  int heartRate;
-  int spO2;
-  int systolic;
-  int diastolic;
-  float hrv;
-  int steps;
-  float calories;
-  float temperature;
-  bool irregularBeat;
-  bool fallDetected;
-  float accelX, accelY, accelZ;
-};
-
-HealthData healthData;
-
-void readSensors() {
-  // Read heart rate
-  healthData.heartRate = readHeartRate();
-  healthData.spO2 = readSpO2();
-  
-  // Read blood pressure (estimated)
-  estimateBloodPressure();
-  
-  // Read accelerometer
-  readAccelerometer();
-  calculateSteps();
-  detectFall();
-  
-  // Calculate HRV
-  calculateHRV();
-}
-
-int readHeartRate() {
-  long irValue = particleSensor.getIR();
-  
-  if (checkForBeat(irValue) == true) {
-    // Calculate instantaneous BPM
-    long delta = millis() - lastBeat;
-    lastBeat = millis();
-    
-    float bpm = 60 / (delta / 1000.0);
-    
-    // Low-pass filter to smooth BPM
-    if (bpm > 30 && bpm < 210) {
-      smoothedBpm = 0.7 * smoothedBpm + 0.3 * bpm;
-      return (int)smoothedBpm;
-    }
-  }
-  return 0;
-}
-
-void calculateSteps() {
-  // Step detection using peak counting
-  if (accelMagnitude > stepThreshold && 
-      (millis() - lastStepTime) > stepDebounce) {
-    stepCount++;
-    lastStepTime = millis();
-  }
-  
-  // Calculate calories
-  healthData.calories = stepCount * 0.04; // Rough estimate
-}
+```
+App ──────> Watch: THEME:3
+Watch ────> Watch: Parse command
+Watch ────> Watch: Set currentTheme = THEME_NIGHT
+Watch ────> Watch: vibrate(50)
 ```
 
 ---
 
-## 7. Power Management
+## 9. Build & Flash
 
-### Sleep Mode Implementation
+### Prerequisites
 
-```cpp
-bool isSleepMode = false;
-unsigned long sleepTimeout = 30000; // 30 seconds
-unsigned long lastActivity = 0;
+```bash
+# Install PlatformIO
+curl -fsSL https://raw.githubusercontent.com/platformio/platformio-core-installer/master/get-platformio.py | python3
 
-void handleSleepMode() {
-  if (isSleepMode) {
-    // Deep sleep until interrupt
-    esp_light_sleep_start();
-    return;
-  }
-  
-  // Check for sleep timeout
-  if (millis() - lastActivity > sleepTimeout) {
-    enterSleepMode();
-  }
-}
-
-void enterSleepMode() {
-  // Turn off LEDs
-  digitalWrite(LED_RED, LOW);
-  digitalWrite(LED_GREEN, LOW);
-  
-  // Turn off display
-  display.sleep();
-  
-  // Configure wake-up sources
-  esp_sleep_enable_ext0_wakeup(GPIO_NUM_34, 0); // Button wake
-  esp_sleep_enable_timer_wakeup(60 * 1000000);  // Wake every 60s for HR monitoring
-  
-  isSleepMode = true;
-  esp_light_sleep_start();
-  
-  // After wake
-  isSleepMode = false;
-  display.wakeup();
-  lastActivity = millis();
-}
+# Or via pip
+pip install platformio
 ```
 
-### Battery Monitoring
+### Project Structure
 
-```cpp
-#define BATTERY_PIN 35
-#define BATTERY_DIVIDER 2.0
-
-float readBatteryLevel() {
-  int adcValue = analogRead(BATTERY_PIN);
-  float voltage = adcValue * (3.3 / 4095.0) * BATTERY_DIVIDER;
-  
-  // LiPo voltage: 3.0V (0%) to 4.2V (100%)
-  float percentage = (voltage - 3.0) / 1.2 * 100;
-  
-  if (percentage < 0) percentage = 0;
-  if (percentage > 100) percentage = 100;
-  
-  return percentage;
-}
-
-void checkBattery() {
-  float level = readBatteryLevel();
-  
-  if (level < 10) {
-    // Low battery warning
-    digitalWrite(LED_RED, HIGH);
-    delay(100);
-    digitalWrite(LED_RED, LOW);
-  }
-}
+```
+firmware/esp32/DigitalSaverWatch/
+├── DigitalSaverWatch.ino    # Main firmware
+├── platformio.ini           # Build configuration
+└── src/                     # Additional sources (if any)
 ```
 
----
+### Build Commands
 
-## 8. Emergency System
+```bash
+cd firmware/esp32/DigitalSaverWatch
 
-### Emergency Button Handling
+# Build firmware
+pio run
 
-```cpp
-#define EMERGENCY_BUTTON 34
+# Build and flash via USB
+pio run --target upload
 
-void initEmergencyButton() {
-  pinMode(EMERGENCY_BUTTON, INPUT_PULLUP);
-  attachInterrupt(EMERGENCY_BUTTON, emergencyISR, FALLING);
-}
+# Build and flash with flash erase
+pio run --target upload --target erase
 
-unsigned long emergencyPressStart = 0;
-bool emergencyTriggered = false;
-
-void emergencyISR() {
-  if (digitalRead(EMERGENCY_BUTTON) == LOW) {
-    emergencyPressStart = millis();
-  } else {
-    // Button released
-    if (emergencyPressStart > 0 && 
-        (millis() - emergencyPressStart) > 3000) {
-      // Held for 3+ seconds
-      triggerEmergency();
-    }
-    emergencyPressStart = 0;
-  }
-}
-
-void triggerEmergency() {
-  if (emergencyTriggered) return;
-  emergencyTriggered = true;
-  
-  // Vibrate in SOS pattern
-  sosPattern();
-  
-  // Send critical BLE packet
-  healthData.fallDetected = 1;
-  healthData.irregularBeat = 1;
-  
-  // Flash red LED
-  flashEmergencyLED();
-}
-
-void sosPattern() {
-  // ... (SOS morse code vibration)
-}
+# Monitor serial output
+pio device monitor --baud 115200
 ```
-
----
-
-## 9. Display System
-
-### OLED SSD1306 Display
-
-```cpp
-#include <SSD1306.h>
-
-SSD1306 display(0x3C, I2C_SDA, I2C_SCL);
-
-void initOLED() {
-  display.init();
-  display.flipScreenVertically();
-  display.setFont(ArialMT_Plain_10);
-}
-
-void updateDisplay() {
-  display.clear();
-  
-  // Header: Battery + Time
-  display.setTextAlignment(TEXT_ALIGN_LEFT);
-  display.drawString(0, 0, "Digital Saver");
-  
-  display.setTextAlignment(TEXT_ALIGN_RIGHT);
-  display.drawString(128, 0, String(batteryLevel) + "%");
-  
-  // Heart rate display
-  display.setTextAlignment(TEXT_ALIGN_CENTER);
-  display.drawString(64, 20, String(healthData.heartRate));
-  display.setFont(ArialMT_Plain_24);
-  display.drawString(64, 35, "BPM");
-  
-  // SpO2
-  display.setFont(ArialMT_Plain_10);
-  display.drawString(10, 50, "SpO2: " + String(healthData.spO2) + "%");
-  
-  // Steps
-  display.drawString(70, 50, "Steps: " + String(healthData.steps));
-  
-  display.display();
-}
-```
-
----
-
-## 10. Build & Flash Instructions
-
-### Development Environment
-
-1. **Install PlatformIO** or **Arduino IDE with ESP32 board support**
-
-2. **Required Libraries:**
-   - Adafruit MAX30105 Library
-   - Adafruit MPU6050 Library
-   - Adafruit GFX Library
-   - Adafruit SSD1306 Library
-   - ESP32 BLE Arduino
 
 ### PlatformIO Configuration
 
 ```ini
-; platformio.ini
 [env:esp32dev]
 platform = espressif32
 board = esp32dev
 framework = arduino
-
 lib_deps = 
-    adafruit/Adafruit MAX30105 Library@^1.0.5
-    adafruit/Adafruit MPU6050@^2.2.4
-    adafruit/Adafruit SSD1306@^1.7.2
     adafruit/Adafruit GFX Library@^1.11.9
-    h2zero/NimBLE-Arduino@^1.4.1
-```
-
-### Upload Process
-
-```bash
-# Connect ESP32 in bootloader mode
-# Hold BOOT button while clicking RESET
-
-# Using PlatformIO
-pio run --target upload
-
-# Using Arduino IDE
-# Select Tools > Upload
-```
-
-### Serial Monitor
-
-```bash
-# Connect at 115200 baud
-pio device monitor --baud 115200
+    adafruit/Adafruit SSD1306@^2.5.9
+    sparkfun/SparkFun MAX3010x Pulse and Proximity Sensor Library@^1.1.3
+monitor_speed = 115200
 ```
 
 ---
 
-## 11. Troubleshooting
+## 10. Troubleshooting
 
 ### Common Issues
 
 | Issue | Cause | Solution |
 |-------|-------|----------|
-| I2C devices not found | Wrong wiring or address | Check SDA/SCL connections |
-| No heart rate reading | Finger not on sensor | Press finger firmly on sensor |
-| ESP32 won't upload | Boot mode issue | Hold BOOT + press RESET |
-| Watch freezes | Power instability | Add 100nF cap across 3V3/GND |
-| BLE not advertising | Incorrect service UUID | Verify UUID matches app config |
-| Battery drains fast | Sleep mode disabled | Enable deep sleep when idle |
+| Display blank | I2C not initialized | Check SDA/SCL wiring |
+| No BLE connection | Bluetooth off | Enable Bluetooth on phone |
+| HR shows "--" | Sensor not on wrist | Ensure sensor contact |
+| Steps not counting | MPU6050 error | Check I2C connection |
+| Watch unresponsive | Low battery | Charge device |
+| Theme not changing | BLE disconnect | Reconnect and retry |
 
-### Diagnostic Code
+### Debug Serial Output
+
+Enable debug mode for troubleshooting:
+
+```bash
+pio device monitor --baud 115200
+```
+
+**Expected Output:**
+```
+[OK] Initializing sensors...
+[OK] MAX30102 found
+[OK] MPU6050 found
+[OK] OLED initialized
+[OK] BLE initialized - waiting for connection...
+[BLE] Device connected
+[CMD] Received: THEME:3
+[THEME] Set to theme 3
+```
+
+### Factory Reset
+
+1. Hold all buttons for 10 seconds
+2. Device will reset to factory defaults
+3. Reflash firmware if needed
+
+### Recovery Flash
+
+```bash
+# Erase flash completely
+esptool.py --chip esp32 erase_flash
+
+# Flash new firmware
+pio run --target upload
+```
+
+---
+
+## Appendix: I2C Troubleshooting
+
+### I2C Scanner Code
+
+To find device addresses:
 
 ```cpp
-void diagnosticMode() {
-  Serial.println("=== Diagnostic Mode ===");
-  
-  // Check I2C
-  scanI2CDevices();
-  
-  // Check battery
-  Serial.print("Battery: ");
-  Serial.print(readBatteryLevel());
-  Serial.println("%");
-  
-  // Check memory
-  Serial.print("Free Heap: ");
-  Serial.println(ESP.getFreeHeap());
-  
-  // Test LEDs
-  digitalWrite(LED_RED, HIGH);
-  delay(500);
-  digitalWrite(LED_RED, LOW);
-  
-  // Test vibration
-  digitalWrite(VIBRATION_PIN, HIGH);
-  delay(500);
-  digitalWrite(VIBRATION_PIN, LOW);
+#include <Wire.h>
+
+void setup() {
+    Serial.begin(115200);
+    Wire.begin();
+    
+    Serial.println("I2C Scanner...");
+    for (byte address = 1; address < 127; address++) {
+        Wire.beginTransmission(address);
+        if (Wire.endTransmission() == 0) {
+            Serial.print("Found: 0x");
+            Serial.println(address, HEX);
+        }
+    }
 }
 ```
 
----
+### Expected Device Addresses
 
-## 12. Tools & Equipment Guide
-
-### Essential Tools (Cannot Build Without)
-
-| Tool | Purpose | Cost (EGP) |
-|------|---------|-------------|
-| Soldering Iron (60W) | Main soldering | ~400 |
-| Solder Wire (63/37) | Electrical connections | ~150 |
-| Multimeter | Testing/debugging | ~350 |
-| Wire Cutters | Trim leads | ~100 |
-| Tweezers | Small components | ~80 |
-| USB-C Cable | Power/programming | ~100 |
-
-### Recommended Tools
-
-| Tool | Purpose | Cost (EGP) |
-|------|---------|-------------|
-| Hot Air Station | SMD components | ~1,500 |
-| Logic Analyzer | I2C/SPI debugging | ~800 |
-| Power Supply | Stable 3.3V/5V | ~600 |
-
-### How to Solder
-
-1. **Clean tip** - Wipe on damp sponge before each joint
-2. **Heat pad** - Touch iron to both pad AND component lead (2-3 sec)
-3. **Apply solder** - Add solder to the joint, not the iron
-4. **Remove iron** - Lift straight up when shiny joint forms
+| Device | Expected Address |
+|--------|-----------------|
+| MAX30102 | 0x57 |
+| MPU6050 | 0x68 |
+| SSD1306 | 0x3C |
 
 ---
 
-## 13. Bill of Materials (BOM)
+## License
 
-### Essential Components (~920 EGP/unit)
+© 2026 Cambric. All Rights Reserved.
 
-| Component | Specification | Qty | Unit Price | Total |
-|-----------|---------------|-----|------------|-------|
-| ESP32-WROOM-32 | Main MCU | 1 | 280 | 280 |
-| MAX30102 | Heart rate/SpO2 | 1 | 180 | 180 |
-| MPU6050 | Accelerometer | 1 | 75 | 75 |
-| OLED 0.96" I2C | Display 128x64 | 1 | 85 | 85 |
-| LiPo 3010120 400mAh | Battery | 1 | 95 | 95 |
-| TP4056 | Charger module | 1 | 35 | 35 |
-| Resistors/Capacitors | Assorted | - | 50 | 50 |
-| Wires/Connectors | Various | - | 100 | 100 |
-| **TOTAL** | | | | **~920 EGP** |
-
----
-
-## 14. PCB Design & Wiring
-
-### Power Circuit
-```
-3.7V LiPo -> TP4056 -> 3.3V Regulator -> ESP32 + Sensors
-              |
-           USB 5V -> Charging
-```
-
-### Button Circuit (Pull-Down)
-```
-3.3V --- 10kohm --- Button --- GND
-               |
-               --- GPIO (Input)
-```
-
-### Vibration Motor (via Transistor)
-```
-GPIO --- 1kohm --- Base (NPN)
-                   |
-               Collector --- Motor --- 3.3V
-                   |
-               Emitter --- GND
-```
-
----
-
-## 15. Assembly Guide
-
-### Step 1: PCB Preparation
-1. Clean PCB with IPA (isopropyl alcohol)
-2. Check for solder bridges under microscope
-3. Verify all component footprints
-
-### Step 2: Sensor Installation
-1. **MAX30102**: Solder 4-pin header, thermal paste back
-2. **MPU6050**: Solder to PCB, verify I2C at 0x68
-3. **OLED**: Attach FPC connector carefully
-
-### Step 3: Power System
-1. Connect battery (Red=B+, Black=B-)
-2. Press power button
-3. Verify 3.3V on rails with multimeter
-
-### Step 4: Enclosure Assembly
-1. Insert PCB into bottom case
-2. Install battery (adhesive backed)
-3. Snap top case into place
-
----
-
-## 16. Quality Control Checklist
-
-```
-- Visual inspection (microscope)
-- Continuity test (power rails)
-- I2C device detection
-- Firmware upload test
-- Display functionality
-- Heart rate sensor test
-- Motion sensor test
-- Battery charging test
-- Bluetooth pairing test
-- Battery life test (>6 hours)
-```
-
----
-
-**Document Version:** 1.1.0 (Updated with build guide)
-**Last Updated:** July 2026
-**Author:** Cambric Engineering Team
-**Copyright 2026 Cambric. All Rights Reserved.**
+This firmware is proprietary software. Redistribution and use in source and binary forms, with or without modification, is not permitted without explicit written permission from Cambric.

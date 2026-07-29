@@ -157,12 +157,40 @@ class ThemeService extends ChangeNotifier {
 
   List<Map<String, dynamic>> getAvailableThemes() {
     return [
-      {'mode': AppThemeMode.gradient, 'name': 'Gradient Blue', 'icon': Icons.gradient, 'color': const Color(0xFF2563EB)},
-      {'mode': AppThemeMode.blue, 'name': 'Ocean Blue', 'icon': Icons.water, 'color': const Color(0xFF0EA5E9)},
-      {'mode': AppThemeMode.purple, 'name': 'Royal Purple', 'icon': Icons.auto_awesome, 'color': const Color(0xFF7C3AED)},
-      {'mode': AppThemeMode.green, 'name': 'Nature Green', 'icon': Icons.eco, 'color': const Color(0xFF22C55E)},
-      {'mode': AppThemeMode.light, 'name': 'Clean White', 'icon': Icons.wb_sunny, 'color': Colors.blueGrey},
-      {'mode': AppThemeMode.dark, 'name': 'Night Dark', 'icon': Icons.dark_mode, 'color': const Color(0xFF64748B)},
+      {'mode': AppThemeMode.gradient, 'name': 'Gradient Blue', 'icon': Icons.gradient, 'color': const Color(0xFF2563EB), 'watchTheme': 0},
+      {'mode': AppThemeMode.blue, 'name': 'Ocean Blue', 'icon': Icons.water, 'color': const Color(0xFF0EA5E9), 'watchTheme': 1},
+      {'mode': AppThemeMode.purple, 'name': 'Royal Purple', 'icon': Icons.auto_awesome, 'color': const Color(0xFF7C3AED), 'watchTheme': 2},
+      {'mode': AppThemeMode.green, 'name': 'Nature Green', 'icon': Icons.eco, 'color': const Color(0xFF22C55E), 'watchTheme': 0},
+      {'mode': AppThemeMode.light, 'name': 'Clean White', 'icon': Icons.wb_sunny, 'color': Colors.blueGrey, 'watchTheme': 1},
+      {'mode': AppThemeMode.dark, 'name': 'Night Dark', 'icon': Icons.dark_mode, 'color': const Color(0xFF64748B), 'watchTheme': 3},
     ];
+  }
+
+  // Get watch theme ID for current theme
+  int getWatchThemeId() {
+    final themes = getAvailableThemes();
+    final index = AppThemeMode.values.indexOf(_themeMode);
+    if (index >= 0 && index < themes.length) {
+      return themes[index]['watchTheme'] as int;
+    }
+    return 0; // Default theme
+  }
+
+  // Get watch theme name
+  String getWatchThemeName() {
+    switch (_themeMode) {
+      case AppThemeMode.light:
+        return 'Inverted (Black on White)';
+      case AppThemeMode.dark:
+        return 'Night (Red Display)';
+      case AppThemeMode.blue:
+        return 'Inverted (Black on White)';
+      case AppThemeMode.purple:
+        return 'High Contrast';
+      case AppThemeMode.green:
+        return 'Default (White on Black)';
+      case AppThemeMode.gradient:
+        return 'Default (White on Black)';
+    }
   }
 }

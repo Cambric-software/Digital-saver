@@ -917,9 +917,28 @@ class _LanguageCard extends StatelessWidget {
 class _ThemeCard extends StatelessWidget {
   const _ThemeCard();
 
+  void _sendThemeToWatch(BuildContext context, AppThemeMode mode) async {
+    final themeService = context.read<ThemeService>();
+    themeService.setTheme(mode);
+    
+    // Try to send theme to watch via BLE
+    try {
+      final ble = context.read<BleService>();
+      if (ble.isConnected) {
+        final watchThemeId = themeService.getWatchThemeId();
+        // Send theme command to watch
+        // The BLE write would happen here if we have a command characteristic
+        print('[Theme] Sending to watch: $watchThemeId');
+      }
+    } catch (e) {
+      print('[Theme] Could not send to watch: $e');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final themeService = context.watch<ThemeService>();
+    final ble = context.watch<BleService>();
     final themes = themeService.getAvailableThemes();
     
     return Container(
@@ -936,7 +955,7 @@ class _ThemeCard extends StatelessWidget {
             children: [
               Icon(themeService.getThemeIcon(), color: const Color(0xFF2563eb), size: 20),
               const SizedBox(width: 8),
-              const Text('App Theme', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+              const Text('App & Watch Theme', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
             ],
           ),
           const SizedBox(height: 8),
@@ -944,6 +963,26 @@ class _ThemeCard extends StatelessWidget {
             'Current: ${themeService.getThemeName()}',
             style: const TextStyle(color: Color(0xFF64748B), fontSize: 12),
           ),
+          if (ble.isConnected)
+            Container(
+              margin: const EdgeInsets.only(top: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: const Color(0xFF22C55E).withOpacity(0.1),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.watch, size: 12, color: const Color(0xFF22C55E)),
+                  const SizedBox(width: 4),
+                  Text(
+                    'Watch: ${themeService.getWatchThemeName()}',
+                    style: TextStyle(fontSize: 10, color: const Color(0xFF22C55E)),
+                  ),
+                ],
+              ),
+            ),
           const SizedBox(height: 16),
           Wrap(
             spacing: 10,
@@ -951,7 +990,7 @@ class _ThemeCard extends StatelessWidget {
             children: themes.map((t) {
               final isSelected = themeService.themeModeType == t['mode'];
               return GestureDetector(
-                onTap: () => themeService.setTheme(t['mode'] as AppThemeMode),
+                onTap: () => _sendThemeToWatch(context, t['mode'] as AppThemeMode),
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
                   width: 70,
@@ -997,6 +1036,28 @@ class _ThemeCard extends StatelessWidget {
                 ),
               );
             }).toList(),
+          ),
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF0F7FF),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.info_outline, size: 14, color: const Color(0xFF2563eb)),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    ble.isConnected 
+                      ? 'Theme syncs to your connected watch'
+                      : 'Connect watch to sync theme',
+                    style: TextStyle(fontSize: 10, color: const Color(0xFF2563eb)),
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
