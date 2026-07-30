@@ -24,13 +24,21 @@ class CambricUserProfile {
   });
 
   factory CambricUserProfile.fromUser(User user) {
-    final createdAt = user.createdAt;
+    final createdAtValue = user.createdAt;
+    DateTime? createdAt;
+    if (createdAtValue != null) {
+      if (createdAtValue is String) {
+        createdAt = DateTime.tryParse(createdAtValue);
+      } else if (createdAtValue is DateTime) {
+        createdAt = createdAtValue;
+      }
+    }
     return CambricUserProfile(
-      id: user.id,
+      id: user.id ?? '',
       email: user.email,
       displayName: user.userMetadata?['display_name'] as String?,
       avatarUrl: user.userMetadata?['avatar_url'] as String?,
-      createdAt: createdAt != null && createdAt.isNotEmpty ? DateTime.tryParse(createdAt) : null,
+      createdAt: createdAt,
       lastLogin: DateTime.now(),
       metadata: user.userMetadata,
     );
@@ -105,11 +113,12 @@ class AuthProvider extends ChangeNotifier {
       final session = client.auth.currentSession;
       if (session == null) return;
       final user = session.user;
-      if (user != null && user.id.isNotEmpty) {
-        _user = user;
-        _profile = CambricUserProfile.fromUser(user);
-        _ensureProfile();
-      }
+      if (user == null) return;
+      final userId = user.id;
+      if (userId == null || userId.isEmpty) return;
+      _user = user;
+      _profile = CambricUserProfile.fromUser(user);
+      _ensureProfile();
     } catch (e) {
       // Ignore errors
     }
@@ -121,8 +130,12 @@ class AuthProvider extends ChangeNotifier {
       final event = data.event;
       final session = data.session;
       
-      if (event == AuthChangeEvent.signedIn && session?.user != null) {
-        final user = session!.user!;
+      if (session == null) return;
+      final user = session.user;
+      
+      if (event == AuthChangeEvent.signedIn && user != null) {
+        final userId = user.id;
+        if (userId == null || userId.isEmpty) return;
         _user = user;
         _profile = CambricUserProfile.fromUser(user);
         _loading = false;
@@ -132,12 +145,14 @@ class AuthProvider extends ChangeNotifier {
         _user = null;
         _profile = null;
         _error = null;
-      } else if (event == AuthChangeEvent.tokenRefreshed && session?.user != null) {
-        final user = session!.user!;
+      } else if (event == AuthChangeEvent.tokenRefreshed && user != null) {
+        final userId = user.id;
+        if (userId == null || userId.isEmpty) return;
         _user = user;
         _profile = CambricUserProfile.fromUser(user);
-      } else if (event == AuthChangeEvent.initialSession && session?.user != null) {
-        final user = session!.user!;
+      } else if (event == AuthChangeEvent.initialSession && user != null) {
+        final userId = user.id;
+        if (userId == null || userId.isEmpty) return;
         _user = user;
         _profile = CambricUserProfile.fromUser(user);
         _ensureProfile();
@@ -162,27 +177,33 @@ class AuthProvider extends ChangeNotifier {
         password: password,
       ).timeout(const Duration(seconds: 30));
 
-      if (result.user != null && result.user!.id.isNotEmpty) {
-        final user = result.user!;
-        _user = user;
-        _profile = CambricUserProfile.fromUser(user);
+      final user = result.user;
+      if (user == null) {
+        _error = 'Sign in failed';
         _loading = false;
-        _error = null;
         notifyListeners();
-        
-        await _ensureProfile();
-
-        try {
-          final prefs = await SharedPreferences.getInstance();
-          await prefs.setString('cached_email', email);
-        } catch (_) {}
-        return true;
+        return false;
       }
-      
-      _error = 'Sign in failed';
+      final userId = user.id;
+      if (userId == null || userId.isEmpty) {
+        _error = 'Sign in failed';
+        _loading = false;
+        notifyListeners();
+        return false;
+      }
+      _user = user;
+      _profile = CambricUserProfile.fromUser(user);
       _loading = false;
+      _error = null;
       notifyListeners();
-      return false;
+      
+      await _ensureProfile();
+
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('cached_email', email);
+      } catch (_) {}
+      return true;
     } catch (e) {
       _error = _parseError(e);
       _loading = false;
@@ -205,26 +226,32 @@ class AuthProvider extends ChangeNotifier {
         data: displayName != null ? {'display_name': displayName} : null,
       );
 
-      if (response.user != null && response.user!.id.isNotEmpty) {
-        final user = response.user!;
-        _user = user;
-        _profile = CambricUserProfile.fromUser(user);
+      final user = response.user;
+      if (user == null) {
+        _error = 'Sign up pending. Check your email.';
         _loading = false;
         notifyListeners();
-        
-        await _ensureProfile();
-
-        try {
-          final prefs = await SharedPreferences.getInstance();
-          await prefs.setString('cached_email', email);
-        } catch (_) {}
-        return true;
+        return false;
       }
-      
-      _error = 'Sign up pending. Check your email.';
+      final userId = user.id;
+      if (userId == null || userId.isEmpty) {
+        _error = 'Sign up pending. Check your email.';
+        _loading = false;
+        notifyListeners();
+        return false;
+      }
+      _user = user;
+      _profile = CambricUserProfile.fromUser(user);
       _loading = false;
       notifyListeners();
-      return false;
+      
+      await _ensureProfile();
+
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('cached_email', email);
+      } catch (_) {}
+      return true;
     } catch (e) {
       _error = _parseError(e);
       _loading = false;
