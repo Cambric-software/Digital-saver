@@ -1,8 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
-// ignore: avoid_web_libraries_in_flutter
-import 'dart:html' as html;
-import 'package:url_launcher/url_launcher.dart';
+import '../utils/download_helper.dart';
 
 class WebLandingPage extends StatefulWidget {
   const WebLandingPage({super.key});
@@ -37,18 +34,7 @@ class _WebLandingPageState extends State<WebLandingPage> with SingleTickerProvid
   }
 
   void _downloadFile(String url, String filename) {
-    if (kIsWeb) {
-      // Web: Use anchor element for download
-      final anchor = html.AnchorElement(href: url)
-        ..setAttribute('download', filename)
-        ..style.display = 'none';
-      html.document.body?.append(anchor);
-      anchor.click();
-      anchor.remove();
-    } else {
-      // Non-web: Open URL in browser
-      launch(url);
-    }
+    downloadFile(url, filename);
   }
 
   @override
