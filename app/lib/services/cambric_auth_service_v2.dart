@@ -72,7 +72,6 @@ class AuthProvider extends ChangeNotifier {
 
   Future<void> _init() async {
     // Mark as ready immediately - Supabase is already initialized in main.dart
-    // This prevents infinite loading
     _loading = false;
     _initialSessionChecked = true;
 
@@ -84,14 +83,16 @@ class AuthProvider extends ChangeNotifier {
     
     try {
       final client = Supabase.instance.client;
+      if (client.auth == null) return;
       
       // Check existing session
       _checkExistingSession(client);
       
       // Set up auth state listener
-      _subscription = client.auth.onAuthStateChange.listen((data) {
-        _onAuthStateChange(client, data);
-      });
+      _subscription = client.auth.onAuthStateChange.listen(
+        (data) => _onAuthStateChange(client, data),
+        onError: (e) { /* Ignore errors */ },
+      );
     } catch (e) {
       _error = 'Failed to connect to server';
       _loading = false;
@@ -100,40 +101,12 @@ class AuthProvider extends ChangeNotifier {
   }
 
   void _checkExistingSession(SupabaseClient client) {
+    if (!mounted) return;
     try {
       final session = client.auth.currentSession;
-      final user = session?.user;
-      if (user != null) {
-        _user = user;
-        _profile = CambricUserProfile.fromUser(user);
-        _ensureProfile();
-      }
-    } catch (e) {
-      // Ignore errors, user can still sign in
-    }
-    notifyListeners();
-  }
-
-  void _onAuthStateChange(SupabaseClient client, AuthState data) {
-    try {
-      final event = data.event;
-      final session = data.session;
-      final user = session?.user;
-
-      if (event == AuthChangeEvent.signedIn && user != null) {
-        _user = user;
-        _profile = CambricUserProfile.fromUser(user);
-        _loading = false;
-        _error = null;
-        _ensureProfile();
-      } else if (event == AuthChangeEvent.signedOut) {
-        _user = null;
-        _profile = null;
-        _error = null;
-      } else if (event == AuthChangeEvent.tokenRefreshed && user != null) {
-        _user = user;
-        _profile = CambricUserProfile.fromUser(user);
-      } else if (event == AuthChangeEvent.initialSession && user != null) {
+      if (session == null) return;
+      final user = session.user;
+      if (user != null && user.id.isNotEmpty) {
         _user = user;
         _profile = CambricUserProfile.fromUser(user);
         _ensureProfile();
@@ -141,8 +114,38 @@ class AuthProvider extends ChangeNotifier {
     } catch (e) {
       // Ignore errors
     }
+    if (mounted) notifyListeners();
+  }
 
-    notifyListeners();
+  void _onAuthStateChange(SupabaseClient client, AuthState data) {
+    if (!mounted) return;
+    try {
+      final event = data.event;
+      final session = data.session;
+      
+      if (event == AuthChangeEvent.signedIn && session?.user != null) {
+        _user = session!.user;
+        _profile = CambricUserProfile.fromUser(_user);
+        _loading = false;
+        _error = null;
+        _ensureProfile();
+      } else if (event == AuthChangeEvent.signedOut) {
+        _user = null;
+        _profile = null;
+        _error = null;
+      } else if (event == AuthChangeEvent.tokenRefreshed && session?.user != null) {
+        _user = session!.user;
+        _profile = CambricUserProfile.fromUser(_user);
+      } else if (event == AuthChangeEvent.initialSession && session?.user != null) {
+        _user = session!.user;
+        _profile = CambricUserProfile.fromUser(_user);
+        _ensureProfile();
+      }
+    } catch (e) {
+      // Ignore errors
+    }
+
+    if (mounted) notifyListeners();
   }
 
   Future<bool> signIn({required String email, required String password}) async {
@@ -158,19 +161,15 @@ class AuthProvider extends ChangeNotifier {
         password: password,
       ).timeout(const Duration(seconds: 30));
 
-      final user = result.user;
-      if (user != null) {
-        _user = user;
-        _profile = CambricUserProfile.fromUser(user);
+      if (result.user != null && result.user!.id.isNotEmpty) {
+        _user = result.user;
+        _profile = CambricUserProfile.fromUser(_user);
         _loading = false;
         _error = null;
         notifyListeners();
         
-        // Await profile creation to prevent race condition
-        // where UI tries to access profile before it's ready
         await _ensureProfile();
 
-        // Cache email for cross-platform login
         try {
           final prefs = await SharedPreferences.getInstance();
           await prefs.setString('cached_email', email);
@@ -204,17 +203,14 @@ class AuthProvider extends ChangeNotifier {
         data: displayName != null ? {'display_name': displayName} : null,
       );
 
-      final user = response.user;
-      if (user != null) {
-        _user = user;
-        _profile = CambricUserProfile.fromUser(user);
+      if (response.user != null && response.user!.id.isNotEmpty) {
+        _user = response.user;
+        _profile = CambricUserProfile.fromUser(_user);
         _loading = false;
         notifyListeners();
         
-        // Await profile creation to prevent race condition
         await _ensureProfile();
 
-        // Cache email for cross-platform login
         try {
           final prefs = await SharedPreferences.getInstance();
           await prefs.setString('cached_email', email);
@@ -265,25 +261,16 @@ class AuthProvider extends ChangeNotifier {
 
   Future<void> _ensureProfile() async {
     final user = _user;
-    if (user == null) return;
+    if (user == null || user.id.isEmpty) return;
     
-    // Retry logic for transient failures
-    const maxRetries = 3;
-    const retryDelay = Duration(milliseconds: 500);
-    
-    for (int attempt = 1; attempt <= maxRetries; attempt++) {
-      try {
-        await Supabase.instance.client.from('digital_saver_user_profiles').upsert({
-          'id': user.id,
-          'email': user.email,
-          'updated_at': DateTime.now().toIso8601String(),
-        });
-        return; // Success - exit the retry loop
-      } catch (e) {
-        // Silently fail - profile creation can be retried later
-        // The user is still authenticated without a profile
-        return;
-      }
+    try {
+      await Supabase.instance.client.from('digital_saver_user_profiles').upsert({
+        'id': user.id,
+        'email': user.email,
+        'updated_at': DateTime.now().toIso8601String(),
+      });
+    } catch (e) {
+      // Silently fail - profile creation can be retried later
     }
   }
 
