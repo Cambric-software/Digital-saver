@@ -122,8 +122,9 @@ class AuthProvider extends ChangeNotifier {
       final session = data.session;
       
       if (event == AuthChangeEvent.signedIn && session?.user != null) {
-        _user = session!.user;
-        _profile = CambricUserProfile.fromUser(_user!);
+        final user = session!.user!;
+        _user = user;
+        _profile = CambricUserProfile.fromUser(user);
         _loading = false;
         _error = null;
         _ensureProfile();
@@ -132,11 +133,13 @@ class AuthProvider extends ChangeNotifier {
         _profile = null;
         _error = null;
       } else if (event == AuthChangeEvent.tokenRefreshed && session?.user != null) {
-        _user = session!.user;
-        _profile = CambricUserProfile.fromUser(_user!);
+        final user = session!.user!;
+        _user = user;
+        _profile = CambricUserProfile.fromUser(user);
       } else if (event == AuthChangeEvent.initialSession && session?.user != null) {
-        _user = session!.user;
-        _profile = CambricUserProfile.fromUser(_user!);
+        final user = session!.user!;
+        _user = user;
+        _profile = CambricUserProfile.fromUser(user);
         _ensureProfile();
       }
     } catch (e) {
@@ -160,8 +163,9 @@ class AuthProvider extends ChangeNotifier {
       ).timeout(const Duration(seconds: 30));
 
       if (result.user != null && result.user!.id.isNotEmpty) {
-        _user = result.user;
-        _profile = CambricUserProfile.fromUser(_user!);
+        final user = result.user!;
+        _user = user;
+        _profile = CambricUserProfile.fromUser(user);
         _loading = false;
         _error = null;
         notifyListeners();
@@ -202,8 +206,9 @@ class AuthProvider extends ChangeNotifier {
       );
 
       if (response.user != null && response.user!.id.isNotEmpty) {
-        _user = response.user;
-        _profile = CambricUserProfile.fromUser(_user!);
+        final user = response.user!;
+        _user = user;
+        _profile = CambricUserProfile.fromUser(user);
         _loading = false;
         notifyListeners();
         
