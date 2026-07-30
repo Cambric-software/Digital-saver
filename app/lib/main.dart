@@ -146,12 +146,12 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                 child: child,
               ),
             ),
-            child: Padding(
+            child: SingleChildScrollView(
               padding: const EdgeInsets.all(24),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Spacer(),
+                  const SizedBox(height: 40),
                   // App Icon with animation
                   Container(
                     width: 120, height: 120,
@@ -265,78 +265,76 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                         ],
                       ),
                     ),
-                  const Spacer(),
+                  const SizedBox(height: 40),
                   if (_showDisclaimer)
-                    Flexible(
-                      child: SingleChildScrollView(
-                        padding: EdgeInsets.only(
-                          bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+                    Container(
+                      padding: EdgeInsets.only(
+                        bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+                      ),
+                      child: Container(
+                        padding: const EdgeInsets.all(20),
+                        margin: const EdgeInsets.symmetric(horizontal: 20),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: Colors.white.withOpacity(0.3)),
                         ),
-                        child: Container(
-                          padding: const EdgeInsets.all(20),
-                          margin: const EdgeInsets.symmetric(horizontal: 20),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.15),
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(color: Colors.white.withOpacity(0.3)),
-                          ),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(Icons.warning_amber_rounded, color: Colors.amber, size: 24),
-                                  SizedBox(width: 10),
-                                  Text(
-                                    'Important Disclaimer',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 12),
-                              const Text(
-                                'Do NOT rely on this app data to help diagnose, treat, or manage any health condition or disease.',
-                                style: TextStyle(color: Colors.white70, fontSize: 13, height: 1.5),
-                                textAlign: TextAlign.center,
-                              ),
-                              const SizedBox(height: 8),
-                              const Text(
-                                'This app is for wellness and educational purposes ONLY. Always consult a qualified healthcare professional for medical advice.',
-                                style: TextStyle(color: Colors.white70, fontSize: 13, height: 1.5),
-                                textAlign: TextAlign.center,
-                              ),
-                              const SizedBox(height: 8),
-                              const Text(
-                                'Digital Saver is NOT a certified medical device. The data shown may not be 100% accurate.',
-                                style: TextStyle(color: Color(0xFFFFD54F), fontSize: 12, height: 1.5),
-                                textAlign: TextAlign.center,
-                              ),
-                              const SizedBox(height: 20),
-                              SizedBox(
-                                width: double.infinity,
-                                child: ElevatedButton(
-                                  onPressed: _acceptAndContinue,
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.white,
-                                    foregroundColor: const Color(0xFF2563EB),
-                                    padding: const EdgeInsets.symmetric(vertical: 14),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                  ),
-                                  child: const Text(
-                                    'I Understand & Continue',
-                                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.warning_amber_rounded, color: Colors.amber, size: 24),
+                                SizedBox(width: 10),
+                                Text(
+                                  'Important Disclaimer',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
                                   ),
                                 ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                            const Text(
+                              'Do NOT rely on this app data to help diagnose, treat, or manage any health condition or disease.',
+                              style: TextStyle(color: Colors.white70, fontSize: 13, height: 1.5),
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: 8),
+                            const Text(
+                              'This app is for wellness and educational purposes ONLY. Always consult a qualified healthcare professional for medical advice.',
+                              style: TextStyle(color: Colors.white70, fontSize: 13, height: 1.5),
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: 8),
+                            const Text(
+                              'Digital Saver is NOT a certified medical device. The data shown may not be 100% accurate.',
+                              style: TextStyle(color: Color(0xFFFFD54F), fontSize: 12, height: 1.5),
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: 20),
+                            SizedBox(
+                              width: double.infinity,
+                              child: ElevatedButton(
+                                onPressed: _acceptAndContinue,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.white,
+                                  foregroundColor: const Color(0xFF2563EB),
+                                  padding: const EdgeInsets.symmetric(vertical: 14),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                                child: const Text(
+                                  'I Understand & Continue',
+                                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                                ),
                               ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
                       ),
                     )
