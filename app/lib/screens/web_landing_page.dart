@@ -2,9 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class WebLandingPage extends StatefulWidget {
-  final VoidCallback onEnterApp;
-  
-  const WebLandingPage({super.key, required this.onEnterApp});
+  const WebLandingPage({super.key});
 
   @override
   State<WebLandingPage> createState() => _WebLandingPageState();
@@ -83,11 +81,6 @@ class _WebLandingPageState extends State<WebLandingPage> with SingleTickerProvid
                   
                   // Instructions
                   _buildInstructions(),
-                  
-                  const SizedBox(height: 48),
-                  
-                  // Enter App Button
-                  _buildEnterButton(),
                   
                   const SizedBox(height: 40),
                 ],
@@ -369,59 +362,6 @@ class _WebLandingPageState extends State<WebLandingPage> with SingleTickerProvid
     );
   }
 
-  Widget _buildEnterButton() {
-    return Column(
-      children: [
-        const Text(
-          'Want to try the web version?',
-          style: TextStyle(
-            color: Colors.white70,
-            fontSize: 14,
-          ),
-        ),
-        const SizedBox(height: 12),
-        Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            gradient: LinearGradient(
-              colors: [
-                Colors.white.withOpacity(0.2),
-                Colors.white.withOpacity(0.1),
-              ],
-            ),
-            border: Border.all(color: Colors.white.withOpacity(0.3)),
-          ),
-          child: Material(
-            color: Colors.transparent,
-            child: InkWell(
-              onTap: widget.onEnterApp,
-              borderRadius: BorderRadius.circular(16),
-              child: const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.web, color: Colors.white, size: 24),
-                    SizedBox(width: 12),
-                    Text(
-                      'Enter Web App',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    SizedBox(width: 8),
-                    Icon(Icons.arrow_forward, color: Colors.white70, size: 20),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
 }
 
 class _DownloadButton extends StatelessWidget {

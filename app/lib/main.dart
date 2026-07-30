@@ -55,35 +55,9 @@ class DigitalSaverApp extends StatelessWidget {
       theme: themeService.getLightTheme(),
       darkTheme: themeService.getDarkTheme(),
       themeMode: themeService.themeMode,
-      // Show landing page for web, splash screen for mobile
-      home: kIsWeb ? const WebLandingPageWrapper() : const SplashScreen(),
+      // Show landing page for web (download only), splash screen for mobile
+      home: kIsWeb ? const WebLandingPage() : const SplashScreen(),
     );
-  }
-}
-
-// Wrapper for web landing page that handles navigation to app
-class WebLandingPageWrapper extends StatefulWidget {
-  const WebLandingPageWrapper({super.key});
-
-  @override
-  State<WebLandingPageWrapper> createState() => _WebLandingPageWrapperState();
-}
-
-class _WebLandingPageWrapperState extends State<WebLandingPageWrapper> {
-  bool _showApp = false;
-
-  void _enterApp() {
-    setState(() {
-      _showApp = true;
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (_showApp) {
-      return const SplashScreen();
-    }
-    return WebLandingPage(onEnterApp: _enterApp);
   }
 }
 
