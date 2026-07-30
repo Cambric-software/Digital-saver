@@ -23,13 +23,10 @@ class CambricUserProfile {
     this.metadata,
   });
 
-  factory CambricUserProfile.fromUser(User? user) {
-    if (user == null) {
-      return CambricUserProfile(id: '');
-    }
+  factory CambricUserProfile.fromUser(User user) {
     final createdAt = user.createdAt;
     return CambricUserProfile(
-      id: user.id ?? '',
+      id: user.id,
       email: user.email,
       displayName: user.userMetadata?['display_name'] as String?,
       avatarUrl: user.userMetadata?['avatar_url'] as String?,
@@ -105,9 +102,10 @@ class AuthProvider extends ChangeNotifier {
   void _checkExistingSession(SupabaseClient client) {
     try {
       final session = client.auth.currentSession;
-      if (session?.user != null) {
-        _user = session!.user;
-        _profile = CambricUserProfile.fromUser(_user);
+      final user = session?.user;
+      if (user != null) {
+        _user = user;
+        _profile = CambricUserProfile.fromUser(user);
         _ensureProfile();
       }
     } catch (e) {
@@ -160,14 +158,16 @@ class AuthProvider extends ChangeNotifier {
         password: password,
       ).timeout(const Duration(seconds: 30));
 
-      if (result.user != null) {
-        _user = result.user;
-        _profile = CambricUserProfile.fromUser(_user);
+      final user = result.user;
+      if (user != null) {
+        _user = user;
+        _profile = CambricUserProfile.fromUser(user);
         _loading = false;
         _error = null;
         notifyListeners();
         
         // Await profile creation to prevent race condition
+        // where UI tries to access profile before it's ready
         await _ensureProfile();
 
         // Cache email for cross-platform login
@@ -265,17 +265,25 @@ class AuthProvider extends ChangeNotifier {
 
   Future<void> _ensureProfile() async {
     final user = _user;
-    if (user == null || user.id.isEmpty) return;
+    if (user == null) return;
     
-    try {
-      await Supabase.instance.client.from('digital_saver_user_profiles').upsert({
-        'id': user.id,
-        'email': user.email,
-        'updated_at': DateTime.now().toIso8601String(),
-      });
-    } catch (e) {
-      // Silently fail - profile creation can be retried later
-      // The user is still authenticated without a profile
+    // Retry logic for transient failures
+    const maxRetries = 3;
+    const retryDelay = Duration(milliseconds: 500);
+    
+    for (int attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        await Supabase.instance.client.from('digital_saver_user_profiles').upsert({
+          'id': user.id,
+          'email': user.email,
+          'updated_at': DateTime.now().toIso8601String(),
+        });
+        return; // Success - exit the retry loop
+      } catch (e) {
+        // Silently fail - profile creation can be retried later
+        // The user is still authenticated without a profile
+        return;
+      }
     }
   }
 
