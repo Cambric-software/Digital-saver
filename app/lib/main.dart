@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -12,6 +13,7 @@ import 'screens/bp_screen.dart';
 import 'screens/activity_screen.dart';
 import 'screens/sleep_screen.dart';
 import 'screens/settings_screen.dart';
+import 'screens/web_landing_page.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -53,8 +55,35 @@ class DigitalSaverApp extends StatelessWidget {
       theme: themeService.getLightTheme(),
       darkTheme: themeService.getDarkTheme(),
       themeMode: themeService.themeMode,
-      home: const SplashScreen(),
+      // Show landing page for web, splash screen for mobile
+      home: kIsWeb ? const WebLandingPageWrapper() : const SplashScreen(),
     );
+  }
+}
+
+// Wrapper for web landing page that handles navigation to app
+class WebLandingPageWrapper extends StatefulWidget {
+  const WebLandingPageWrapper({super.key});
+
+  @override
+  State<WebLandingPageWrapper> createState() => _WebLandingPageWrapperState();
+}
+
+class _WebLandingPageWrapperState extends State<WebLandingPageWrapper> {
+  bool _showApp = false;
+
+  void _enterApp() {
+    setState(() {
+      _showApp = true;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_showApp) {
+      return const SplashScreen();
+    }
+    return WebLandingPage(onEnterApp: _enterApp);
   }
 }
 
