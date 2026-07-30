@@ -3,9 +3,12 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'services/ble_service.dart';
 import 'services/cambric_auth_service_v2.dart';
 import 'services/theme_service.dart';
+import 'services/dynamic_theme_service.dart';
+import 'services/auto_update_service.dart';
 import 'screens/auth_screen.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/heart_screen.dart';
@@ -14,6 +17,7 @@ import 'screens/activity_screen.dart';
 import 'screens/sleep_screen.dart';
 import 'screens/settings_screen.dart';
 import 'screens/web_landing_page.dart';
+import 'widgets/enhanced_splash.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -36,338 +40,144 @@ void main() async {
         ChangeNotifierProvider(create: (_) => BleService()),
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => ThemeService()),
+        ChangeNotifierProvider(create: (_) => DynamicThemeService()),
+        ChangeNotifierProvider(create: (_) => AutoUpdateService()),
       ],
       child: const DigitalSaverApp(),
     ),
   );
 }
 
-class DigitalSaverApp extends StatelessWidget {
+class DigitalSaverApp extends StatefulWidget {
   const DigitalSaverApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final themeService = context.watch<ThemeService>();
-    
-    return MaterialApp(
-      title: 'Digital Saver',
-      debugShowCheckedModeBanner: false,
-      theme: themeService.getLightTheme(),
-      darkTheme: themeService.getDarkTheme(),
-      themeMode: themeService.themeMode,
-      // Show landing page for web (download only), splash screen for mobile
-      home: kIsWeb ? const WebLandingPage() : const SplashScreen(),
-    );
-  }
+  State<DigitalSaverApp> createState() => _DigitalSaverAppState();
 }
 
-class SplashScreen extends StatefulWidget {
-  const SplashScreen({super.key});
-
-  @override
-  State<SplashScreen> createState() => _SplashScreenState();
-}
-
-class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _fadeAnimation;
-  late Animation<double> _scaleAnimation;
-  bool _showDisclaimer = false;
-
+class _DigitalSaverAppState extends State<DigitalSaverApp> with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(vsync: this, duration: const Duration(milliseconds: 1500));
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _controller, curve: const Interval(0.0, 0.5, curve: Curves.easeIn)),
-    );
-    _scaleAnimation = Tween<double>(begin: 0.8, end: 1.0).animate(
-      CurvedAnimation(parent: _controller, curve: const Interval(0.0, 0.5, curve: Curves.easeOut)),
-    );
-    _controller.forward();
-
-    // Show disclaimer after animation
-    Future.delayed(const Duration(milliseconds: 1500), () {
-      if (mounted) {
-        setState(() {
-          _showDisclaimer = true;
-        });
-      }
-    });
+    WidgetsBinding.instance.addObserver(this);
+    _checkForUpdates();
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
 
-  void _acceptAndContinue() {
-    final auth = context.read<AuthProvider>();
-    
-    // Navigate based on current auth state
-    if (auth.isAuthenticated) {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const MainNav()),
-      );
-    } else {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => AuthScreen(
-          onSignedIn: () {
-            Navigator.of(context).pushReplacement(
-              MaterialPageRoute(builder: (_) => const MainNav()),
-            );
-          },
-        )),
-      );
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _checkForUpdates();
+    }
+  }
+
+  Future<void> _checkForUpdates() async {
+    if (kIsWeb) return;
+    await context.read<AutoUpdateService>().checkForUpdates();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final themeService = context.watch<ThemeService>();
+    final dynamicTheme = context.watch<DynamicThemeService>();
+    final updateService = context.watch<AutoUpdateService>();
+
+    // Use dynamic theme if enabled
+    final useDynamicTheme = dynamicTheme.autoMode;
+
+    return MaterialApp(
+      title: 'Digital Saver',
+      debugShowCheckedModeBanner: false,
+      theme: useDynamicTheme ? dynamicTheme.getThemeData() : themeService.getLightTheme(),
+      darkTheme: useDynamicTheme ? dynamicTheme.getThemeData() : themeService.getDarkTheme(),
+      themeMode: useDynamicTheme ? ThemeMode.system : themeService.themeMode,
+      home: kIsWeb
+          ? const WebLandingPage()
+          : _UpdateWrapper(
+              updateService: updateService,
+              child: const EnhancedSplashScreen(),
+            ),
+    );
+  }
+}
+
+class _UpdateWrapper extends StatefulWidget {
+  final Widget child;
+  final AutoUpdateService updateService;
+
+  const _UpdateWrapper({required this.child, required this.updateService});
+
+  @override
+  State<_UpdateWrapper> createState() => _UpdateWrapperState();
+}
+
+class _UpdateWrapperState extends State<_UpdateWrapper> {
+  @override
+  void initState() {
+    super.initState();
+    Future.delayed(const Duration(seconds: 4), () {
+      if (mounted && widget.updateService.updateAvailable) {
+        _showUpdateDialog();
+      }
+    });
+  }
+
+  void _showUpdateDialog() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(children: [
+          Icon(Icons.system_update_alt, color: Theme.of(ctx).primaryColor),
+          const SizedBox(width: 8),
+          const Text('Update Available!'),
+        ]),
+        content: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text('Version ${widget.updateService.latestUpdate?.version ?? "3.0.3"} is now available!'),
+          const SizedBox(height: 12),
+          if (widget.updateService.latestUpdate?.releaseNotes != null)
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Theme.of(ctx).colorScheme.surfaceContainerHighest,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(widget.updateService.latestUpdate!.releaseNotes, style: Theme.of(ctx).textTheme.bodySmall),
+            ),
+        ]),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Later')),
+          ElevatedButton.icon(
+            onPressed: () {
+              Navigator.pop(ctx);
+              _launchUrl(widget.updateService.latestUpdate?.downloadUrl ?? AppVersion.downloadUrl);
+            },
+            icon: const Icon(Icons.download),
+            label: const Text('Download'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _launchUrl(String url) async {
+    final uri = Uri.parse(url);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    // Watch auth - this triggers session restoration
-    final auth = context.watch<AuthProvider>();
-    
-    return Scaffold(
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xFF1E3A5F), Color(0xFF2563EB), Color(0xFF7C3AED)],
-          ),
-        ),
-        child: SafeArea(
-          child: AnimatedBuilder(
-            animation: _controller,
-            builder: (context, child) => Opacity(
-              opacity: _fadeAnimation.value,
-              child: Transform.scale(
-                scale: _scaleAnimation.value,
-                child: child,
-              ),
-            ),
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const SizedBox(height: 40),
-                  // App Icon with animation
-                  Container(
-                    width: 120, height: 120,
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFF2563EB), Color(0xFF7C3AED)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: BorderRadius.circular(28),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFF2563EB).withOpacity(0.5),
-                          blurRadius: 40,
-                          offset: const Offset(0, 15),
-                        ),
-                      ],
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(28),
-                      child: Image.asset(
-                        'assets/digital-saver-icon-transparent.png',
-                        width: 120, height: 120,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => const Icon(Icons.favorite, color: Colors.white, size: 60),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 32),
-                  const Text(
-                    'Digital Saver',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 36,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 1.5,
-                      shadows: [Shadow(color: Colors.black26, blurRadius: 10)],
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'Health Monitoring System',
-                    style: TextStyle(color: Colors.white70, fontSize: 16, letterSpacing: 0.5),
-                  ),
-                  const SizedBox(height: 12),
-                  // Cambric badge
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: Colors.white24),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          width: 20, height: 20,
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.3),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(4),
-                            child: Image.asset(
-                              'assets/cambric-icon-transparent.png',
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) => const Icon(Icons.layers, color: Colors.white, size: 14),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        const Text(
-                          'by Cambric',
-                          style: TextStyle(color: Colors.white70, fontSize: 13),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  // Session status indicator
-                  if (auth.loading)
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: const Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          SizedBox(width: 12, height: 12, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)),
-                          SizedBox(width: 8),
-                          Text('Restoring session...', style: TextStyle(color: Colors.white, fontSize: 12)),
-                        ],
-                      ),
-                    )
-                  else if (auth.isAuthenticated)
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: Colors.green.withOpacity(0.4),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: const Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.check_circle, color: Colors.white, size: 16),
-                          SizedBox(width: 6),
-                          Text('Signed in', style: TextStyle(color: Colors.white, fontSize: 12)),
-                        ],
-                      ),
-                    ),
-                  const SizedBox(height: 40),
-                  if (_showDisclaimer)
-                    Container(
-                      padding: EdgeInsets.only(
-                        bottom: MediaQuery.of(context).viewInsets.bottom + 20,
-                      ),
-                      child: Container(
-                        padding: const EdgeInsets.all(20),
-                        margin: const EdgeInsets.symmetric(horizontal: 20),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.15),
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: Colors.white.withOpacity(0.3)),
-                        ),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(Icons.warning_amber_rounded, color: Colors.amber, size: 24),
-                                SizedBox(width: 10),
-                                Text(
-                                  'Important Disclaimer',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 12),
-                            const Text(
-                              'Do NOT rely on this app data to help diagnose, treat, or manage any health condition or disease.',
-                              style: TextStyle(color: Colors.white70, fontSize: 13, height: 1.5),
-                              textAlign: TextAlign.center,
-                            ),
-                            const SizedBox(height: 8),
-                            const Text(
-                              'This app is for wellness and educational purposes ONLY. Always consult a qualified healthcare professional for medical advice.',
-                              style: TextStyle(color: Colors.white70, fontSize: 13, height: 1.5),
-                              textAlign: TextAlign.center,
-                            ),
-                            const SizedBox(height: 8),
-                            const Text(
-                              'Digital Saver is NOT a certified medical device. The data shown may not be 100% accurate.',
-                              style: TextStyle(color: Color(0xFFFFD54F), fontSize: 12, height: 1.5),
-                              textAlign: TextAlign.center,
-                            ),
-                            const SizedBox(height: 20),
-                            SizedBox(
-                              width: double.infinity,
-                              child: ElevatedButton(
-                                onPressed: _acceptAndContinue,
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.white,
-                                  foregroundColor: const Color(0xFF2563EB),
-                                  padding: const EdgeInsets.symmetric(vertical: 14),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                ),
-                                child: const Text(
-                                  'I Understand & Continue',
-                                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    )
-                  else if (!_showDisclaimer)
-                    Column(
-                      children: [
-                        const SizedBox(
-                          width: 24, height: 24,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'Loading...',
-                          style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 14),
-                        ),
-                      ],
-                    ),
-                  const SizedBox(height: 40),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
+    return widget.child;
   }
 }
+
 
 class MainNav extends StatefulWidget {
   const MainNav({super.key});
