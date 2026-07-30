@@ -24,14 +24,10 @@ class CambricUserProfile {
   });
 
   factory CambricUserProfile.fromUser(User user) {
-    final createdAtValue = user.createdAt;
     DateTime? createdAt;
-    if (createdAtValue != null) {
-      if (createdAtValue is String) {
-        createdAt = DateTime.tryParse(createdAtValue);
-      } else if (createdAtValue is DateTime) {
-        createdAt = createdAtValue;
-      }
+    final createdAtValue = user.createdAt;
+    if (createdAtValue != null && createdAtValue.isNotEmpty) {
+      createdAt = DateTime.tryParse(createdAtValue);
     }
     return CambricUserProfile(
       id: user.id ?? '',
