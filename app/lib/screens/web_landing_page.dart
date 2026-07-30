@@ -13,10 +13,10 @@ class _WebLandingPageState extends State<WebLandingPage> with SingleTickerProvid
   late AnimationController _controller;
   late Animation<double> _fadeAnimation;
   
-  // Download URLs - Replace with actual release URLs
-  static const String androidUrl = 'https://github.com/Cambric-software/Digital-saver/releases/latest/download/digital_saver.apk';
-  static const String windowsUrl = 'https://github.com/Cambric-software/Digital-saver/releases/latest/download/digital_saver_windows.zip';
-  static const String linuxUrl = 'https://github.com/Cambric-software/Digital-saver/releases/latest/download/digital_saver_linux.tar.gz';
+  // Download URLs - Exact files from v3.0.1 release
+  static const String androidUrl = 'https://github.com/Cambric-software/Digital-saver/releases/download/v3.0.1/digital_saver_android_v3.0.1.apk';
+  static const String windowsUrl = 'https://github.com/Cambric-software/Digital-saver/releases/download/v3.0.1/digital_saver_windows_v3.0.1.zip';
+  static const String linuxUrl = 'https://github.com/Cambric-software/Digital-saver/releases/download/v3.0.1/digital_saver_linux.tar.gz';
 
   @override
   void initState() {
@@ -220,21 +220,21 @@ class _WebLandingPageState extends State<WebLandingPage> with SingleTickerProvid
               label: 'Android',
               subtitle: 'APK',
               color: const Color(0xFF34A853),
-              onTap: () => _downloadFile(androidUrl, 'digital_saver.apk'),
+              onTap: () => _downloadFile(androidUrl, 'digital_saver_android_v3.0.1.apk'),
             ),
             _DownloadButton(
               icon: Icons.window,
               label: 'Windows',
               subtitle: 'EXE / ZIP',
               color: const Color(0xFF0078D4),
-              onTap: () => _downloadFile(windowsUrl, 'digital_saver_windows.zip'),
+              onTap: () => _downloadFile(windowsUrl, 'digital_saver_windows_v3.0.1.zip'),
             ),
             _DownloadButton(
               icon: Icons.computer,
               label: 'Linux',
               subtitle: 'AppImage / ZIP',
               color: const Color(0xFFE95420),
-              onTap: () => _downloadFile(linuxUrl, 'digital_saver_linux.tar.gz'),
+              onTap: () => _downloadFile(linuxUrl, 'digital_saver_linux_v3.0.1.tar.gz'),
             ),
             _DownloadButton(
               icon: Icons.apple,
