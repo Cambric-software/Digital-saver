@@ -136,6 +136,16 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y -qq clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev libstdc++-12-dev
 
+      - name: Enable Linux desktop support
+        run: |
+          cd app
+          flutter config --enable-linux-desktop
+
+      - name: Create Linux project
+        run: |
+          cd app
+          flutter create --platforms=linux .
+
       - name: Install dependencies
         run: |
           cd app
