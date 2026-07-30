@@ -93,14 +93,13 @@ class BleService extends ChangeNotifier {
   HeartRateData get heartRate => _heartRate;
   BloodPressureData get bloodPressure => _bloodPressure;
   OxygenData get oxygen => _oxygen;
-  AccelData get accel => AccelData();
+  AccelData get accel => _accel;
   ActivityData get activity => _activity;
   bool get isConnected => _state == BleState.connected;
   bool get demoMode => _demoMode;
   int get batteryLevel => _batteryLevel;
   double get temperature => _temperature.temperature;
   int get temperatureConfidence => _temperature.confidence;
-  AccelData get accel => _accel;
   List<DiscoveredDevice> get discoveredDevices => _discoveredDevices;
 
   int get healthScore {
