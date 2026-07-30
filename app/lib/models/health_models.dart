@@ -104,6 +104,28 @@ class AccelData {
   }) : timestamp = timestamp ?? DateTime.now();
 }
 
+class TemperatureData {
+  final double temperature; // Body temperature in Celsius
+  final int confidence;
+  final DateTime timestamp;
+
+  TemperatureData({
+    this.temperature = 0,
+    this.confidence = 0,
+    DateTime? timestamp,
+  }) : timestamp = timestamp ?? DateTime.now();
+
+  String get temperatureStatus {
+    if (temperature >= 36.1 && temperature <= 37.2) return 'Normal';
+    if (temperature < 36.1) return 'Low';
+    if (temperature <= 38.0) return 'Elevated';
+    return 'Fever';
+  }
+
+  bool get isFever => temperature > 38.0;
+  bool get isHypothermia => temperature < 35.0;
+}
+
 class ActivityData {
   final int steps;
   final double calories;

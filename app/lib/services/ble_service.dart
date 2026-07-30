@@ -4,6 +4,20 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import '../models/health_models.dart';
 
+// Temperature data class for BLE
+class _TemperatureData {
+  double temperature;
+  int confidence;
+  _TemperatureData({this.temperature = 0, this.confidence = 0});
+}
+
+// Accelerometer data class for BLE parsing
+class _AccelRawData {
+  double x, y, z;
+  bool fallDetected;
+  _AccelRawData({this.x = 0, this.y = 0, this.z = 0, this.fallDetected = false});
+}
+
 // Standard Bluetooth UUIDs for health devices
 const String kHeartRateServiceUUID = '180d';
 const String kBloodPressureServiceUUID = '1810';
@@ -16,6 +30,9 @@ const String kServiceUUID = '4fafc201-1fb5-459e-8fcc-c5c9c331914b';
 const String kHRCharUUID = 'beb5483e-36e1-4688-b7f5-ea07361b26a8';
 const String kBPCharUUID = 'beb5483e-36e1-4688-b7f5-ea07361b26a9';
 const String kO2CharUUID = 'beb5483e-36e1-4688-b7f5-ea07361b26aa';
+const String kStepsCharUUID = 'beb5483e-36e1-4688-b7f5-ea07361b26ab';
+const String kAccelCharUUID = 'beb5483e-36e1-4688-b7f5-ea07361b26ac';
+const String kTempCharUUID = 'beb5483e-36e1-4688-b7f5-ea07361b26ae';
 
 // Keywords for smartwatch detection - more inclusive
 const List<String> kSmartwatchKeywords = [
@@ -54,12 +71,17 @@ class BleService extends ChangeNotifier {
   BloodPressureData _bloodPressure = BloodPressureData();
   OxygenData _oxygen = OxygenData();
   ActivityData _activity = ActivityData(hourlySteps: List.filled(24, 0));
+  AccelData _accel = AccelData();
+  _TemperatureData _temperature = _TemperatureData();
 
   StreamSubscription? _scanSub;
   StreamSubscription? _hrSub;
   StreamSubscription? _bpSub;
   StreamSubscription? _o2Sub;
   StreamSubscription? _batterySub;
+  StreamSubscription? _tempSub;
+  StreamSubscription? _stepsSub;
+  StreamSubscription? _accelSub;
 
   // Demo mode
   bool _demoMode = false;
@@ -76,6 +98,9 @@ class BleService extends ChangeNotifier {
   bool get isConnected => _state == BleState.connected;
   bool get demoMode => _demoMode;
   int get batteryLevel => _batteryLevel;
+  double get temperature => _temperature.temperature;
+  int get temperatureConfidence => _temperature.confidence;
+  AccelData get accel => _accel;
   List<DiscoveredDevice> get discoveredDevices => _discoveredDevices;
 
   int get healthScore {
@@ -240,6 +265,42 @@ class BleService extends ChangeNotifier {
             }
           }
         }
+        
+        // Temperature Service (custom)
+        if (serviceUuid.contains(kServiceUUID)) {
+          for (final char in service.characteristics) {
+            final uuidLower = char.uuid.toString().toLowerCase();
+            if (uuidLower.contains('beb5483e-36e1-4688-b7f5-ea07361b26ae')) {
+              await char.setNotifyValue(true);
+              _tempSub = char.onValueReceived.listen(_parseTemperature);
+              break;
+            }
+          }
+        }
+        
+        // Steps/Activity Service (custom)
+        if (serviceUuid.contains(kServiceUUID)) {
+          for (final char in service.characteristics) {
+            final uuidLower = char.uuid.toString().toLowerCase();
+            if (uuidLower.contains('beb5483e-36e1-4688-b7f5-ea07361b26ab')) {
+              await char.setNotifyValue(true);
+              _stepsSub = char.onValueReceived.listen(_parseSteps);
+              break;
+            }
+          }
+        }
+        
+        // Accelerometer Service (custom)
+        if (serviceUuid.contains(kServiceUUID)) {
+          for (final char in service.characteristics) {
+            final uuidLower = char.uuid.toString().toLowerCase();
+            if (uuidLower.contains('beb5483e-36e1-4688-b7f5-ea07361b26ac')) {
+              await char.setNotifyValue(true);
+              _accelSub = char.onValueReceived.listen(_parseAccelerometer);
+              break;
+            }
+          }
+        }
       }
       
       // Start demo data if no real services found
@@ -288,6 +349,19 @@ class BleService extends ChangeNotifier {
         distanceKm: 3.9,
         activeMinutes: 38,
         hourlySteps: List.generate(24, (i) => i < now.hour ? (150 + i * 25) : 0),
+      );
+      // Simulated temperature (normal body temperature)
+      _temperature = _TemperatureData(
+        temperature: 36.5 + (now.second % 10) * 0.01,  // Slight variation
+        confidence: 85,
+      );
+      // Simulated accelerometer data (standing still)
+      _accel = AccelData(
+        x: 0.0,
+        y: 0.0,
+        z: 1.0,  // ~1g when standing still
+        fallDetected: false,
+        locSuspected: false,
       );
       notifyListeners();
     });
@@ -357,9 +431,100 @@ class BleService extends ChangeNotifier {
     notifyListeners();
   }
 
+
+  void _parseTemperature(List<int> data) {
+    if (data.length < 2) return;
+
+    // Temperature data format from watch:
+    // data[0]: flags/status
+    // data[1..2] or data[1]: temperature value (in 0.1 degrees Celsius)
+    // Example: 365 = 36.5°C
+    int tempRaw;
+    if (data.length >= 3) {
+      tempRaw = data[1] | (data[2] << 8);
+    } else {
+      tempRaw = data[1];
+    }
+    
+    // Convert from 0.1°C to °C
+    double tempCelsius = tempRaw / 10.0;
+    
+    _temperature = _TemperatureData(
+      temperature: tempCelsius,
+      confidence: data.length > 3 ? data[3] : 85,
+    );
+    notifyListeners();
+  }
+
+  void _parseSteps(List<int> data) {
+    if (data.length < 4) return;
+
+    // Steps data format from watch:
+    // data[0-3]: steps (32-bit integer)
+    int steps = data[0] | (data[1] << 8) | (data[2] << 16) | (data[3] << 24);
+    
+    // Update activity data with steps
+    final now = DateTime.now();
+    final hourlySteps = List<int>.from(_activity.hourlySteps);
+    if (now.hour < hourlySteps.length) {
+      hourlySteps[now.hour] = steps;
+    }
+    
+    _activity = ActivityData(
+      steps: steps,
+      calories: _activity.calories,
+      distanceKm: _activity.distanceKm,
+      activeMinutes: _activity.activeMinutes,
+      hourlySteps: hourlySteps,
+    );
+    notifyListeners();
+  }
+
+  void _parseAccelerometer(List<int> data) {
+    if (data.length < 7) return;
+
+    // Accelerometer data format from watch:
+    // data[0-2]: x axis (16-bit signed integer, little endian)
+    // data[3-5]: y axis (16-bit signed integer, little endian)
+    // data[6-8]: z axis (16-bit signed integer, little endian)
+    // data[9]: fall detection flag
+    int xRaw = data[0] | (data[1] << 8);
+    int yRaw = data[2] | (data[3] << 8);
+    int zRaw = data[4] | (data[5] << 8);
+    
+    // Convert to signed values (handle negative numbers)
+    int x = xRaw > 32767 ? xRaw - 65536 : xRaw;
+    int y = yRaw > 32767 ? yRaw - 65536 : yRaw;
+    int z = zRaw > 32767 ? zRaw - 65536 : zRaw;
+    
+    // Convert raw values to G (assuming ±2g range, 16-bit ADC)
+    double xG = x / 16384.0;
+    double yG = y / 16384.0;
+    double zG = z / 16384.0;
+    
+    // Fall detection flag (bit 0)
+    bool fallDetected = (data.length > 6 && (data[6] & 0x01) != 0);
+    
+    // Detect fall based on acceleration magnitude (threshold: ~3g for fall)
+    double magnitude = (xG * xG + yG * yG + zG * zG);
+    if (magnitude > 9.0 || magnitude < 1.0) {  // >3g or <1g (free fall)
+      fallDetected = true;
+    }
+    
+    _accel = AccelData(
+      x: xG,
+      y: yG,
+      z: zG,
+      fallDetected: fallDetected,
+      locSuspected: fallDetected,  // If fall detected, LOC is suspected
+    );
+    notifyListeners();
+  }
+
   void enableDemoMode() {
     _demoMode = true;
     _batteryLevel = 85;
+    _temperature = _TemperatureData(temperature: 36.6, confidence: 85);
     _setState(BleState.connected);
     _startSimulatedData();
   }
@@ -368,14 +533,22 @@ class BleService extends ChangeNotifier {
     _demoTimer?.cancel();
     _demoMode = false;
     _batteryLevel = 0;
+    _temperature = _TemperatureData();
+    _accel = AccelData();
     _hrSub?.cancel();
     _bpSub?.cancel();
     _o2Sub?.cancel();
     _batterySub?.cancel();
+    _tempSub?.cancel();
+    _stepsSub?.cancel();
+    _accelSub?.cancel();
     _hrSub = null;
     _bpSub = null;
     _o2Sub = null;
     _batterySub = null;
+    _tempSub = null;
+    _stepsSub = null;
+    _accelSub = null;
     
     if (_device != null) {
       try {
@@ -407,6 +580,9 @@ class BleService extends ChangeNotifier {
     _bpSub?.cancel();
     _o2Sub?.cancel();
     _batterySub?.cancel();
+    _tempSub?.cancel();
+    _stepsSub?.cancel();
+    _accelSub?.cancel();
     super.dispose();
   }
 }
