@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../services/cambric_auth_service_v2.dart';
 import '../screens/auth_screen.dart';
 import '../screens/dashboard_screen.dart';
+import '../main.dart' show MainNav;
 
 class EnhancedSplashScreen extends StatefulWidget {
   const EnhancedSplashScreen({super.key});

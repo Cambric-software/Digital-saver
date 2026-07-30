@@ -101,7 +101,6 @@ class AuthProvider extends ChangeNotifier {
   }
 
   void _checkExistingSession(SupabaseClient client) {
-    if (!mounted) return;
     try {
       final session = client.auth.currentSession;
       if (session == null) return;
@@ -114,18 +113,17 @@ class AuthProvider extends ChangeNotifier {
     } catch (e) {
       // Ignore errors
     }
-    if (mounted) notifyListeners();
+    notifyListeners();
   }
 
   void _onAuthStateChange(SupabaseClient client, AuthState data) {
-    if (!mounted) return;
     try {
       final event = data.event;
       final session = data.session;
       
       if (event == AuthChangeEvent.signedIn && session?.user != null) {
         _user = session!.user;
-        _profile = CambricUserProfile.fromUser(_user);
+        _profile = CambricUserProfile.fromUser(_user!);
         _loading = false;
         _error = null;
         _ensureProfile();
@@ -135,17 +133,17 @@ class AuthProvider extends ChangeNotifier {
         _error = null;
       } else if (event == AuthChangeEvent.tokenRefreshed && session?.user != null) {
         _user = session!.user;
-        _profile = CambricUserProfile.fromUser(_user);
+        _profile = CambricUserProfile.fromUser(_user!);
       } else if (event == AuthChangeEvent.initialSession && session?.user != null) {
         _user = session!.user;
-        _profile = CambricUserProfile.fromUser(_user);
+        _profile = CambricUserProfile.fromUser(_user!);
         _ensureProfile();
       }
     } catch (e) {
       // Ignore errors
     }
 
-    if (mounted) notifyListeners();
+    notifyListeners();
   }
 
   Future<bool> signIn({required String email, required String password}) async {
@@ -163,7 +161,7 @@ class AuthProvider extends ChangeNotifier {
 
       if (result.user != null && result.user!.id.isNotEmpty) {
         _user = result.user;
-        _profile = CambricUserProfile.fromUser(_user);
+        _profile = CambricUserProfile.fromUser(_user!);
         _loading = false;
         _error = null;
         notifyListeners();
@@ -205,7 +203,7 @@ class AuthProvider extends ChangeNotifier {
 
       if (response.user != null && response.user!.id.isNotEmpty) {
         _user = response.user;
-        _profile = CambricUserProfile.fromUser(_user);
+        _profile = CambricUserProfile.fromUser(_user!);
         _loading = false;
         notifyListeners();
         
