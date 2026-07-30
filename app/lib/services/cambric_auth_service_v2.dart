@@ -24,12 +24,13 @@ class CambricUserProfile {
   });
 
   factory CambricUserProfile.fromUser(User user) {
+    final createdAt = user.createdAt;
     return CambricUserProfile(
       id: user.id,
       email: user.email,
       displayName: user.userMetadata?['display_name'] as String?,
       avatarUrl: user.userMetadata?['avatar_url'] as String?,
-      createdAt: user.createdAt != null && user.createdAt.isNotEmpty ? DateTime.tryParse(user.createdAt) : null,
+      createdAt: createdAt != null && createdAt.isNotEmpty ? DateTime.tryParse(createdAt) : null,
       lastLogin: DateTime.now(),
       metadata: user.userMetadata,
     );
@@ -101,9 +102,10 @@ class AuthProvider extends ChangeNotifier {
   void _checkExistingSession(SupabaseClient client) {
     try {
       final session = client.auth.currentSession;
-      if (session != null && session.user != null) {
-        _user = session.user;
-        _profile = CambricUserProfile.fromUser(_user!);
+      final user = session?.user;
+      if (user != null) {
+        _user = user;
+        _profile = CambricUserProfile.fromUser(user);
         _ensureProfile();
       }
     } catch (e) {
@@ -116,10 +118,11 @@ class AuthProvider extends ChangeNotifier {
     try {
       final event = data.event;
       final session = data.session;
+      final user = session?.user;
 
-      if (event == AuthChangeEvent.signedIn && session?.user != null) {
-        _user = session!.user;
-        _profile = CambricUserProfile.fromUser(_user!);
+      if (event == AuthChangeEvent.signedIn && user != null) {
+        _user = user;
+        _profile = CambricUserProfile.fromUser(user);
         _loading = false;
         _error = null;
         _ensureProfile();
@@ -127,12 +130,12 @@ class AuthProvider extends ChangeNotifier {
         _user = null;
         _profile = null;
         _error = null;
-      } else if (event == AuthChangeEvent.tokenRefreshed && session?.user != null) {
-        _user = session!.user;
-        _profile = CambricUserProfile.fromUser(_user!);
-      } else if (event == AuthChangeEvent.initialSession && session?.user != null) {
-        _user = session!.user;
-        _profile = CambricUserProfile.fromUser(_user!);
+      } else if (event == AuthChangeEvent.tokenRefreshed && user != null) {
+        _user = user;
+        _profile = CambricUserProfile.fromUser(user);
+      } else if (event == AuthChangeEvent.initialSession && user != null) {
+        _user = user;
+        _profile = CambricUserProfile.fromUser(user);
         _ensureProfile();
       }
     } catch (e) {
@@ -155,9 +158,10 @@ class AuthProvider extends ChangeNotifier {
         password: password,
       ).timeout(const Duration(seconds: 30));
 
-      if (result.user != null) {
-        _user = result.user;
-        _profile = CambricUserProfile.fromUser(_user!);
+      final user = result.user;
+      if (user != null) {
+        _user = user;
+        _profile = CambricUserProfile.fromUser(user);
         _loading = false;
         _error = null;
         notifyListeners();
@@ -200,9 +204,10 @@ class AuthProvider extends ChangeNotifier {
         data: displayName != null ? {'display_name': displayName} : null,
       );
 
-      if (response.user != null) {
-        _user = response.user;
-        _profile = CambricUserProfile.fromUser(_user!);
+      final user = response.user;
+      if (user != null) {
+        _user = user;
+        _profile = CambricUserProfile.fromUser(user);
         _loading = false;
         notifyListeners();
         
@@ -244,10 +249,11 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<void> updateProfile({String? displayName, Map<String, dynamic>? additionalData}) async {
-    if (_user == null) return;
+    final user = _user;
+    if (user == null) return;
     try {
       final updates = <String, dynamic>{
-        'id': _user!.id,
+        'id': user.id,
         'updated_at': DateTime.now().toIso8601String(),
       };
       if (displayName != null) updates['display_name'] = displayName;
@@ -258,7 +264,8 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<void> _ensureProfile() async {
-    if (_user == null) return;
+    final user = _user;
+    if (user == null) return;
     
     // Retry logic for transient failures
     const maxRetries = 3;
@@ -267,18 +274,15 @@ class AuthProvider extends ChangeNotifier {
     for (int attempt = 1; attempt <= maxRetries; attempt++) {
       try {
         await Supabase.instance.client.from('digital_saver_user_profiles').upsert({
-          'id': _user!.id,
-          'email': _user!.email,
+          'id': user.id,
+          'email': user.email,
           'updated_at': DateTime.now().toIso8601String(),
         });
         return; // Success - exit the retry loop
       } catch (e) {
-        if (attempt < maxRetries) {
-          // Wait before retrying
-          await Future.delayed(retryDelay * attempt);
-        }
-        // Last attempt failed - log error but don't throw
-        // The user is still authenticated, profile can be created later
+        // Silently fail - profile creation can be retried later
+        // The user is still authenticated without a profile
+        return;
       }
     }
   }
