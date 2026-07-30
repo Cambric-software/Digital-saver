@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
+// ignore: avoid_web_libraries_in_flutter
+import 'dart:html' as html;
 
 class WebLandingPage extends StatefulWidget {
   const WebLandingPage({super.key});
@@ -33,17 +34,14 @@ class _WebLandingPageState extends State<WebLandingPage> with SingleTickerProvid
     super.dispose();
   }
 
-  Future<void> _launchUrl(String url) async {
-    final uri = Uri.parse(url);
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
-    } else {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not open download link')),
-        );
-      }
-    }
+  void _downloadFile(String url, String filename) {
+    // Create an anchor element and trigger download
+    final anchor = html.AnchorElement(href: url)
+      ..setAttribute('download', filename)
+      ..style.display = 'none';
+    html.document.body?.append(anchor);
+    anchor.click();
+    anchor.remove();
   }
 
   @override
@@ -222,21 +220,21 @@ class _WebLandingPageState extends State<WebLandingPage> with SingleTickerProvid
               label: 'Android',
               subtitle: 'APK',
               color: const Color(0xFF34A853),
-              onTap: () => _launchUrl(androidUrl),
+              onTap: () => _downloadFile(androidUrl, 'digital_saver.apk'),
             ),
             _DownloadButton(
               icon: Icons.window,
               label: 'Windows',
               subtitle: 'EXE / ZIP',
               color: const Color(0xFF0078D4),
-              onTap: () => _launchUrl(windowsUrl),
+              onTap: () => _downloadFile(windowsUrl, 'digital_saver_windows.zip'),
             ),
             _DownloadButton(
               icon: Icons.computer,
               label: 'Linux',
               subtitle: 'AppImage / ZIP',
               color: const Color(0xFFE95420),
-              onTap: () => _launchUrl(linuxUrl),
+              onTap: () => _downloadFile(linuxUrl, 'digital_saver_linux.tar.gz'),
             ),
             _DownloadButton(
               icon: Icons.apple,
