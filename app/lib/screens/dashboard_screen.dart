@@ -620,7 +620,7 @@ class _TodaySummary extends StatelessWidget {
       Row(mainAxisAlignment: MainAxisAlignment.spaceAround, children: [
         _Stat(icon: Icons.directions_walk, label: 'Steps', value: ble.isConnected ? '${ble.activity.steps}' : '--', color: AppColors.stepAmber),
         _Stat(icon: Icons.local_fire_department, label: 'Calories', value: ble.isConnected ? '${ble.activity.calories.round()} kcal' : '--', color: AppColors.heartRed),
-        _Stat(icon: Icons.thermostat, label: 'Temp', value: ble.isConnected && ble.oxygen.respirationRate > 0 ? '${ble.oxygen.respirationRate}' : '--', color: AppColors.accent),
+        _Stat(icon: Icons.thermostat, label: 'Temp', value: ble.isConnected && ble.temperature > 0 ? '${ble.temperature.toStringAsFixed(1)}°C' : '--', color: AppColors.accent),
         _Stat(icon: Icons.bedtime, label: 'Sleep', value: '7h 20m', color: AppColors.sleepPurple),
       ]),
     ]),
