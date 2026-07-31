@@ -7,7 +7,7 @@ import 'dart:convert';
 
 // Current app version - update this with each release
 class AppVersion {
-  static const String current = '3.1.4';
+  static const String current = '3.1.7';
   static const String buildNumber = '14';
   
   static String get downloadUrl {
