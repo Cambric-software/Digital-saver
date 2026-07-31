@@ -553,11 +553,14 @@ class _VitalCard extends StatelessWidget {
           decoration: BoxDecoration(gradient: gradient, borderRadius: BorderRadius.circular(10)),
           child: Icon(icon, color: Colors.white, size: 16)),
         if (badge != null)
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-            decoration: BoxDecoration(color: badge.color.withOpacity(0.12), borderRadius: BorderRadius.circular(6)),
-            child: Text(badge.label, style: TextStyle(color: badge.color, fontSize: 9, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
-          ),
+          Builder(builder: (context) {
+            final b = badge!;
+            return Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(color: b.color.withOpacity(0.12), borderRadius: BorderRadius.circular(6)),
+              child: Text(b.label, style: TextStyle(color: b.color, fontSize: 9, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
+            );
+          }),
       ]),
       const SizedBox(height: 12),
       Text(value, style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: AppColors.textPrimary, height: 1)),
