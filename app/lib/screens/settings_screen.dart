@@ -170,7 +170,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     // Show auth card immediately (auth loads fast from Supabase session)
     // Only show full loading if both auth AND profile are loading
     if (auth.loading && _loading) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator())));
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
     
     return Scaffold(
