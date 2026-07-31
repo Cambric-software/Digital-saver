@@ -96,8 +96,9 @@ class AuthProvider extends ChangeNotifier {
         if (event == AuthChangeEvent.initialSession ||
             event == AuthChangeEvent.signedIn ||
             event == AuthChangeEvent.tokenRefreshed) {
-          if (session?.user != null) {
-            _user = session!.user;
+          final user = session?.user;
+          if (user != null) {
+            _user = user;
             _profile = CambricUserProfile.fromUser(_user!);
             await _loadFullProfile();
           }
@@ -114,9 +115,12 @@ class AuthProvider extends ChangeNotifier {
       // Check for existing session
       final existingSession = _client.auth.currentSession;
       if (existingSession != null) {
-        _user = existingSession.user;
-        _profile = CambricUserProfile.fromUser(_user!);
-        await _loadFullProfile();
+        final user = existingSession.user;
+        if (user != null) {
+          _user = user;
+          _profile = CambricUserProfile.fromUser(_user!);
+          await _loadFullProfile();
+        }
       }
     } catch (e) {
       // Initialization error, continue anyway

@@ -44,16 +44,20 @@ class UpdateService {
       final windowsMatch = RegExp(r'"name":\s*"digital_saver_windows_([^"]+\.zip)"').firstMatch(body);
       
       if (tagMatch != null) {
-        final tag = tagMatch.group(1)!;
+        final tag = tagMatch.group(1) ?? '';
         String? androidUrl;
         String? windowsUrl;
         if (androidMatch != null) {
-          final apkName = androidMatch.group(1)!;
-          androidUrl = 'https://github.com/Cambric-software/Digital-saver/releases/download/$tag/$apkName';
+          final apkName = androidMatch.group(1) ?? '';
+          if (apkName.isNotEmpty) {
+            androidUrl = 'https://github.com/Cambric-software/Digital-saver/releases/download/$tag/$apkName';
+          }
         }
         if (windowsMatch != null) {
-          final zipName = windowsMatch.group(1)!;
-          windowsUrl = 'https://github.com/Cambric-software/Digital-saver/releases/download/$tag/$zipName';
+          final zipName = windowsMatch.group(1) ?? '';
+          if (zipName.isNotEmpty) {
+            windowsUrl = 'https://github.com/Cambric-software/Digital-saver/releases/download/$tag/$zipName';
+          }
         }
         return {
           'tag_name': tag,
@@ -70,11 +74,14 @@ class UpdateService {
     // Extract version numbers: v1.0.0-beta-18 -> 100018
     final match = RegExp(r'v?(\d+)\.(\d+)\.(\d+)(?:-beta-(\d+))?').firstMatch(version);
     if (match != null) {
-      final major = int.parse(match.group(1)!) * 10000;
-      final minor = int.parse(match.group(2)!) * 100;
-      final patch = int.parse(match.group(3)!);
+      final majorStr = match.group(1) ?? '0';
+      final minorStr = match.group(2) ?? '0';
+      final patchStr = match.group(3) ?? '0';
+      final major = int.tryParse(majorStr) ?? 0;
+      final minor = int.tryParse(minorStr) ?? 0;
+      final patch = int.tryParse(patchStr) ?? 0;
       final beta = int.tryParse(match.group(4) ?? '0') ?? 0;
-      return major + minor + patch + beta;
+      return major * 10000 + minor * 100 + patch + beta;
     }
     return 0;
   }
