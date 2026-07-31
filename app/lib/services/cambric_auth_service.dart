@@ -99,7 +99,7 @@ class AuthProvider extends ChangeNotifier {
           final user = session?.user;
           if (user != null) {
             _user = user;
-            _profile = CambricUserProfile.fromUser(_user!);
+            _profile = CambricUserProfile.fromUser(user);
             await _loadFullProfile();
           }
         } else if (event == AuthChangeEvent.signedOut) {
@@ -118,7 +118,7 @@ class AuthProvider extends ChangeNotifier {
         final user = existingSession.user;
         if (user != null) {
           _user = user;
-          _profile = CambricUserProfile.fromUser(_user!);
+          _profile = CambricUserProfile.fromUser(user);
           await _loadFullProfile();
         }
       }
@@ -130,13 +130,14 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<void> _loadFullProfile() async {
-    if (_user == null) return;
+    final currentUser = _user;
+    if (currentUser == null) return;
     
     try {
       final result = await _client
           .from('digital_saver_user_profiles')
           .select()
-          .eq('id', _user!.id)
+          .eq('id', currentUser.id)
           .maybeSingle();
       
       if (result != null) {
@@ -159,11 +160,14 @@ class AuthProvider extends ChangeNotifier {
         password: password,
       );
 
-      _user = response.user;
-      _profile = _user != null ? CambricUserProfile.fromUser(_user!) : null;
-      
-      // Load full profile after sign in
-      await _loadFullProfile();
+      final user = response.user;
+      _user = user;
+      if (user != null) {
+        _profile = CambricUserProfile.fromUser(user);
+        await _loadFullProfile();
+      } else {
+        _profile = null;
+      }
       
       _loading = false;
       notifyListeners();
@@ -193,13 +197,14 @@ class AuthProvider extends ChangeNotifier {
         data: {'display_name': displayName},
       );
 
-      if (response.user != null) {
-        _user = response.user;
-        _profile = CambricUserProfile.fromUser(_user!);
+      final user = response.user;
+      if (user != null) {
+        _user = user;
+        _profile = CambricUserProfile.fromUser(user);
         
         try {
           await _client.from('digital_saver_user_profiles').insert({
-            'id': _user!.id,
+            'id': user.id,
             'email': email,
             'display_name': displayName,
           });
@@ -207,7 +212,7 @@ class AuthProvider extends ChangeNotifier {
         
         try {
           await _client.from('digital_saver_storage_stats').insert({
-            'user_id': _user!.id,
+            'user_id': user.id,
           });
         } catch (_) {}
         
@@ -236,7 +241,8 @@ class AuthProvider extends ChangeNotifier {
     String? displayName,
     Map<String, dynamic>? additionalData,
   }) async {
-    if (_user == null) return;
+    final currentUser = _user;
+    if (currentUser == null) return;
     
     final updates = <String, dynamic>{
       'updated_at': DateTime.now().toIso8601String(),
@@ -258,7 +264,7 @@ class AuthProvider extends ChangeNotifier {
       await _client
           .from('digital_saver_user_profiles')
           .update(updates)
-          .eq('id', _user!.id);
+          .eq('id', currentUser.id);
       
       // Reload profile
       await _loadFullProfile();

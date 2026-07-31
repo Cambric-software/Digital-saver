@@ -147,7 +147,7 @@ class _UpdateWrapperState extends State<_UpdateWrapper> {
                 color: Theme.of(ctx).colorScheme.surfaceContainerHighest,
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Text(widget.updateService.latestUpdate!.releaseNotes, style: Theme.of(ctx).textTheme.bodySmall),
+              child: Text(widget.updateService.latestUpdate?.releaseNotes ?? '', style: Theme.of(ctx).textTheme.bodySmall),
             ),
         ]),
         actions: [

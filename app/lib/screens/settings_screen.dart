@@ -39,14 +39,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _load() async {
     final auth = context.read<AuthProvider>();
+    final user = auth.user;
 
     // Try to load from Supabase if authenticated
-    if (auth.isAuthenticated && auth.user != null) {
+    if (auth.isAuthenticated && user != null) {
       try {
         final result = await Supabase.instance.client
             .from('digital_saver_user_profiles')
             .select()
-            .eq('id', auth.user!.id)
+            .eq('id', user.id)
             .maybeSingle();
 
         UserProfile p;
@@ -82,7 +83,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         });
       } catch (e) {
         // Fallback to local storage on error
-        final p = await _profileService.loadProfile(auth.user?.id);
+        final p = await _profileService.loadProfile(user.id);
         final c = await StorageService.loadContacts();
         setState(() {
           _profile = p;
@@ -125,9 +126,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _performUpdate() async {
-    if (_updateResult?.downloadUrl != null) {
+    final result = _updateResult;
+    if (result?.downloadUrl != null) {
       // Open the download URL
-      _launchUrl(_updateResult!.downloadUrl!);
+      _launchUrl(result!.downloadUrl!);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -181,7 +183,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         children: [
           // Update banner
           if (_updateResult?.hasUpdate == true) _UpdateBanner(
-            newVersion: _updateResult!.newVersion ?? '',
+            newVersion: _updateResult?.newVersion ?? '',
             onUpdate: _performUpdate,
           ),
           if (_checkingUpdate) const _CheckingUpdateBanner(),

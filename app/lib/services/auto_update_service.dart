@@ -120,7 +120,7 @@ class AutoUpdateService extends ChangeNotifier {
 
         // Save last checked time
         final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('last_update_check', _lastChecked!.toIso8601String());
+        await prefs.setString('last_update_check', _lastChecked.toIso8601String());
       } else {
         _error = 'Failed to check for updates';
       }
@@ -142,8 +142,9 @@ class AutoUpdateService extends ChangeNotifier {
 
   // Check if we should show update prompt (don't ask too often)
   bool shouldPromptUpdate() {
-    if (_lastChecked == null) return true;
-    final hoursSinceCheck = DateTime.now().difference(_lastChecked!).inHours;
+    final lastChecked = _lastChecked;
+    if (lastChecked == null) return true;
+    final hoursSinceCheck = DateTime.now().difference(lastChecked).inHours;
     return hoursSinceCheck >= 24; // Only prompt once per day
   }
 
