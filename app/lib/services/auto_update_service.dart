@@ -116,11 +116,12 @@ class AutoUpdateService extends ChangeNotifier {
         );
 
         _updateAvailable = isNewer;
-        _lastChecked = DateTime.now();
+        final now = DateTime.now();
+        _lastChecked = now;
 
         // Save last checked time
         final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('last_update_check', _lastChecked.toIso8601String());
+        await prefs.setString('last_update_check', now.toIso8601String());
       } else {
         _error = 'Failed to check for updates';
       }
