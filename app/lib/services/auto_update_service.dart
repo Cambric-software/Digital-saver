@@ -1,7 +1,10 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:http/http.dart' as http;
+import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 
@@ -9,6 +12,22 @@ import 'dart:convert';
 class AppVersion {
   static const String current = '3.1.7';
   static const String buildNumber = '14';
+  
+  // Minimum version for auto-update (3.1.8+ supports silent auto-update)
+  static const String autoUpdateMinVersion = '3.1.8';
+  
+  static bool get supportsAutoUpdate {
+    final currentParts = current.split('.').map((e) => int.tryParse(e) ?? 0).toList();
+    final minParts = autoUpdateMinVersion.split('.').map((e) => int.tryParse(e) ?? 0).toList();
+    
+    for (int i = 0; i < 3; i++) {
+      final curr = i < currentParts.length ? currentParts[i] : 0;
+      final min = i < minParts.length ? minParts[i] : 0;
+      if (curr > min) return true;
+      if (curr < min) return false;
+    }
+    return true; // Equal to min version
+  }
   
   static String get downloadUrl {
     if (defaultTargetPlatform == TargetPlatform.android) {
@@ -44,12 +63,45 @@ class AutoUpdateService extends ChangeNotifier {
   bool _updateAvailable = false;
   String? _error;
   DateTime? _lastChecked;
+  
+  // Auto-update state
+  bool _isAutoUpdating = false;
+  double _downloadProgress = 0.0;
+  String? _autoUpdateError;
+  
+  // Notification plugin
+  FlutterLocalNotificationsPlugin? _notificationsPlugin;
 
   UpdateInfo? get latestUpdate => _latestUpdate;
   bool get isChecking => _isChecking;
   bool get updateAvailable => _updateAvailable;
   String? get error => _error;
   DateTime? get lastChecked => _lastChecked;
+  bool get isAutoUpdating => _isAutoUpdating;
+  double get downloadProgress => _downloadProgress;
+  String? get autoUpdateError => _autoUpdateError;
+
+  AutoUpdateService() {
+    _initNotifications();
+  }
+
+  Future<void> _initNotifications() async {
+    _notificationsPlugin = FlutterLocalNotificationsPlugin();
+    
+    const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+    const iosSettings = DarwinInitializationSettings(
+      requestAlertPermission: true,
+      requestBadgePermission: true,
+      requestSoundPermission: true,
+    );
+    
+    const initSettings = InitializationSettings(
+      android: androidSettings,
+      iOS: iosSettings,
+    );
+    
+    await _notificationsPlugin?.initialize(initSettings);
+  }
 
   Future<void> checkForUpdates() async {
     if (_isChecking) return;
@@ -122,6 +174,11 @@ class AutoUpdateService extends ChangeNotifier {
         // Save last checked time
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('last_update_check', now.toIso8601String());
+        
+        // Auto-update if conditions are met
+        if (isNewer && AppVersion.supportsAutoUpdate && Platform.isAndroid) {
+          _startAutoUpdate();
+        }
       } else {
         _error = 'Failed to check for updates';
       }
@@ -131,6 +188,124 @@ class AutoUpdateService extends ChangeNotifier {
       _isChecking = false;
       notifyListeners();
     }
+  }
+
+  Future<void> _startAutoUpdate() async {
+    if (_isAutoUpdating || _latestUpdate == null) return;
+    
+    _isAutoUpdating = true;
+    _downloadProgress = 0.0;
+    _autoUpdateError = null;
+    notifyListeners();
+    
+    try {
+      final downloadUrl = _latestUpdate!.downloadUrl;
+      final version = _latestUpdate!.version;
+      
+      // Download APK
+      final apkPath = await _downloadApkSilent(downloadUrl);
+      
+      if (apkPath == null) {
+        _autoUpdateError = 'Failed to download update';
+        _isAutoUpdating = false;
+        notifyListeners();
+        return;
+      }
+      
+      // Install APK
+      final installed = await _installApkSilent(apkPath);
+      
+      if (installed) {
+        // Show success notification
+        await _showUpdateNotification(
+          title: 'App Updated! 🎉',
+          body: 'Your app has been updated to version $version',
+        );
+        
+        // Save that we auto-updated
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('last_auto_update_version', version);
+      } else {
+        _autoUpdateError = 'Failed to install update';
+      }
+    } catch (e) {
+      _autoUpdateError = 'Auto-update error: $e';
+    } finally {
+      _isAutoUpdating = false;
+      notifyListeners();
+    }
+  }
+
+  Future<String?> _downloadApkSilent(String url) async {
+    try {
+      final response = await http.get(Uri.parse(url)).timeout(
+        const Duration(minutes: 5),
+      );
+      
+      if (response.statusCode != 200) return null;
+      
+      final bytes = response.bodyBytes;
+      final dir = await getTemporaryDirectory();
+      final file = File('${dir.path}/digital_saver_update.apk');
+      await file.writeAsBytes(bytes);
+      
+      return file.path;
+    } catch (e) {
+      debugPrint('Error downloading APK: $e');
+      return null;
+    }
+  }
+
+  Future<bool> _installApkSilent(String filePath) async {
+    if (!Platform.isAndroid) return false;
+    
+    try {
+      // Make APK readable
+      await Process.run('chmod', ['644', filePath]);
+      
+      // Install APK with auto-accept
+      final result = await Process.run(
+        'pm',
+        ['install', '-r', '-t', filePath],
+      ).timeout(const Duration(minutes: 3));
+      
+      return result.exitCode == 0;
+    } catch (e) {
+      debugPrint('Error installing APK: $e');
+      return false;
+    }
+  }
+
+  Future<void> _showUpdateNotification({
+    required String title,
+    required String body,
+  }) async {
+    const androidDetails = AndroidNotificationDetails(
+      'update_channel',
+      'App Updates',
+      channelDescription: 'Notifications for app updates',
+      importance: Importance.high,
+      priority: Priority.high,
+      showWhen: true,
+    );
+    
+    const iosDetails = DarwinNotificationDetails(
+      presentAlert: true,
+      presentBadge: true,
+      presentSound: true,
+    );
+    
+    const details = NotificationDetails(
+      android: androidDetails,
+      iOS: iosDetails,
+    );
+    
+    await _notificationsPlugin?.show(
+      0,
+      title,
+      body,
+      details,
+    );
   }
 
   Future<void> loadLastChecked() async {
