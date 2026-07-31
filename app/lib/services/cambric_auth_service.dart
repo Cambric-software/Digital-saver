@@ -30,12 +30,17 @@ class CambricUserProfile {
   });
 
   factory CambricUserProfile.fromUser(User user) {
+    DateTime? parsedCreatedAt;
+    final createdAtStr = user.createdAt;
+    if (createdAtStr != null && createdAtStr.isNotEmpty) {
+      parsedCreatedAt = DateTime.tryParse(createdAtStr);
+    }
     return CambricUserProfile(
-      id: user.id,
+      id: user.id ?? '',
       email: user.email,
       displayName: user.userMetadata?['display_name'] as String?,
       avatarUrl: user.userMetadata?['avatar_url'] as String?,
-      createdAt: user.createdAt.isNotEmpty ? DateTime.tryParse(user.createdAt) : null,
+      createdAt: parsedCreatedAt,
       lastLogin: DateTime.now(),
       metadata: user.userMetadata,
     );
@@ -43,12 +48,12 @@ class CambricUserProfile {
 
   factory CambricUserProfile.fromProfile(Map<String, dynamic> data) {
     return CambricUserProfile(
-      id: data['id'],
+      id: data['id']?.toString() ?? '',
       email: data['email'],
       displayName: data['display_name'],
       avatarUrl: data['avatar_url'],
-      createdAt: data['created_at'] != null ? DateTime.tryParse(data['created_at']) : null,
-      lastLogin: data['last_sync_at'] != null ? DateTime.tryParse(data['last_sync_at']) : null,
+      createdAt: data['created_at'] != null ? DateTime.tryParse(data['created_at'].toString()) : null,
+      lastLogin: data['last_sync_at'] != null ? DateTime.tryParse(data['last_sync_at'].toString()) : null,
       metadata: data,
     );
   }

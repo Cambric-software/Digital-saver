@@ -127,22 +127,26 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _performUpdate() async {
     final result = _updateResult;
-    if (result?.downloadUrl != null) {
-      // Open the download URL
-      _launchUrl(result!.downloadUrl!);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Opening download page...'),
-            duration: Duration(seconds: 3),
-          ),
-        );
+    if (result != null) {
+      final url = result.downloadUrl;
+      if (url != null && url.isNotEmpty) {
+        // Open the download URL
+        _launchUrl(url);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Opening download page...'),
+              duration: Duration(seconds: 3),
+            ),
+          );
+        }
+        return;
       }
-    } else {
-      // Fallback to releases page
-      _launchUrl('https://github.com/Cambric-software/Digital-saver/releases');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+    }
+    // Fallback to releases page
+    _launchUrl('https://github.com/Cambric-software/Digital-saver/releases');
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Opening releases page...'),
             duration: Duration(seconds: 3),

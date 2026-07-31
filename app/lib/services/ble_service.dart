@@ -549,9 +549,10 @@ class BleService extends ChangeNotifier {
     _stepsSub = null;
     _accelSub = null;
     
-    if (_device != null) {
+    final device = _device;
+    if (device != null) {
       try {
-        await _device!.disconnect();
+        await device.disconnect();
       } catch (e) {
         // Ignore disconnect errors
       }
