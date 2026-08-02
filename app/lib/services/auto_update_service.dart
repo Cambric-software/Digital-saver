@@ -10,11 +10,11 @@ import 'dart:convert';
 
 // Current app version - update this with each release
 class AppVersion {
-  static const String current = '3.3.0';
+  static const String current = '3.1.8';
   static const String buildNumber = '15';
   
   // Minimum version for auto-update (3.1.8+ supports silent auto-update)
-  static const String autoUpdateMinVersion = '3.3.0';
+  static const String autoUpdateMinVersion = '3.1.8';
   
   static bool get supportsAutoUpdate {
     final currentParts = current.split('.').map((e) => int.tryParse(e) ?? 0).toList();
@@ -31,11 +31,11 @@ class AppVersion {
   
   static String get downloadUrl {
     if (defaultTargetPlatform == TargetPlatform.android) {
-      return 'https://github.com/Cambric-software/Digital-saver/releases/download/v3.3.0/digital_saver_android_v3.1.8.apk';
+      return 'https://github.com/Cambric-software/Digital-saver/releases/download/v3.1.8/digital_saver_android_v3.1.8.apk';
     } else if (defaultTargetPlatform == TargetPlatform.windows) {
-      return 'https://github.com/Cambric-software/Digital-saver/releases/download/v3.3.0/digital_saver_windows_v3.1.8.zip';
+      return 'https://github.com/Cambric-software/Digital-saver/releases/download/v3.1.8/digital_saver_windows_v3.1.8.zip';
     } else if (defaultTargetPlatform == TargetPlatform.linux) {
-      return 'https://github.com/Cambric-software/Digital-saver/releases/download/v3.3.0/digital_saver_linux_v3.1.8.tar.gz';
+      return 'https://github.com/Cambric-software/Digital-saver/releases/download/v3.1.8/digital_saver_linux_v3.1.8.tar.gz';
     }
     return 'https://cambric-software.github.io/Digital-saver/';
   }
@@ -144,18 +144,28 @@ class AutoUpdateService extends ChangeNotifier {
 
         // Get download URL for current platform
         String downloadUrl = AppVersion.downloadUrl;
-        final assets = data['assets'] as List<dynamic>? ?? [];
-        for (final asset in assets) {
-          final name = asset['name']?.toString().toLowerCase() ?? '';
-          if (defaultTargetPlatform == TargetPlatform.android && name.contains('android')) {
-            downloadUrl = asset['browser_download_url']?.toString() ?? downloadUrl;
-            break;
-          } else if (defaultTargetPlatform == TargetPlatform.windows && name.contains('windows')) {
-            downloadUrl = asset['browser_download_url']?.toString() ?? downloadUrl;
-            break;
-          } else if (defaultTargetPlatform == TargetPlatform.linux && name.contains('linux')) {
-            downloadUrl = asset['browser_download_url']?.toString() ?? downloadUrl;
-            break;
+        
+        // Safely get assets - handle null, missing, or non-list assets
+        List<dynamic>? rawAssets = data['assets'];
+        if (rawAssets is List) {
+          for (final asset in rawAssets) {
+            if (asset is! Map) continue;
+            final name = (asset['name'] as String?)?.toLowerCase() ?? '';
+            if (name.isEmpty) continue;
+            
+            final url = (asset['browser_download_url'] as String?) ?? '';
+            if (url.isEmpty) continue;
+            
+            if (defaultTargetPlatform == TargetPlatform.android && name.contains('android')) {
+              downloadUrl = url;
+              break;
+            } else if (defaultTargetPlatform == TargetPlatform.windows && name.contains('windows')) {
+              downloadUrl = url;
+              break;
+            } else if (defaultTargetPlatform == TargetPlatform.linux && name.contains('linux')) {
+              downloadUrl = url;
+              break;
+            }
           }
         }
 
