@@ -21,6 +21,8 @@ import 'screens/web_landing_page.dart';
 import 'screens/profile_completion_screen.dart';
 import 'screens/watch_simulator_screen.dart';
 import 'screens/health_trends_screen.dart';
+import 'screens/achievements_screen.dart';
+import 'screens/health_tips_screen.dart';
 import 'widgets/enhanced_splash.dart';
 
 void main() async {
@@ -199,6 +201,8 @@ class _MainNavState extends State<MainNav> {
     BpScreen(),
     ActivityScreen(),
     HealthTrendsScreen(),
+    AchievementsScreen(),
+    HealthTipsScreen(),
     WatchSimulatorScreen(),
     SettingsScreen(),
   ];
@@ -384,6 +388,8 @@ class _MainNavState extends State<MainNav> {
           NavigationDestination(icon: Icon(Icons.water_drop_outlined), label: 'BP'),
           NavigationDestination(icon: Icon(Icons.directions_run_outlined), label: 'Activity'),
           NavigationDestination(icon: Icon(Icons.trending_up_outlined), label: 'Trends'),
+          NavigationDestination(icon: Icon(Icons.emoji_events_outlined), label: 'Badges'),
+          NavigationDestination(icon: Icon(Icons.lightbulb_outlined), label: 'Tips'),
           NavigationDestination(icon: Icon(Icons.watch_outlined), label: 'Watch'),
           NavigationDestination(icon: Icon(Icons.settings_outlined), label: 'Settings'),
         ],
