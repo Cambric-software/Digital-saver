@@ -9,6 +9,7 @@ import 'services/cambric_auth_service_v2.dart';
 import 'services/theme_service.dart';
 import 'services/dynamic_theme_service.dart';
 import 'services/auto_update_service.dart';
+import 'services/profile_check_service.dart';
 import 'screens/auth_screen.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/heart_screen.dart';
@@ -17,6 +18,7 @@ import 'screens/activity_screen.dart';
 import 'screens/sleep_screen.dart';
 import 'screens/settings_screen.dart';
 import 'screens/web_landing_page.dart';
+import 'screens/profile_completion_screen.dart';
 import 'widgets/enhanced_splash.dart';
 
 void main() async {
@@ -138,7 +140,7 @@ class _UpdateWrapperState extends State<_UpdateWrapper> {
           const Text('Update Available!'),
         ]),
         content: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('Version ${widget.updateService.latestUpdate?.version ?? "3.1.8"} is now available!'),
+          Text('Version ${widget.updateService.latestUpdate?.version ?? "3.1.7"} is now available!'),
           const SizedBox(height: 12),
           if (widget.updateService.latestUpdate?.releaseNotes != null)
             Container(
@@ -199,21 +201,64 @@ class _MainNavState extends State<MainNav> {
   ];
 
   bool _authChecked = false;
+  bool _profileCheckDone = false;
+  List<String> _missingFields = [];
+  ProfileCheckService _profileService = ProfileCheckService();
 
   @override
   void initState() {
     super.initState();
     _authChecked = false;
+    _profileCheckDone = false;
   }
 
   void _checkAuth() {
-    if (_authChecked) return;  // Prevent multiple navigation attempts
+    if (_authChecked) return;
     final auth = context.read<AuthProvider>();
     if (!auth.isAuthenticated && !auth.loading) {
-      _authChecked = true;  // Mark as checked before navigation
+      _authChecked = true;
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (_) => const AuthScreen()),
       );
+    }
+  }
+
+  Future<void> _checkProfileCompleteness() async {
+    if (_profileCheckDone) return;
+    
+    final auth = context.read<AuthProvider>();
+    if (!auth.isAuthenticated) return;
+    
+    final result = await _profileService.checkProfileCompleteness(auth);
+    
+    if (mounted && result.missingFields.isNotEmpty) {
+      setState(() {
+        _missingFields = result.missingFields;
+        _profileCheckDone = true;
+      });
+      
+      // Navigate to profile completion
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => ProfileCompletionScreen(
+                missingFields: _missingFields,
+                onComplete: () {
+                  Navigator.of(context).pop();
+                  setState(() {
+                    _missingFields = [];
+                  });
+                },
+              ),
+            ),
+          );
+        }
+      });
+    } else {
+      setState(() {
+        _profileCheckDone = true;
+      });
     }
   }
 
@@ -264,6 +309,11 @@ class _MainNavState extends State<MainNav> {
       );
     } else {
       _authChecked = true;  // Reset flag when authenticated
+      
+      // Check profile completeness after sign in
+      if (_profileCheckDone == false) {
+        WidgetsBinding.instance.addPostFrameCallback((_) => _checkProfileCompleteness());
+      }
     }
 
     return Scaffold(
