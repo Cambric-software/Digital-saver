@@ -111,12 +111,22 @@ class AuthProvider extends ChangeNotifier {
       final user = session.user;
       if (user == null) return;
       final userId = user.id;
-      if (userId == null || userId.isEmpty) return;
-      _user = user;
-      _profile = CambricUserProfile.fromUser(user);
+      // FIXED: Properly check for null/empty userId before using it
+      if (userId == null || userId.isEmpty) {
+        // Try to get from metadata as fallback
+        final metadataId = user.userMetadata?['id']?.toString();
+        if (metadataId == null || metadataId.isEmpty) return;
+        // Create a minimal user object for local use
+        _user = user;
+        _profile = CambricUserProfile.fromUser(user);
+      } else {
+        _user = user;
+        _profile = CambricUserProfile.fromUser(user);
+      }
       _ensureProfile();
     } catch (e) {
-      // Ignore errors
+      // Log error for debugging but don't crash
+      debugPrint('Error checking existing session: $e');
     }
     notifyListeners();
   }
@@ -126,12 +136,33 @@ class AuthProvider extends ChangeNotifier {
       final event = data.event;
       final session = data.session;
       
-      if (session == null) return;
-      final user = session.user;
+      if (session == null) {
+        // Handle sign out
+        if (event == AuthChangeEvent.signedOut) {
+          _user = null;
+          _profile = null;
+          _error = null;
+          _loading = false;
+        }
+        notifyListeners();
+        return;
+      }
       
-      if (event == AuthChangeEvent.signedIn && user != null) {
-        final userId = user.id;
-        if (userId == null || userId.isEmpty) return;
+      final user = session.user;
+      if (user == null) {
+        notifyListeners();
+        return;
+      }
+      
+      // FIXED: Safely check userId before using
+      final userId = user.id;
+      
+      if (event == AuthChangeEvent.signedIn) {
+        if (userId == null || userId.isEmpty) {
+          debugPrint('Sign in event but userId is null/empty');
+          notifyListeners();
+          return;
+        }
         _user = user;
         _profile = CambricUserProfile.fromUser(user);
         _loading = false;
@@ -141,20 +172,22 @@ class AuthProvider extends ChangeNotifier {
         _user = null;
         _profile = null;
         _error = null;
-      } else if (event == AuthChangeEvent.tokenRefreshed && user != null) {
-        final userId = user.id;
-        if (userId == null || userId.isEmpty) return;
-        _user = user;
-        _profile = CambricUserProfile.fromUser(user);
-      } else if (event == AuthChangeEvent.initialSession && user != null) {
-        final userId = user.id;
-        if (userId == null || userId.isEmpty) return;
-        _user = user;
-        _profile = CambricUserProfile.fromUser(user);
-        _ensureProfile();
+        _loading = false;
+      } else if (event == AuthChangeEvent.tokenRefreshed) {
+        if (userId != null && userId.isNotEmpty) {
+          _user = user;
+          _profile = CambricUserProfile.fromUser(user);
+        }
+      } else if (event == AuthChangeEvent.initialSession) {
+        if (userId != null && userId.isNotEmpty) {
+          _user = user;
+          _profile = CambricUserProfile.fromUser(user);
+          _ensureProfile();
+        }
       }
     } catch (e) {
-      // Ignore errors
+      // Log error for debugging but don't crash
+      debugPrint('Error in auth state change: $e');
     }
 
     notifyListeners();
@@ -180,13 +213,16 @@ class AuthProvider extends ChangeNotifier {
         notifyListeners();
         return false;
       }
+      
+      // FIXED: Safely check userId
       final userId = user.id;
       if (userId == null || userId.isEmpty) {
-        _error = 'Sign in failed';
+        _error = 'Sign in failed - invalid user session';
         _loading = false;
         notifyListeners();
         return false;
       }
+      
       _user = user;
       _profile = CambricUserProfile.fromUser(user);
       _loading = false;
