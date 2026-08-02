@@ -19,6 +19,8 @@ import 'screens/sleep_screen.dart';
 import 'screens/settings_screen.dart';
 import 'screens/web_landing_page.dart';
 import 'screens/profile_completion_screen.dart';
+import 'screens/watch_simulator_screen.dart';
+import 'screens/health_trends_screen.dart';
 import 'widgets/enhanced_splash.dart';
 
 void main() async {
@@ -196,7 +198,8 @@ class _MainNavState extends State<MainNav> {
     HeartScreen(),
     BpScreen(),
     ActivityScreen(),
-    SleepScreen(),
+    HealthTrendsScreen(),
+    WatchSimulatorScreen(),
     SettingsScreen(),
   ];
 
@@ -380,7 +383,8 @@ class _MainNavState extends State<MainNav> {
           NavigationDestination(icon: Icon(Icons.favorite_outline), label: 'Heart'),
           NavigationDestination(icon: Icon(Icons.water_drop_outlined), label: 'BP'),
           NavigationDestination(icon: Icon(Icons.directions_run_outlined), label: 'Activity'),
-          NavigationDestination(icon: Icon(Icons.bedtime_outlined), label: 'Sleep'),
+          NavigationDestination(icon: Icon(Icons.trending_up_outlined), label: 'Trends'),
+          NavigationDestination(icon: Icon(Icons.watch_outlined), label: 'Watch'),
           NavigationDestination(icon: Icon(Icons.settings_outlined), label: 'Settings'),
         ],
       ),
