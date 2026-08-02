@@ -73,65 +73,61 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
     super.initState();
     _loadExistingProfile();
   }
-  
+
   Future<void> _loadExistingProfile() async {
     final auth = context.read<AuthProvider>();
-    if (auth.user != null) {
-      try {
-        final result = await Supabase.instance.client
-            .from('digital_saver_user_profiles')
-            .select()
-            .eq('id', auth.user!.id)
-            .maybeSingle();
-        
-        if (result != null && mounted) {
-          setState(() {
-            final profile = UserProfile.fromSupabase(result);
-            _nameController.text = profile.name;
-            _ageController.text = profile.age > 0 ? profile.age.toString() : '';
-            _weightController.text = profile.weightKg > 0 ? profile.weightKg.toStringAsFixed(0) : '';
-            _heightController.text = profile.heightCm > 0 ? profile.heightCm.toStringAsFixed(0) : '';
-            _gender = profile.gender;
-            _bloodType = profile.bloodType;
-            _emergencyNameController.text = profile.emergencyContactName ?? '';
-            _emergencyPhoneController.text = profile.emergencyContactPhone ?? '';
-            _medicalConditions = List.from(profile.medicalConditions);
-            _allergies = List.from(profile.allergies);
-          });
-        }
-      } catch (e) {
-        debugPrint('Error loading profile: $e');
+
+    // Safe null check - store userId locally
+    final userId = auth.user?.id;
+    if (userId == null || userId.isEmpty) {
+      debugPrint('ERROR [_loadExistingProfile]: User ID is null or empty');
+      return;
+    }
+
+    try {
+      final result = await Supabase.instance.client
+          .from('digital_saver_user_profiles')
+          .select()
+          .eq('id', userId)
+          .maybeSingle();
+
+      if (result != null && mounted) {
+        setState(() {
+          final profile = UserProfile.fromSupabase(result);
+          _nameController.text = profile.name;
+          _ageController.text = profile.age > 0 ? profile.age.toString() : '';
+          _weightController.text = profile.weightKg > 0 ? profile.weightKg.toStringAsFixed(0) : '';
+          _heightController.text = profile.heightCm > 0 ? profile.heightCm.toStringAsFixed(0) : '';
+          _gender = profile.gender;
+          _bloodType = profile.bloodType;
+          _emergencyNameController.text = profile.emergencyContactName ?? '';
+          _emergencyPhoneController.text = profile.emergencyContactPhone ?? '';
+          _medicalConditions = List.from(profile.medicalConditions);
+          _allergies = List.from(profile.allergies);
+        });
       }
+    } catch (e, stackTrace) {
+      debugPrint('ERROR [_loadExistingProfile]: $e\nStack: $stackTrace');
     }
   }
 
-  @override
-  void dispose() {
-    _nameController.dispose();
-    _ageController.dispose();
-    _weightController.dispose();
-    _heightController.dispose();
-    _emergencyNameController.dispose();
-    _emergencyPhoneController.dispose();
-    super.dispose();
-  }
 
   Future<void> _saveProfile() async {
-    if (!_formKey.currentState!.validate()) return;
-    
-    setState(() => _isLoading = true);
-    
     try {
       final auth = context.read<AuthProvider>();
-      if (auth.user == null) {
+      
+      // Safe null check - store userId locally
+      final userId = auth.user?.id;
+      if (userId == null || userId.isEmpty) {
         _showError('Not signed in');
+        setState(() => _isLoading = false);
         return;
       }
-      
+
       final profileData = {
-        'id': auth.user!.id,
+        'id': userId,
         'display_name': _nameController.text.trim(),
-        'email': auth.user!.email,
+        'email': auth.user?.email ?? '',
         'age': int.tryParse(_ageController.text) ?? 30,
         'weight_kg': double.tryParse(_weightController.text) ?? 70,
         'height_cm': double.tryParse(_heightController.text) ?? 170,
@@ -141,9 +137,7 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
         'allergies': _allergies,
         'emergency_contact_name': _emergencyNameController.text.trim(),
         'emergency_contact_phone': _emergencyPhoneController.text.trim(),
-        'updated_at': DateTime.now().toIso8601String(),
       };
-      
       await Supabase.instance.client
           .from('digital_saver_user_profiles')
           .upsert(profileData);

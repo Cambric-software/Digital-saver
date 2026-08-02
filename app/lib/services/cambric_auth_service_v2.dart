@@ -97,7 +97,8 @@ class AuthProvider extends ChangeNotifier {
         (data) => _onAuthStateChange(client, data),
         onError: (e) { /* Ignore errors */ },
       );
-    } catch (e) {
+    } catch (e, stackTrace) {
+      debugPrint('ERROR [signUp]: $e\nStack: $stackTrace');
       _error = 'Failed to connect to server';
       _loading = false;
       notifyListeners();
@@ -124,7 +125,8 @@ class AuthProvider extends ChangeNotifier {
         _profile = CambricUserProfile.fromUser(user);
       }
       _ensureProfile();
-    } catch (e) {
+    } catch (e, stackTrace) {
+      debugPrint('ERROR [signUp]: $e\nStack: $stackTrace');
       // Log error for debugging but don't crash
       debugPrint('Error checking existing session: $e');
     }
@@ -185,7 +187,8 @@ class AuthProvider extends ChangeNotifier {
           _ensureProfile();
         }
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
+      debugPrint('ERROR [signUp]: $e\nStack: $stackTrace');
       // Log error for debugging but don't crash
       debugPrint('Error in auth state change: $e');
     }
@@ -236,7 +239,8 @@ class AuthProvider extends ChangeNotifier {
         await prefs.setString('cached_email', email);
       } catch (_) {}
       return true;
-    } catch (e) {
+    } catch (e, stackTrace) {
+      debugPrint('ERROR [signUp]: $e\nStack: $stackTrace');
       _error = _parseError(e);
       _loading = false;
       notifyListeners();
@@ -284,7 +288,8 @@ class AuthProvider extends ChangeNotifier {
         await prefs.setString('cached_email', email);
       } catch (_) {}
       return true;
-    } catch (e) {
+    } catch (e, stackTrace) {
+      debugPrint('ERROR [signUp]: $e\nStack: $stackTrace');
       _error = _parseError(e);
       _loading = false;
       notifyListeners();
