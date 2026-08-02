@@ -138,7 +138,7 @@ class _UpdateWrapperState extends State<_UpdateWrapper> {
           const Text('Update Available!'),
         ]),
         content: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('Version ${widget.updateService.latestUpdate?.version ?? "3.1.7"} is now available!'),
+          Text('Version ${widget.updateService.latestUpdate?.version ?? "3.1.8"} is now available!'),
           const SizedBox(height: 12),
           if (widget.updateService.latestUpdate?.releaseNotes != null)
             Container(

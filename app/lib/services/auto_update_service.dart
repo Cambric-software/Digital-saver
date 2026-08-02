@@ -10,8 +10,8 @@ import 'dart:convert';
 
 // Current app version - update this with each release
 class AppVersion {
-  static const String current = '3.1.7';
-  static const String buildNumber = '14';
+  static const String current = '3.1.8';
+  static const String buildNumber = '15';
   
   // Minimum version for auto-update (3.1.8+ supports silent auto-update)
   static const String autoUpdateMinVersion = '3.1.8';
@@ -31,11 +31,11 @@ class AppVersion {
   
   static String get downloadUrl {
     if (defaultTargetPlatform == TargetPlatform.android) {
-      return 'https://github.com/Cambric-software/Digital-saver/releases/download/v$current/digital_saver_android_v$current.apk';
+      return 'https://github.com/Cambric-software/Digital-saver/releases/download/v3.1.8/digital_saver_android_v3.1.8.apk';
     } else if (defaultTargetPlatform == TargetPlatform.windows) {
-      return 'https://github.com/Cambric-software/Digital-saver/releases/download/v$current/digital_saver_windows_v$current.zip';
+      return 'https://github.com/Cambric-software/Digital-saver/releases/download/v3.1.8/digital_saver_windows_v3.1.8.zip';
     } else if (defaultTargetPlatform == TargetPlatform.linux) {
-      return 'https://github.com/Cambric-software/Digital-saver/releases/download/v$current/digital_saver_linux_v$current.tar.gz';
+      return 'https://github.com/Cambric-software/Digital-saver/releases/download/v3.1.8/digital_saver_linux_v3.1.8.tar.gz';
     }
     return 'https://cambric-software.github.io/Digital-saver/';
   }
