@@ -1,7 +1,7 @@
 name: digital_saver
 description: Professional smartwatch health monitoring system with emergency alerts - Cambric Health Suite
 publish_to: 'none'
-version: 3.1.8+15
+version: 3.3.0+17
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
