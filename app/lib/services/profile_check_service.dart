@@ -11,22 +11,41 @@ class ProfileCheckService {
   
   /// Check if user's profile is complete
   Future<ProfileCheckResult> checkProfileCompleteness(AuthProvider auth) async {
-    if (!auth.isAuthenticated || auth.user == null) {
-      return ProfileCheckResult(
-        isComplete: false,
-        missingFields: [],
-        profile: UserProfile(),
-      );
-    }
+    // Detailed error tracking
+    final errorDetails = <String>[];
     
     try {
+      if (!auth.isAuthenticated) {
+        errorDetails.add('User is not authenticated');
+        return ProfileCheckResult(
+          isComplete: false,
+          missingFields: [],
+          profile: UserProfile(),
+        );
+      }
+      
+      // Store user ID in local variable to avoid race conditions
+      final userId = auth.user?.id;
+      if (userId == null || userId.isEmpty) {
+        errorDetails.add('User ID is null or empty - user object: ${auth.user}');
+        return ProfileCheckResult(
+          isComplete: false,
+          missingFields: [],
+          profile: UserProfile(),
+          error: 'User ID not found. Details: $errorDetails',
+        );
+      }
+      
+      errorDetails.add('Fetching profile for user ID: $userId');
+      
       final result = await Supabase.instance.client
           .from('digital_saver_user_profiles')
           .select()
-          .eq('id', auth.user!.id)
+          .eq('id', userId)
           .maybeSingle();
-      
+
       if (result == null) {
+        errorDetails.add('No profile found for user - creating new profile');
         // No profile exists - all fields are missing
         return ProfileCheckResult(
           isComplete: false,
@@ -34,22 +53,27 @@ class ProfileCheckService {
           profile: UserProfile(),
         );
       }
-      
+
+      errorDetails.add('Profile found, parsing data...');
       final profile = UserProfile.fromSupabase(result);
       final missingFields = profile.missingRequiredFields;
       
+      errorDetails.add('Missing fields: $missingFields');
+
       return ProfileCheckResult(
         isComplete: missingFields.isEmpty,
         missingFields: missingFields,
         profile: profile,
       );
-    } catch (e) {
-      debugPrint('Error checking profile: $e');
+    } catch (e, stackTrace) {
+      // Capture full error details
+      final fullError = 'Error checking profile: $e\nUser state: ${auth.isAuthenticated}\nUser: ${auth.user}\nSteps: ${errorDetails.join(' -> ')}\n\nStack Trace:\n$stackTrace';
+      debugPrint(fullError);
       return ProfileCheckResult(
         isComplete: false,
         missingFields: [],
         profile: UserProfile(),
-        error: e.toString(),
+        error: fullError,
       );
     }
   }

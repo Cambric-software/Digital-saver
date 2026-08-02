@@ -323,20 +323,27 @@ class AuthProvider extends ChangeNotifier {
 
   Future<void> _ensureProfile() async {
     final user = _user;
-    if (user == null || user.id.isEmpty) return;
-    
+    if (user == null || user.id.isEmpty) {
+      debugPrint('ERROR [_ensureProfile]: User is null or has empty ID. User: $user');
+      return;
+    }
+
     try {
+      debugPrint('INFO [_ensureProfile]: Creating profile for user ${user.id}');
       await Supabase.instance.client.from('digital_saver_user_profiles').upsert({
         'id': user.id,
-        'email': user.email,
+        'email': user.email ?? 'unknown',
         'updated_at': DateTime.now().toIso8601String(),
       });
-    } catch (e) {
-      // Silently fail - profile creation can be retried later
+      debugPrint('INFO [_ensureProfile]: Profile created successfully');
+    } catch (e, stackTrace) {
+      final errorMsg = 'ERROR [_ensureProfile]: Failed to create profile for user ${user.id}. Error: $e\nStack: $stackTrace';
+      debugPrint(errorMsg);
+      _error = 'Profile creation failed: $e';
     }
   }
-
   String _parseError(dynamic error) {
+
     final msg = error.toString().toLowerCase();
     if (msg.contains('invalid')) return 'Invalid email or password';
     if (msg.contains('email')) return 'Check your email address';
