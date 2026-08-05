@@ -3,6 +3,9 @@ name: Build Web App
 on:
   push:
     branches: [ main ]
+    paths:
+      - 'app/**'
+      - '.github/workflows/build.yml'
   workflow_dispatch:
 
 jobs:
