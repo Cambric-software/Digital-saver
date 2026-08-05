@@ -160,9 +160,7 @@ class EnhancedProfileCard extends StatelessWidget {
                         ),
                         child: Center(
                           child: Text(
-                            (profile?.name.isNotEmpty == true 
-                                ? profile!.name[0].toUpperCase() 
-                                : auth.user?.email?[0].toUpperCase() ?? '?'),
+                            _getAvatarInitial(profile, auth),
                             style: const TextStyle(
                               color: Colors.white,
                               fontSize: 24,
@@ -305,5 +303,13 @@ class EnhancedProfileCard extends StatelessWidget {
         ),
       ],
     );
+  }
+
+  static String _getAvatarInitial(UserProfile? profile, AuthProvider auth) {
+    if (profile != null && profile.name.isNotEmpty) {
+      return profile.name[0].toUpperCase();
+    }
+    final emailInitial = auth.user?.email?[0]?.toUpperCase();
+    return emailInitial ?? '?';
   }
 }

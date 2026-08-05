@@ -314,9 +314,11 @@ class AuthProvider extends ChangeNotifier {
   Future<void> updateProfile({String? displayName, Map<String, dynamic>? additionalData}) async {
     final user = _user;
     if (user == null) return;
+    final userId = user.id;
+    if (userId == null || userId.isEmpty) return;
     try {
       final updates = <String, dynamic>{
-        'id': user.id,
+        'id': userId,
         'updated_at': DateTime.now().toIso8601String(),
       };
       if (displayName != null) updates['display_name'] = displayName;
@@ -328,21 +330,22 @@ class AuthProvider extends ChangeNotifier {
 
   Future<void> _ensureProfile() async {
     final user = _user;
-    if (user == null || user.id.isEmpty) {
+    final userId = user?.id;
+    if (userId == null || userId.isEmpty) {
       debugPrint('ERROR [_ensureProfile]: User is null or has empty ID. User: $user');
       return;
     }
 
     try {
-      debugPrint('INFO [_ensureProfile]: Creating profile for user ${user.id}');
+      debugPrint('INFO [_ensureProfile]: Creating profile for user $userId');
       await Supabase.instance.client.from('digital_saver_user_profiles').upsert({
-        'id': user.id,
-        'email': user.email ?? 'unknown',
+        'id': userId,
+        'email': user?.email ?? 'unknown',
         'updated_at': DateTime.now().toIso8601String(),
       });
       debugPrint('INFO [_ensureProfile]: Profile created successfully');
     } catch (e, stackTrace) {
-      final errorMsg = 'ERROR [_ensureProfile]: Failed to create profile for user ${user.id}. Error: $e\nStack: $stackTrace';
+      final errorMsg = 'ERROR [_ensureProfile]: Failed to create profile for user $userId. Error: $e\nStack: $stackTrace';
       debugPrint(errorMsg);
       _error = 'Profile creation failed: $e';
     }
