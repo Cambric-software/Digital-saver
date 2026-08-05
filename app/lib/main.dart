@@ -23,6 +23,7 @@ import 'screens/watch_simulator_screen.dart';
 import 'screens/health_trends_screen.dart';
 import 'screens/achievements_screen.dart';
 import 'screens/health_tips_screen.dart';
+import 'screens/ai_assistant_screen.dart';
 import 'widgets/enhanced_splash.dart';
 
 void main() async {
@@ -203,6 +204,7 @@ class _MainNavState extends State<MainNav> {
     HealthTrendsScreen(),
     AchievementsScreen(),
     HealthTipsScreen(),
+    AIAssistantScreen(),
     WatchSimulatorScreen(),
     SettingsScreen(),
   ];
@@ -390,6 +392,7 @@ class _MainNavState extends State<MainNav> {
           NavigationDestination(icon: Icon(Icons.trending_up_outlined), label: 'Trends'),
           NavigationDestination(icon: Icon(Icons.emoji_events_outlined), label: 'Badges'),
           NavigationDestination(icon: Icon(Icons.lightbulb_outlined), label: 'Tips'),
+          NavigationDestination(icon: Icon(Icons.smart_toy_outlined), selectedIcon: Icon(Icons.smart_toy), label: 'AI'),
           NavigationDestination(icon: Icon(Icons.watch_outlined), label: 'Watch'),
           NavigationDestination(icon: Icon(Icons.settings_outlined), label: 'Settings'),
         ],

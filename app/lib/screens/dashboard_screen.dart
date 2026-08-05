@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import '../services/ble_service.dart';
 import '../services/health_analysis_service.dart';
 import '../theme/app_theme.dart';
+import '../widgets/missing_info_banner.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -66,6 +67,8 @@ class _DashboardScreenState extends State<DashboardScreen>
               _AlertsCard(ble: ble),
               const SizedBox(height: 16),
               _TodaySummary(ble: ble),
+              const SizedBox(height: 16),
+              _AIInsightsCard(),
               const SizedBox(height: 100),
             ])),
           ),
@@ -645,4 +648,22 @@ class _Stat extends StatelessWidget {
     Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.textPrimary)),
     Text(label, style: const TextStyle(fontSize: 10, color: AppColors.textMuted)),
   ]);
+}
+
+class _AIInsightsCard extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return AIInsightsCard(
+      insight: 'Your heart rate has been stable today. Keep up the good work!',
+      onTapAI: () {
+        // Navigate to AI tab - this would be handled by parent navigation
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Open AI Assistant tab to chat!'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      },
+    );
+  }
 }
