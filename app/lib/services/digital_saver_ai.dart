@@ -1,6 +1,4 @@
-import 'dart:math';
 import '../models/health_models.dart';
-import 'package:intl/intl.dart';
 
 /// Digital Saver AI Assistant
 /// A smart AI that knows your health data and can answer any question
@@ -115,8 +113,8 @@ class DigitalSaverAI {
         
         'sleep': _latestSleep != null ? {
           'quality': _latestSleep!.qualityScore,
-          'hours': _latestSleep!.totalHours.toStringAsFixed(1),
-          'deepSleep': _latestSleep!.deepSleepHours.toStringAsFixed(1),
+          'hours': (_latestSleep!.totalMinutes / 60).toStringAsFixed(1),
+          'deepSleep': (_latestSleep!.deepSleepMinutes / 60).toStringAsFixed(1),
         } : null,
       },
       
@@ -344,7 +342,7 @@ class DigitalSaverAI {
       return "No sleep data yet. Wear your Onyx watch overnight to track your sleep patterns.";
     }
     
-    final hours = sleep.totalHours;
+    final hours = sleep.totalMinutes / 60;
     final quality = sleep.qualityScore;
     String advice = "";
     
@@ -363,9 +361,9 @@ class DigitalSaverAI {
     }
     
     // Sleep stages analysis
-    if (sleep.deepSleepHours > 0 && _intelligenceLevel >= 4) {
-      final deepPct = ((sleep.deepSleepHours / hours) * 100).toInt();
-      advice += "\n\n📊 Deep Sleep: ${sleep.deepSleepHours.toStringAsFixed(1)}h ($deepPct%)";
+    if (sleep.deepSleepMinutes > 0 && _intelligenceLevel >= 4) {
+      final deepPct = ((sleep.deepSleepMinutes / sleep.totalMinutes) * 100).toInt();
+      advice += "\n\n📊 Deep Sleep: ${(sleep.deepSleepMinutes / 60).toStringAsFixed(1)}h ($deepPct%)";
       if (deepPct < 15) {
         advice += " - Below optimal. Consider stress reduction before bed.";
       } else if (deepPct > 25) {
@@ -582,7 +580,7 @@ class DigitalSaverAI {
       summary += "👟 Activity: ${_latestActivity!.steps} steps ($pct% of goal)\n";
     }
     if (_latestSleep != null) {
-      summary += "😴 Sleep: ${_latestSleep!.totalHours.toStringAsFixed(1)} hours\n";
+      summary += "😴 Sleep: ${(_latestSleep!.totalMinutes / 60).toStringAsFixed(1)} hours\n";
     }
     
     if (_latestHeartRate == null && _latestBloodPressure == null && 
@@ -667,7 +665,7 @@ class DigitalSaverAI {
     }
     
     // Based on sleep
-    if (_latestSleep != null && _latestSleep!.totalHours < 6) {
+    if (_latestSleep != null && _latestSleep!.totalMinutes / 60 < 6) {
       recommendations.add("You might be sleep-deprived. Try to get more rest tonight.");
     }
     

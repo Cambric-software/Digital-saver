@@ -607,11 +607,19 @@ class _EnhancedSignupScreenState extends State<EnhancedSignupScreen> {
     );
   }
   
-  Widget _buildMultiSelectSection(String title, List<String> options, List<String> selected, Function(String) onToggle) {
+  Widget _buildMultiSelectSection(String title, List<String> options, List<String> selected, Function(String) onToggle, {IconData? icon}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(title, style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 14)),
+        Row(
+          children: [
+            if (icon != null) ...[
+              Icon(icon, color: Colors.white.withOpacity(0.7), size: 18),
+              const SizedBox(width: 8),
+            ],
+            Text(title, style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 14)),
+          ],
+        ),
         const SizedBox(height: 8),
         Wrap(
           spacing: 8,

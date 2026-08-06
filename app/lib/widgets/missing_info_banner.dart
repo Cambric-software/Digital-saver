@@ -29,13 +29,13 @@ class MissingInfoBanner extends StatelessWidget {
         color: Colors.orange,
         alignment: Alignment.centerLeft,
         padding: const EdgeInsets.only(left: 20),
-        child: const Icon(Icons.dismiss, color: Colors.white),
+        child: const Icon(Icons.cancel, color: Colors.white),
       ),
       secondaryBackground: Container(
         color: Colors.orange,
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.only(right: 20),
-        child: const Icon(Icons.dismiss, color: Colors.white),
+        child: const Icon(Icons.cancel, color: Colors.white),
       ),
       child: Container(
         margin: const EdgeInsets.all(16),

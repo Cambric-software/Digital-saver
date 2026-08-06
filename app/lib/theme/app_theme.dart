@@ -73,7 +73,7 @@ class AppTheme {
             fontSize: 20,
           ),
         ),
-        cardTheme: CardThemeData(
+        cardTheme: CardTheme(
           color: AppColors.surface,
           elevation: 0,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
