@@ -383,11 +383,11 @@ class _EnhancedSignupScreenState extends State<EnhancedSignupScreen> {
           const SizedBox(height: 16),
           
           // Medical Conditions
-          _buildMultiSelectSection('Medical Conditions', _commonConditions, _medicalConditions, Icons.medical_services_outlined),
+          _buildMultiSelectSection('Medical Conditions', _commonConditions, _medicalConditions, (c) => setState(() { if (_medicalConditions.contains(c)) { _medicalConditions.remove(c); } else { _medicalConditions.add(c); } }), icon: Icons.medical_services_outlined),
           const SizedBox(height: 16),
           
           // Allergies
-          _buildMultiSelectSection('Allergies', _commonAllergies, _allergies, Icons.warning_outlined),
+          _buildMultiSelectSection('Allergies', _commonAllergies, _allergies, (a) => setState(() { if (_allergies.contains(a)) { _allergies.remove(a); } else { _allergies.add(a); } }), icon: Icons.warning_outlined),
           const SizedBox(height: 16),
           
           if (_errorMessage.isNotEmpty && _currentPage == 1) _buildErrorBox(),

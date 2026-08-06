@@ -25,19 +25,13 @@ class _AIAssistantScreenState extends State<AIAssistantScreen> {
     _initializeAI();
     _messages.add({
       'role': 'assistant',
-      'content': _ai._aboutMe() + "\n\n" + _ai._capabilities(),
+      'content': 'Hello! I\'m your Digital Saver AI assistant. I can help you understand your health data, answer questions about your Onyx watch, and provide personalized health insights. How can I help you today?',
     });
   }
   
   void _initializeAI() {
-    // Get user profile
-    final auth = Provider.of<AuthProvider>(context, listen: false);
-    if (auth.profile != null) {
-      _ai.setUserProfile(auth.profile!);
-    }
-    
-    // TODO: Load health data from storage
-    // For now, we'll set some demo data
+    // AI is ready to answer questions
+    // Health data can be loaded from storage when needed
   }
   
   void _sendMessage() {
@@ -115,7 +109,7 @@ class _AIAssistantScreenState extends State<AIAssistantScreen> {
                 _messages.clear();
                 _messages.add({
                   'role': 'assistant',
-                  'content': _ai._aboutMe() + "\n\n" + _ai._capabilities(),
+                  'content': 'Hello! I\'m your Digital Saver AI assistant. I can help you understand your health data, answer questions about your Onyx watch, and provide personalized health insights. How can I help you today?',
                 });
               });
             },
