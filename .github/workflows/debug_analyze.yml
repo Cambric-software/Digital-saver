@@ -1,0 +1,29 @@
+name: Debug Analyze
+
+on:
+  workflow_dispatch:
+
+jobs:
+  analyze:
+    name: Analyze Flutter Code
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.0'
+          channel: 'stable'
+
+      - name: Install dependencies
+        run: |
+          cd app
+          flutter pub get
+
+      - name: Run Flutter analyze
+        run: |
+          cd app
+          flutter analyze
