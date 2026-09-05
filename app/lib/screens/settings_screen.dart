@@ -65,6 +65,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Saved on this phone only')));
   }
 
+  Future<void> _clearLocalHistory() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Clear local health history?'),
+        content: const Text('This permanently deletes saved watch readings from this device. Your profile and watch remain unchanged.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: FilledButton.styleFrom(backgroundColor: Theme.of(ctx).colorScheme.error),
+            child: const Text('Delete history'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    await LocalStore.clearHealthHistory();
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Local health history deleted')));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final ble = context.watch<BleService>();
@@ -131,6 +154,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
           TextButton(
             onPressed: () => launchUrl(Uri.parse('https://github.com/Cambric-software/Digital-saver/releases')),
             child: const Text('Optional GitHub update page'),
+          ),
+          const Divider(height: 32),
+          Text('Local data', style: Theme.of(context).textTheme.titleMedium),
+          const Text('Health readings stay on this device unless you export or share them yourself.'),
+          OutlinedButton.icon(
+            onPressed: _clearLocalHistory,
+            icon: const Icon(Icons.delete_sweep_outlined),
+            label: const Text('Clear local health history'),
           ),
         ],
       ),

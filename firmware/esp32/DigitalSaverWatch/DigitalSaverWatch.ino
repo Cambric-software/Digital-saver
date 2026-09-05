@@ -17,6 +17,7 @@
 #include <BLEServer.h>
 #include <BLEUtils.h>
 #include <BLE2902.h>
+#include <BLESecurity.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 #include <Adafruit_MPU6050.h>
@@ -310,6 +311,9 @@ class CmdCb : public BLECharacteristicCallbacks {
 
 void initBle() {
   BLEDevice::init(VEYRO_NAME);
+  // Require an encrypted Secure Connections link using the displayed watch PIN.
+  BLESecurity *security = new BLESecurity();
+  security->setStaticPIN(strtoul(pinCode, nullptr, 10));
   bleServer = BLEDevice::createServer();
   bleServer->setCallbacks(new ServerCb());
   BLEService *svc = bleServer->createService(SERVICE_UUID);

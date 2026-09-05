@@ -42,7 +42,7 @@ class _DashboardScreenState extends State<DashboardScreen>
   @override
   Widget build(BuildContext context) {
     final ble = context.watch<BleService>();
-    final score = ble.isConnected ? ble.healthScore : 82;
+    final score = ble.isConnected ? ble.healthScore : 0;
 
     return Scaffold(
       backgroundColor: AppColors.background,

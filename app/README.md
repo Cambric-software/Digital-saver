@@ -1000,7 +1000,7 @@ Owner: UNKNOWN. Date: UNKNOWN. Evidence path: UNKNOWN.
 A release is blocked by missing measurements, missing review, unsafe battery behavior, or unsupported medical claims.
 Firmware artifact hash: UNKNOWN. App artifact hash: UNKNOWN. Production signing: UNKNOWN.
 Battery life: MUST MEASURE. Water resistance: MUST CONFIRM by a documented test; do not infer it.
-BLE encryption and authenticated transport: UNKNOWN; the PIN flow alone is not secure BLE encryption.
+Firmware requests encrypted BLE Secure Connections using the existing six-digit static passkey. Android pairing, bonding persistence, disconnect/reconnect, wrong-PIN rejection, and on-device behavior still require hardware-in-the-loop validation. No production security certification is claimed.
 Clinical accuracy, diagnostic accuracy, and emergency response reliability: UNKNOWN.
 
 ## Canonical references

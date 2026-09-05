@@ -89,7 +89,7 @@ This stage changes the acceptance context. Repeat the check only after the stage
 - [ ] 062. Stage 1 acceptance: Confirm BLE advertises as Veyro with the service UUID from protocol.h.
 - [ ] 063. Stage 1 acceptance: Confirm the app discovers the same service and characteristic UUIDs from veyro_protocol.dart.
 - [ ] 064. Stage 1 acceptance: Confirm BLE pairing sends the displayed six-digit PIN and that wrong PINs remain rejected.
-- [ ] 065. Stage 1 acceptance: Remember BLE link encryption is not established by the application PIN flow; production security is still required.
+- [ ] 065. Stage 1 acceptance: Firmware requests encrypted BLE Secure Connections with the existing six-digit static passkey; Android pairing, bonding persistence, disconnect/reconnect, wrong-PIN rejection, and on-device behavior still require hardware-in-the-loop validation, and this is not production security certification.
 - [ ] 066. Stage 1 acceptance: Treat BLE notifications and local files as prototype data paths; threat modeling and hardening are incomplete.
 - [ ] 067. Stage 1 acceptance: Confirm the app requests platform-specific Bluetooth permissions before scanning.
 - [ ] 068. Stage 1 acceptance: Confirm the app sends UTC time before relying on timestamps; otherwise firmware uses its fallback epoch behavior.
@@ -179,7 +179,7 @@ This stage changes the acceptance context. Repeat the check only after the stage
 - [ ] 062. Stage 2 acceptance: Confirm BLE advertises as Veyro with the service UUID from protocol.h.
 - [ ] 063. Stage 2 acceptance: Confirm the app discovers the same service and characteristic UUIDs from veyro_protocol.dart.
 - [ ] 064. Stage 2 acceptance: Confirm BLE pairing sends the displayed six-digit PIN and that wrong PINs remain rejected.
-- [ ] 065. Stage 2 acceptance: Remember BLE link encryption is not established by the application PIN flow; production security is still required.
+- [ ] 065. Stage 2 acceptance: Firmware requests encrypted BLE Secure Connections with the existing six-digit static passkey; Android pairing, bonding persistence, disconnect/reconnect, wrong-PIN rejection, and on-device behavior still require hardware-in-the-loop validation, and this is not production security certification.
 - [ ] 066. Stage 2 acceptance: Treat BLE notifications and local files as prototype data paths; threat modeling and hardening are incomplete.
 - [ ] 067. Stage 2 acceptance: Confirm the app requests platform-specific Bluetooth permissions before scanning.
 - [ ] 068. Stage 2 acceptance: Confirm the app sends UTC time before relying on timestamps; otherwise firmware uses its fallback epoch behavior.
@@ -269,7 +269,7 @@ This stage changes the acceptance context. Repeat the check only after the stage
 - [ ] 062. Stage 3 acceptance: Confirm BLE advertises as Veyro with the service UUID from protocol.h.
 - [ ] 063. Stage 3 acceptance: Confirm the app discovers the same service and characteristic UUIDs from veyro_protocol.dart.
 - [ ] 064. Stage 3 acceptance: Confirm BLE pairing sends the displayed six-digit PIN and that wrong PINs remain rejected.
-- [ ] 065. Stage 3 acceptance: Remember BLE link encryption is not established by the application PIN flow; production security is still required.
+- [ ] 065. Stage 3 acceptance: Firmware requests encrypted BLE Secure Connections with the existing six-digit static passkey; Android pairing, bonding persistence, disconnect/reconnect, wrong-PIN rejection, and on-device behavior still require hardware-in-the-loop validation, and this is not production security certification.
 - [ ] 066. Stage 3 acceptance: Treat BLE notifications and local files as prototype data paths; threat modeling and hardening are incomplete.
 - [ ] 067. Stage 3 acceptance: Confirm the app requests platform-specific Bluetooth permissions before scanning.
 - [ ] 068. Stage 3 acceptance: Confirm the app sends UTC time before relying on timestamps; otherwise firmware uses its fallback epoch behavior.
@@ -359,7 +359,7 @@ This stage changes the acceptance context. Repeat the check only after the stage
 - [ ] 062. Stage 4 acceptance: Confirm BLE advertises as Veyro with the service UUID from protocol.h.
 - [ ] 063. Stage 4 acceptance: Confirm the app discovers the same service and characteristic UUIDs from veyro_protocol.dart.
 - [ ] 064. Stage 4 acceptance: Confirm BLE pairing sends the displayed six-digit PIN and that wrong PINs remain rejected.
-- [ ] 065. Stage 4 acceptance: Remember BLE link encryption is not established by the application PIN flow; production security is still required.
+- [ ] 065. Stage 4 acceptance: Firmware requests encrypted BLE Secure Connections with the existing six-digit static passkey; Android pairing, bonding persistence, disconnect/reconnect, wrong-PIN rejection, and on-device behavior still require hardware-in-the-loop validation, and this is not production security certification.
 - [ ] 066. Stage 4 acceptance: Treat BLE notifications and local files as prototype data paths; threat modeling and hardening are incomplete.
 - [ ] 067. Stage 4 acceptance: Confirm the app requests platform-specific Bluetooth permissions before scanning.
 - [ ] 068. Stage 4 acceptance: Confirm the app sends UTC time before relying on timestamps; otherwise firmware uses its fallback epoch behavior.
@@ -449,7 +449,7 @@ This stage changes the acceptance context. Repeat the check only after the stage
 - [ ] 062. Stage 5 acceptance: Confirm BLE advertises as Veyro with the service UUID from protocol.h.
 - [ ] 063. Stage 5 acceptance: Confirm the app discovers the same service and characteristic UUIDs from veyro_protocol.dart.
 - [ ] 064. Stage 5 acceptance: Confirm BLE pairing sends the displayed six-digit PIN and that wrong PINs remain rejected.
-- [ ] 065. Stage 5 acceptance: Remember BLE link encryption is not established by the application PIN flow; production security is still required.
+- [ ] 065. Stage 5 acceptance: Firmware requests encrypted BLE Secure Connections with the existing six-digit static passkey; Android pairing, bonding persistence, disconnect/reconnect, wrong-PIN rejection, and on-device behavior still require hardware-in-the-loop validation, and this is not production security certification.
 - [ ] 066. Stage 5 acceptance: Treat BLE notifications and local files as prototype data paths; threat modeling and hardening are incomplete.
 - [ ] 067. Stage 5 acceptance: Confirm the app requests platform-specific Bluetooth permissions before scanning.
 - [ ] 068. Stage 5 acceptance: Confirm the app sends UTC time before relying on timestamps; otherwise firmware uses its fallback epoch behavior.
@@ -539,7 +539,7 @@ This stage changes the acceptance context. Repeat the check only after the stage
 - [ ] 062. Stage 6 acceptance: Confirm BLE advertises as Veyro with the service UUID from protocol.h.
 - [ ] 063. Stage 6 acceptance: Confirm the app discovers the same service and characteristic UUIDs from veyro_protocol.dart.
 - [ ] 064. Stage 6 acceptance: Confirm BLE pairing sends the displayed six-digit PIN and that wrong PINs remain rejected.
-- [ ] 065. Stage 6 acceptance: Remember BLE link encryption is not established by the application PIN flow; production security is still required.
+- [ ] 065. Stage 6 acceptance: Firmware requests encrypted BLE Secure Connections with the existing six-digit static passkey; Android pairing, bonding persistence, disconnect/reconnect, wrong-PIN rejection, and on-device behavior still require hardware-in-the-loop validation, and this is not production security certification.
 - [ ] 066. Stage 6 acceptance: Treat BLE notifications and local files as prototype data paths; threat modeling and hardening are incomplete.
 - [ ] 067. Stage 6 acceptance: Confirm the app requests platform-specific Bluetooth permissions before scanning.
 - [ ] 068. Stage 6 acceptance: Confirm the app sends UTC time before relying on timestamps; otherwise firmware uses its fallback epoch behavior.
@@ -629,7 +629,7 @@ This stage changes the acceptance context. Repeat the check only after the stage
 - [ ] 062. Stage 7 acceptance: Confirm BLE advertises as Veyro with the service UUID from protocol.h.
 - [ ] 063. Stage 7 acceptance: Confirm the app discovers the same service and characteristic UUIDs from veyro_protocol.dart.
 - [ ] 064. Stage 7 acceptance: Confirm BLE pairing sends the displayed six-digit PIN and that wrong PINs remain rejected.
-- [ ] 065. Stage 7 acceptance: Remember BLE link encryption is not established by the application PIN flow; production security is still required.
+- [ ] 065. Stage 7 acceptance: Firmware requests encrypted BLE Secure Connections with the existing six-digit static passkey; Android pairing, bonding persistence, disconnect/reconnect, wrong-PIN rejection, and on-device behavior still require hardware-in-the-loop validation, and this is not production security certification.
 - [ ] 066. Stage 7 acceptance: Treat BLE notifications and local files as prototype data paths; threat modeling and hardening are incomplete.
 - [ ] 067. Stage 7 acceptance: Confirm the app requests platform-specific Bluetooth permissions before scanning.
 - [ ] 068. Stage 7 acceptance: Confirm the app sends UTC time before relying on timestamps; otherwise firmware uses its fallback epoch behavior.
@@ -719,7 +719,7 @@ This stage changes the acceptance context. Repeat the check only after the stage
 - [ ] 062. Stage 8 acceptance: Confirm BLE advertises as Veyro with the service UUID from protocol.h.
 - [ ] 063. Stage 8 acceptance: Confirm the app discovers the same service and characteristic UUIDs from veyro_protocol.dart.
 - [ ] 064. Stage 8 acceptance: Confirm BLE pairing sends the displayed six-digit PIN and that wrong PINs remain rejected.
-- [ ] 065. Stage 8 acceptance: Remember BLE link encryption is not established by the application PIN flow; production security is still required.
+- [ ] 065. Stage 8 acceptance: Firmware requests encrypted BLE Secure Connections with the existing six-digit static passkey; Android pairing, bonding persistence, disconnect/reconnect, wrong-PIN rejection, and on-device behavior still require hardware-in-the-loop validation, and this is not production security certification.
 - [ ] 066. Stage 8 acceptance: Treat BLE notifications and local files as prototype data paths; threat modeling and hardening are incomplete.
 - [ ] 067. Stage 8 acceptance: Confirm the app requests platform-specific Bluetooth permissions before scanning.
 - [ ] 068. Stage 8 acceptance: Confirm the app sends UTC time before relying on timestamps; otherwise firmware uses its fallback epoch behavior.
@@ -809,7 +809,7 @@ This stage changes the acceptance context. Repeat the check only after the stage
 - [ ] 062. Stage 9 acceptance: Confirm BLE advertises as Veyro with the service UUID from protocol.h.
 - [ ] 063. Stage 9 acceptance: Confirm the app discovers the same service and characteristic UUIDs from veyro_protocol.dart.
 - [ ] 064. Stage 9 acceptance: Confirm BLE pairing sends the displayed six-digit PIN and that wrong PINs remain rejected.
-- [ ] 065. Stage 9 acceptance: Remember BLE link encryption is not established by the application PIN flow; production security is still required.
+- [ ] 065. Stage 9 acceptance: Firmware requests encrypted BLE Secure Connections with the existing six-digit static passkey; Android pairing, bonding persistence, disconnect/reconnect, wrong-PIN rejection, and on-device behavior still require hardware-in-the-loop validation, and this is not production security certification.
 - [ ] 066. Stage 9 acceptance: Treat BLE notifications and local files as prototype data paths; threat modeling and hardening are incomplete.
 - [ ] 067. Stage 9 acceptance: Confirm the app requests platform-specific Bluetooth permissions before scanning.
 - [ ] 068. Stage 9 acceptance: Confirm the app sends UTC time before relying on timestamps; otherwise firmware uses its fallback epoch behavior.
@@ -899,7 +899,7 @@ This stage changes the acceptance context. Repeat the check only after the stage
 - [ ] 062. Stage 10 acceptance: Confirm BLE advertises as Veyro with the service UUID from protocol.h.
 - [ ] 063. Stage 10 acceptance: Confirm the app discovers the same service and characteristic UUIDs from veyro_protocol.dart.
 - [ ] 064. Stage 10 acceptance: Confirm BLE pairing sends the displayed six-digit PIN and that wrong PINs remain rejected.
-- [ ] 065. Stage 10 acceptance: Remember BLE link encryption is not established by the application PIN flow; production security is still required.
+- [ ] 065. Stage 10 acceptance: Firmware requests encrypted BLE Secure Connections with the existing six-digit static passkey; Android pairing, bonding persistence, disconnect/reconnect, wrong-PIN rejection, and on-device behavior still require hardware-in-the-loop validation, and this is not production security certification.
 - [ ] 066. Stage 10 acceptance: Treat BLE notifications and local files as prototype data paths; threat modeling and hardening are incomplete.
 - [ ] 067. Stage 10 acceptance: Confirm the app requests platform-specific Bluetooth permissions before scanning.
 - [ ] 068. Stage 10 acceptance: Confirm the app sends UTC time before relying on timestamps; otherwise firmware uses its fallback epoch behavior.

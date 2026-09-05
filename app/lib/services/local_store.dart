@@ -124,6 +124,18 @@ class LocalStore {
     return samples;
   }
 
+  static Future<void> clearHealthHistory() async {
+    if (kIsWeb) return;
+    final root = await _root();
+    final days = Directory('${root.path}/days');
+    if (!await days.exists()) return;
+    await for (final entry in days.list()) {
+      if (entry is File && entry.path.toLowerCase().endsWith('.csv')) {
+        await entry.delete();
+      }
+    }
+  }
+
   static Future<UserProfile> loadProfile() async {
     final prefs = await SharedPreferences.getInstance();
     final raw = prefs.getString('veyro_profile');
