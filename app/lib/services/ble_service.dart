@@ -234,6 +234,11 @@ class BleService extends ChangeNotifier {
     await _sendCmd({'op': 'sync'});
   }
 
+  Future<void> setWatchFace(int face) async {
+    if (!isConnected || face < 0 || face > 7) return;
+    await _sendCmd({'op': 'face', 'face': face});
+  }
+
   Future<void> _sendCmd(Map<String, dynamic> body) async {
     if (_cmd == null) return;
     await _cmd!.write(utf8.encode(jsonEncode(body)), withoutResponse: false);

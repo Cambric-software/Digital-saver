@@ -117,6 +117,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
             onPressed: ble.isConnected ? ble.disconnect : ble.startScan,
             child: Text(ble.isConnected ? 'Disconnect' : 'Scan for Veyro'),
           ),
+          if (ble.isConnected)
+            DropdownButtonFormField<int>(
+              decoration: const InputDecoration(labelText: 'Watch home screen'),
+              initialValue: 0,
+              items: const [
+                DropdownMenuItem(value: 0, child: Text('Clock')),
+                DropdownMenuItem(value: 1, child: Text('Vitals estimate')),
+                DropdownMenuItem(value: 2, child: Text('Activity')),
+                DropdownMenuItem(value: 3, child: Text('Motion')),
+                DropdownMenuItem(value: 4, child: Text('Battery')),
+                DropdownMenuItem(value: 5, child: Text('Storage')),
+                DropdownMenuItem(value: 6, child: Text('Connection')),
+                DropdownMenuItem(value: 7, child: Text('Device info')),
+              ],
+              onChanged: (value) {
+                if (value != null) ble.setWatchFace(value);
+              },
+            ),
           if (!ble.isConnected)
             TextButton(onPressed: ble.startDemo, child: const Text('Use demo numbers (no watch)')),
           const Divider(height: 32),

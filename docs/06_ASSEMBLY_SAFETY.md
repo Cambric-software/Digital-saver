@@ -21,6 +21,22 @@ For every check below record date, operator, build or hardware identity, instrum
 ## Safety stop
 Stop immediately for smoke, swelling, odor, exposed battery conductor, unexpected heat, unstable current, short circuit, damaged insulation, or a motor that runs without command. Disconnect power only when doing so is safe, isolate the assembly, and escalate.
 
+## How to connect and flash the watch
+
+Use this procedure only on the bench. The target is the ESP32-WROOM-32 DevKit and the PlatformIO project is `firmware/esp32/DigitalSaverWatch`. Its `esp32dev` environment sets upload speed `921600` and monitor speed `115200`.
+
+1. Do not flash while wearing the watch. Disconnect the LiPo before USB flashing, and do not connect an unsafe, swollen, damaged, unprotected, or questionable LiPo. PlatformIO upload success is not proof of hardware safety.
+2. Inspect for shorts, solder bridges, exposed conductors, damaged insulation, and wrong power rails, including between BAT+, 3V3, 5V, and ground.
+3. Connect only a known-good USB data cable. If no port appears, install the correct USB-UART driver for the DevKit's USB interface.
+4. In a terminal at the firmware directory, run `pio device list`, then `pio run`, `pio run --target upload`, and `pio device monitor` in that order. Use the monitor at `115200`.
+5. If several ports exist, select the DevKit with `--upload-port COM7`, replacing `COM7` with the port from `pio device list`. A repeated local setting may use `upload_port = COM7` under `[env:esp32dev]`. If `921600` times out, retry with a shorter cable or a lower upload speed.
+6. If auto-reset fails, hold `BOOT` while upload begins and release `BOOT` after the tool starts writing. Wait for verification and reset before unplugging anything.
+7. Capture `Veyro 4.0.0 PIN ... PPG=... MPU=... OLED=...` at `115200`, but never publish the PIN. Confirm the OLED and the PPG, MPU, and OLED flags. Pair only after these post-flash checks pass.
+
+For recovery, check the port and data cable for an upload timeout, isolate external wiring and LiPo for a boot loop, inspect power, SDA GPIO21, SCL GPIO22, and I2C addresses for a missing sensor, and reopen the monitor at `115200` for serial garbage. After `pio run`, verify the artifact with `Get-FileHash .pio\build\esp32dev\firmware.bin -Algorithm SHA256` and record the full SHA256 hash with the board and firmware identity.
+
+Firmware 4.0.0 provides eight persisted OLED screens: clock, vitals estimate, activity, motion, battery, storage, connection, and device. The mode button cycles them. After pairing, the app may select one remotely with the BLE `face` command using a value from 0 through 7; the selected value is persisted by the firmware.
+
 ## Non-negotiable power and fit decision
 Build the first unit as a wired bench prototype, not as a wearable, unless the exact enclosure and power path have been measured. The ESP32 DevKit is useful because it exposes USB and headers, but those same headers and the USB connector consume height and width. The MAX30102 optical window must touch the test surface without the PCB edge or solder joints touching skin. The SSD1306 must remain visible. The battery must not be compressed. The motor must not press against the cell. These requirements cannot be proven from a parts list.
 

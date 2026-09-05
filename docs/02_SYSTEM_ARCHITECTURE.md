@@ -21,6 +21,16 @@ For every check below record date, operator, build or hardware identity, instrum
 ## Safety stop
 Stop immediately for smoke, swelling, odor, exposed battery conductor, unexpected heat, unstable current, short circuit, damaged insulation, or a motor that runs without command. Disconnect power only when doing so is safe, isolate the assembly, and escalate.
 
+## How to connect and flash the watch
+
+Use `firmware/esp32/DigitalSaverWatch` for the ESP32-WROOM-32 DevKit. The `esp32dev` PlatformIO environment defines upload speed `921600` and monitor speed `115200`. Remove the watch from the wrist, disconnect the LiPo, inspect for shorts, and connect only a USB data cable. Install the correct USB-UART driver if no port appears. An upload success is not proof of hardware safety.
+
+Run `pio device list`, `pio run`, `pio run --target upload`, and `pio device monitor` in that directory. Select a detected port with `--upload-port COM7` or a local `upload_port = COM7`. If auto-reset fails, hold `BOOT` while upload begins, release it once writing starts, and wait for verification and reset. Monitor at `115200` and capture `Veyro 4.0.0 PIN ... PPG=... MPU=... OLED=...`; redact and never publish the PIN. Confirm the OLED and sensor flags, then pair only after flashing.
+
+For timeout, check the port and data cable and lower upload speed. For a boot loop, isolate the LiPo and external wiring and inspect shorts. For a missing sensor, inspect 3.3 V, ground, SDA GPIO21, SCL GPIO22, and I2C addresses. For serial garbage, reopen the correct port at `115200`. Verify the artifact with `Get-FileHash .pio\build\esp32dev\firmware.bin -Algorithm SHA256` and record its full hash.
+
+The new firmware provides eight persisted OLED screens: clock, vitals estimate, activity, motion, battery, storage, connection, and device. The mode button cycles them, and the paired app can select screen 0 through 7 with the BLE `face` command.
+
 ## Stage checklists
 
 ## Stage 1: architecture inventory

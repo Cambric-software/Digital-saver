@@ -21,6 +21,16 @@ For every check below record date, operator, build or hardware identity, instrum
 ## Safety stop
 Stop immediately for smoke, swelling, odor, exposed battery conductor, unexpected heat, unstable current, short circuit, damaged insulation, or a motor that runs without command. Disconnect power only when doing so is safe, isolate the assembly, and escalate.
 
+## How to connect and flash the watch
+
+Release flashing uses the ESP32-WROOM-32 DevKit and `firmware/esp32/DigitalSaverWatch/platformio.ini`: environment `esp32dev`, upload speed `921600`, monitor speed `115200`. Do not flash while wearing the watch. Disconnect the LiPo, inspect for shorts, and connect only a USB data cable. Install the correct USB-UART driver if no port appears. PlatformIO upload success is not proof of hardware safety.
+
+From the firmware directory run `pio device list`, `pio run`, `pio run --target upload`, and `pio device monitor`. Select the port with `--upload-port COM7` or a local `upload_port = COM7`. If auto-reset fails, hold `BOOT` while upload begins, release it after writing starts, and wait for verification and reset. Monitor at `115200`; capture `Veyro 4.0.0 PIN ... PPG=... MPU=... OLED=...`, redact and never publish the PIN, and confirm OLED and sensor flags before pairing.
+
+Timeout recovery is to verify the port and data cable and lower upload speed. A boot loop requires LiPo disconnection and a shorts and power inspection. A missing sensor requires checks of 3.3 V, ground, SDA GPIO21, SCL GPIO22, and I2C addresses. Serial garbage requires reopening the correct port at `115200`. Verify the exact artifact with `Get-FileHash .pio\build\esp32dev\firmware.bin -Algorithm SHA256` and store the full hash in the release record.
+
+Firmware 4.0.0 includes eight persisted OLED screens: clock, vitals estimate, activity, motion, battery, storage, connection, and device. The mode button cycles them; after pairing, remote app selection uses the BLE `face` command with values 0 through 7.
+
 ## Stage checklists
 
 ## Stage 1: record system

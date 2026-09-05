@@ -36,6 +36,54 @@ Do not diagnose, triage, or replace professional care with its readings.
 Stop for smoke, swelling, odor, heat, exposed conductors, shorts, or unstable current.
 Battery chemistry, protection, water resistance, enclosure fit, and skin safety are UNKNOWN until evidenced.
 
+## How to connect and flash the watch
+
+This procedure is for the ESP32-WROOM-32 DevKit in `firmware/esp32/DigitalSaverWatch`. It uses the PlatformIO environment `esp32dev`, upload speed `921600`, and monitor speed `115200`, as defined in `platformio.ini`.
+
+### Before connecting power
+
+1. Do not flash while wearing the watch. Remove it from the wrist and work on a non-conductive, supervised bench.
+2. Disconnect the LiPo before USB flashing. Never flash with an unsafe, swollen, damaged, unprotected, or otherwise questionable LiPo attached.
+3. Inspect the board, solder joints, headers, cable, and wiring for shorts, bridges, exposed conductors, crushed insulation, or heat damage. Check for shorts between BAT+, 3V3, 5V, and ground. PlatformIO upload success is not proof of hardware safety.
+4. Connect only a known-good USB data cable to the DevKit. A charge-only cable cannot provide a serial port.
+5. Install the correct USB-UART driver for the USB interface on the particular DevKit if no port appears. Do not guess the driver from the project name.
+
+### Build, upload, and monitor
+
+Open a terminal in `firmware/esp32/DigitalSaverWatch` and run:
+
+```text
+pio device list
+pio run
+pio run --target upload
+pio device monitor
+```
+
+The first command lists available serial ports. If more than one port exists, select the DevKit port with `--upload-port COM7`, replacing `COM7` with the result from `pio device list`. You can also set `upload_port = COM7` under `[env:esp32dev]` in a local PlatformIO configuration when repeated uploads need a fixed port. Keep the configured upload speed at `921600`; if a reliable board or cable times out, retry with a shorter cable or lower upload speed, for example `pio run --target upload --upload-port COM7 --upload-speed 115200`.
+
+If auto-reset fails, hold the board's `BOOT` button while upload begins. Release `BOOT` after the tool starts writing. Wait for the upload verification to finish and for the board to reset. Do not unplug it during verification or reset.
+
+Start the serial monitor at `115200` with `pio device monitor`. After reset, capture the boot line, but redact the PIN before sharing any log:
+
+```text
+Veyro 4.0.0 PIN ... PPG=... MPU=... OLED=...
+```
+
+Never publish the PIN, even in a bug report or screenshot. Confirm the OLED shows the boot/device information and confirm the `PPG`, `MPU`, and `OLED` flags are present as expected. If a sensor is missing, stop and inspect wiring, power, I2C pins, address conflicts, and the sensor module before pairing. Pair with the app only after flashing, reset, serial capture, and the OLED/sensor checks pass.
+
+### Recovery and binary identity
+
+- Upload timeout: verify the port with `pio device list`, use a data cable, disconnect the LiPo, hold `BOOT` as upload begins, and lower the upload speed if needed.
+- Boot loop: disconnect external hardware and LiPo, inspect for shorts and wrong power rails, then retry a clean build and upload. Do not wear or charge the device during this investigation.
+- Missing sensor: check the module orientation, 3.3 V compatibility, common ground, SDA GPIO21, SCL GPIO22, and the actual I2C address. A boot line with `PPG=0` or `MPU=0` is a failed hardware check, not permission to pair.
+- Serial garbage: stop the monitor, select the correct port, reopen it at `115200`, and press reset. Do not interpret output captured at another baud rate.
+
+After `pio run`, verify the exact binary you intend to flash. From the firmware directory on Windows, run `Get-FileHash .pio\build\esp32dev\firmware.bin -Algorithm SHA256` and record the full SHA256 value with the firmware version, date, and board identity. A later build can change the hash. Verify the same hash from the same artifact before treating it as a known-good image.
+
+### Persisted watch screens
+
+Firmware 4.0.0 includes eight persisted OLED screens: clock, vitals estimate, activity, motion, battery, storage, connection, and device. The mode button cycles them, and the selected screen is stored in Preferences across reset. After pairing, the app can select a screen remotely with the BLE command `{"op":"face","face":0}` through `{"op":"face","face":7}`. Pairing is required for this command; do not use it as a substitute for the post-flash hardware checks.
+
 ## 1. Prerequisites
 Use this section as a small work package; record the result before moving on.
 Owner: UNKNOWN. Date: UNKNOWN. Evidence path: UNKNOWN.

@@ -74,7 +74,7 @@ uint32_t lastPrune = 0;
 uint32_t lastDisp = 0;
 uint32_t lastSosDown = 0;
 bool sosTriggered = false;
-int face = 0;  // 0 clock 1 hr 2 steps
+int face = 0;  // selected watch screen; changed with the mode button
 
 bool histSending = false;
 File histFile;
@@ -242,6 +242,14 @@ void handleCmd(const String &raw) {
   if (strcmp(op, "time") == 0) {
     unixTime = doc["unix"] | 0;
     bootMs = millis();
+    return;
+  }
+  if (strcmp(op, "face") == 0) {
+    int requested = doc["face"] | -1;
+    if (requested >= 0 && requested < 8) {
+      face = requested;
+      prefs.putUChar("face", (uint8_t)face);
+    }
     return;
   }
   if (strcmp(op, "sync") == 0) {
@@ -446,6 +454,7 @@ void draw() {
   }
   display.setCursor(0, 12);
   if (face == 0) {
+    display.println("CLOCK");
     uint32_t t = nowUnix() % 86400;
     char buf[16];
     snprintf(buf, sizeof(buf), "%02lu:%02lu", (unsigned long)(t / 3600), (unsigned long)((t % 3600) / 60));
@@ -454,6 +463,7 @@ void draw() {
     display.setTextSize(1);
     display.print(bleConnected ? "phone OK" : "no phone");
   } else if (face == 1) {
+    display.println("VITALS EST.");
     display.setTextSize(2);
     display.print((int)hrBpm);
     display.setTextSize(1);
@@ -462,11 +472,58 @@ void draw() {
     display.print((int)spo2);
     display.println("%");
     if (spo2 > 0 && spo2 < 90) display.println("low O2 est.");
-  } else {
+  } else if (face == 2) {
+    display.println("ACTIVITY");
     display.setTextSize(2);
     display.println(steps);
     display.setTextSize(1);
     display.println("steps");
+    display.print("HR ");
+    display.print((int)hrBpm);
+    display.println(" bpm");
+  } else if (face == 3) {
+    display.println("MOTION");
+    display.print("X ");
+    display.print(ax, 1);
+    display.print(" Y ");
+    display.println(ay, 1);
+    display.print("Z ");
+    display.print(az, 1);
+    display.print(" fall ");
+    display.println(fall ? "YES" : "no");
+  } else if (face == 4) {
+    display.println("BATTERY");
+    display.setTextSize(2);
+    display.print(batteryPct > 0 ? String(batteryPct) : "--");
+    display.println("%");
+    display.setTextSize(1);
+    display.println("GPIO34 divider");
+    display.println("verify with meter");
+  } else if (face == 5) {
+    display.println("STORAGE");
+    display.print("Rows today: ");
+    display.println(dumpFileCount);
+    display.print("Retention: ");
+    display.print(RETAIN_DAYS);
+    display.println(" days");
+    display.println("LittleFS local only");
+  } else if (face == 6) {
+    display.println("CONNECTION");
+    display.print("Phone: ");
+    display.println(bleConnected ? "connected" : "offline");
+    display.print("Pair: ");
+    display.println(paired ? "secure" : "show PIN");
+    display.println("BLE Secure Connections");
+  } else {
+    display.println("DEVICE");
+    display.print("FW ");
+    display.println(VEYRO_FW_VERSION);
+    display.print("PPG ");
+    display.print(hasPpg ? "OK" : "missing");
+    display.print(" MPU ");
+    display.println(hasMpu ? "OK" : "missing");
+    display.print("OLED ");
+    display.println(hasOled ? "OK" : "missing");
   }
   if (fall) {
     display.setCursor(0, 56);
@@ -518,6 +575,7 @@ void setup() {
 
   prefs.begin("veyro", false);
   paired = prefs.getBool("paired", false);
+  face = prefs.getUChar("face", 0) % 8;
   String saved = prefs.getString("pin", "");
   if (saved.length() == 6) {
     strncpy(pinCode, saved.c_str(), 6);
@@ -542,7 +600,8 @@ void loop() {
   if (digitalRead(PIN_BTN_MODE) == LOW) {
     delay(40);
     if (digitalRead(PIN_BTN_MODE) == LOW) {
-      face = (face + 1) % 3;
+      face = (face + 1) % 8;
+      prefs.putUChar("face", (uint8_t)face);
       while (digitalRead(PIN_BTN_MODE) == LOW) delay(10);
     }
   }

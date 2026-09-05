@@ -21,6 +21,16 @@ For every check below record date, operator, build or hardware identity, instrum
 ## Safety stop
 Stop immediately for smoke, swelling, odor, exposed battery conductor, unexpected heat, unstable current, short circuit, damaged insulation, or a motor that runs without command. Disconnect power only when doing so is safe, isolate the assembly, and escalate.
 
+## How to connect and flash the watch
+
+For the beginner flash workflow, use `firmware/esp32/DigitalSaverWatch` with an ESP32-WROOM-32 DevKit, a USB data cable, PlatformIO environment `esp32dev`, upload speed `921600`, and monitor speed `115200`. Remove the watch from the wrist, disconnect the LiPo, and inspect for shorts before USB connection. Never flash with an unsafe LiPo attached; successful upload does not prove hardware safety.
+
+Run `pio device list`, `pio run`, `pio run --target upload`, and then `pio device monitor` from the firmware directory. Install the correct USB-UART driver if no port appears. Select a detected port with `--upload-port COM7` or a local `upload_port = COM7` setting. If auto-reset fails, hold `BOOT` as upload begins, release it after writing starts, and wait for verification and reset. Open the monitor at `115200`, capture `Veyro 4.0.0 PIN ... PPG=... MPU=... OLED=...`, redact and never publish the PIN, and confirm the OLED and sensor flags before pairing.
+
+For timeout, retry with a known-good data cable and lower upload speed. For a boot loop, isolate the LiPo and external wiring and inspect shorts. For a missing sensor, inspect 3.3 V, common ground, SDA GPIO21, SCL GPIO22, and I2C addresses. For serial garbage, reopen the correct port at `115200`. Verify the flashed artifact with `Get-FileHash .pio\build\esp32dev\firmware.bin -Algorithm SHA256` and record the full hash.
+
+Firmware 4.0.0 has eight persisted OLED screens: clock, vitals estimate, activity, motion, battery, storage, connection, and device. The mode button cycles them; after pairing, the app selects one with the BLE `face` command using a value from 0 through 7.
+
 ## Stage checklists
 
 ## Stage 1: concept review

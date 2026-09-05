@@ -21,6 +21,38 @@ For every check below record date, operator, build or hardware identity, instrum
 ## Safety stop
 Stop immediately for smoke, swelling, odor, exposed battery conductor, unexpected heat, unstable current, short circuit, damaged insulation, or a motor that runs without command. Disconnect power only when doing so is safe, isolate the assembly, and escalate.
 
+## How to connect and flash the watch
+
+This procedure is grounded in `firmware/esp32/DigitalSaverWatch/platformio.ini` and `DigitalSaverWatch.ino`. The board is an ESP32-WROOM-32 DevKit. Use the PlatformIO environment `esp32dev`, upload speed `921600`, and monitor speed `115200`.
+
+### Safe connection and upload
+
+1. Work on a bench. Never flash while wearing the watch. Disconnect the LiPo before USB flashing and never flash with an unsafe, swollen, damaged, unprotected, or questionable LiPo attached.
+2. Inspect for shorts, solder bridges, exposed conductors, damaged insulation, and incorrect power rails, including BAT+, 3V3, 5V, and ground. PlatformIO upload success is not proof of hardware safety.
+3. Connect only a known-good USB data cable. If no serial port appears, install the correct USB-UART driver for the USB interface on the DevKit.
+4. In `firmware/esp32/DigitalSaverWatch`, run:
+
+```text
+pio device list
+pio run
+pio run --target upload
+pio device monitor
+```
+
+`pio device list` identifies the COM port. When needed, use `--upload-port COM7`, replacing `COM7` with the listed port, or set `upload_port = COM7` under `[env:esp32dev]` for a local fixed-port setup. If upload times out at `921600`, use a reliable shorter cable and retry at a lower upload speed.
+
+If auto-reset fails, hold `BOOT` while upload begins. Release `BOOT` after the tool starts writing. Wait for verification and reset. Open the monitor at `115200` and capture the boot line `Veyro 4.0.0 PIN ... PPG=... MPU=... OLED=...`. Redact the PIN and never publish it. Confirm the OLED and the PPG, MPU, and OLED status flags. Pair only after flashing and these checks pass.
+
+### Recovery and hash check
+
+For an upload timeout, recheck `pio device list`, the data cable, LiPo disconnection, and `BOOT`; lower the upload speed if necessary. For a boot loop, disconnect external hardware and LiPo and inspect shorts and power rails before retrying. For a missing sensor, inspect 3.3 V compatibility, common ground, SDA GPIO21, SCL GPIO22, module orientation, and I2C address. For serial garbage, select the correct port and reopen `pio device monitor` at `115200` before pressing reset.
+
+After `pio run`, verify the exact binary with `Get-FileHash .pio\build\esp32dev\firmware.bin -Algorithm SHA256` on Windows. Record the full SHA256 value with firmware version, date, board identity, and artifact path. Recheck that same hash before flashing a known-good image; a later build may differ.
+
+### Eight persisted OLED screens
+
+Firmware 4.0.0 includes eight persisted screens: clock, vitals estimate, activity, motion, battery, storage, connection, and device. The mode button cycles screens and Preferences restores the selected screen after reset. Once paired, the app can select a screen with the BLE `face` command and a value from 0 through 7. Pairing is deliberately after flashing and hardware checks, not before them.
+
 ## Stage checklists
 
 ## Stage 1: toolchain setup
