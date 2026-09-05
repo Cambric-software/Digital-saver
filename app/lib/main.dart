@@ -2,15 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'services/ble_service.dart';
-import 'services/cambric_auth_service_v2.dart';
+import 'services/app_lock.dart';
 import 'services/theme_service.dart';
 import 'services/dynamic_theme_service.dart';
 import 'services/auto_update_service.dart';
-import 'services/profile_check_service.dart';
-import 'screens/auth_screen.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/heart_screen.dart';
 import 'screens/bp_screen.dart';
@@ -18,7 +15,6 @@ import 'screens/activity_screen.dart';
 import 'screens/sleep_screen.dart';
 import 'screens/settings_screen.dart';
 import 'screens/web_landing_page.dart';
-import 'screens/profile_completion_screen.dart';
 import 'screens/watch_simulator_screen.dart';
 import 'screens/health_trends_screen.dart';
 import 'screens/achievements_screen.dart';
@@ -27,11 +23,8 @@ import 'widgets/enhanced_splash.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  await Supabase.initialize(
-    url: 'https://dafgzzkerytjuvxzymnq.supabase.co',
-    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRhZmd6emtlcnl0anV2eHp5bW5xIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM3MTE1MDUsImV4cCI6MjA5OTI4NzUwNX0.bZdxqNuy1ZyHMGzBieq7BzUd6IUEhfHEZxL-YTka3DQ',
-  );
+  final appLock = AppLock();
+  await appLock.load();
 
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
@@ -44,7 +37,7 @@ void main() async {
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => BleService()),
-        ChangeNotifierProvider(create: (_) => AuthProvider()),
+        ChangeNotifierProvider.value(value: appLock),
         ChangeNotifierProvider(create: (_) => ThemeService()),
         ChangeNotifierProvider(create: (_) => DynamicThemeService()),
         ChangeNotifierProvider(create: (_) => AutoUpdateService()),
@@ -207,121 +200,14 @@ class _MainNavState extends State<MainNav> {
     SettingsScreen(),
   ];
 
-  bool _authChecked = false;
-  bool _profileCheckDone = false;
-  List<String> _missingFields = [];
-  ProfileCheckService _profileService = ProfileCheckService();
-
   @override
   void initState() {
     super.initState();
-    _authChecked = false;
-    _profileCheckDone = false;
-  }
-
-  void _checkAuth() {
-    if (_authChecked) return;
-    final auth = context.read<AuthProvider>();
-    if (!auth.isAuthenticated && !auth.loading) {
-      _authChecked = true;
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const AuthScreen()),
-      );
-    }
-  }
-
-  Future<void> _checkProfileCompleteness() async {
-    if (_profileCheckDone) return;
-    
-    final auth = context.read<AuthProvider>();
-    if (!auth.isAuthenticated) return;
-    
-    final result = await _profileService.checkProfileCompleteness(auth);
-    
-    if (mounted && result.missingFields.isNotEmpty) {
-      setState(() {
-        _missingFields = result.missingFields;
-        _profileCheckDone = true;
-      });
-      
-      // Navigate to profile completion
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (_) => ProfileCompletionScreen(
-                missingFields: _missingFields,
-                onComplete: () {
-                  Navigator.of(context).pop();
-                  setState(() {
-                    _missingFields = [];
-                  });
-                },
-              ),
-            ),
-          );
-        }
-      });
-    } else {
-      setState(() {
-        _profileCheckDone = true;
-      });
-    }
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (!_authChecked) {
-      WidgetsBinding.instance.addPostFrameCallback((_) => _checkAuth());
-    }
   }
 
   @override
   Widget build(BuildContext context) {
     final ble = context.watch<BleService>();
-    final auth = context.watch<AuthProvider>();
-
-    // Show loading ONLY when actively loading
-    if (auth.loading) {
-      return const Scaffold(
-        body: Center(
-          child: CircularProgressIndicator(),
-        ),
-      );
-    }
-
-    // Not authenticated AND not loading = redirect to auth screen
-    if (!auth.isAuthenticated) {
-      if (!_authChecked) {
-        _authChecked = true;
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) {
-            Navigator.of(context).pushReplacement(
-              MaterialPageRoute(builder: (_) => AuthScreen(
-                onSignedIn: () {
-                  Navigator.of(context).pushReplacement(
-                    MaterialPageRoute(builder: (_) => const MainNav()),
-                  );
-                },
-              )),
-            );
-          }
-        });
-      }
-      return const Scaffold(
-        body: Center(
-          child: CircularProgressIndicator(),
-        ),
-      );
-    } else {
-      _authChecked = true;  // Reset flag when authenticated
-      
-      // Check profile completeness after sign in
-      if (_profileCheckDone == false) {
-        WidgetsBinding.instance.addPostFrameCallback((_) => _checkProfileCompleteness());
-      }
-    }
 
     return Scaffold(
       body: Stack(

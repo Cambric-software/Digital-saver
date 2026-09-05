@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
@@ -10,8 +9,8 @@ import 'dart:convert';
 
 // Current app version - update this with each release
 class AppVersion {
-  static const String current = '3.4.0';
-  static const String buildNumber = '15';
+  static const String current = '3.3.0';
+  static const String buildNumber = '17';
   
   // Minimum version for auto-update (3.1.8+ supports silent auto-update)
   static const String autoUpdateMinVersion = '3.1.8';
@@ -31,11 +30,11 @@ class AppVersion {
   
   static String get downloadUrl {
     if (defaultTargetPlatform == TargetPlatform.android) {
-      return 'https://github.com/Cambric-software/Digital-saver/releases/download/v3.4.0/digital_saver_android_v3.4.0.apk';
+      return 'https://github.com/Cambric-software/Digital-saver/releases/download/v3.3.0/digital_saver_android_v3.3.0.apk';
     } else if (defaultTargetPlatform == TargetPlatform.windows) {
-      return 'https://github.com/Cambric-software/Digital-saver/releases/download/v3.4.0/digital_saver_windows_v3.4.0.zip';
+      return 'https://github.com/Cambric-software/Digital-saver/releases/download/v3.3.0/digital_saver_windows_v3.3.0.zip';
     } else if (defaultTargetPlatform == TargetPlatform.linux) {
-      return 'https://github.com/Cambric-software/Digital-saver/releases/download/v3.4.0/digital_saver_linux_v3.4.0.tar.gz';
+      return 'https://github.com/Cambric-software/Digital-saver/releases/download/v3.3.0/digital_saver_linux_v3.3.0.tar.gz';
     }
     return 'https://cambric-software.github.io/Digital-saver/';
   }
@@ -58,6 +57,7 @@ class UpdateInfo {
 }
 
 class AutoUpdateService extends ChangeNotifier {
+  static const bool networkUpdateChecksEnabled = false;
   UpdateInfo? _latestUpdate;
   bool _isChecking = false;
   bool _updateAvailable = false;
@@ -104,7 +104,7 @@ class AutoUpdateService extends ChangeNotifier {
   }
 
   Future<void> checkForUpdates() async {
-    if (_isChecking) return;
+    if (!networkUpdateChecksEnabled || _isChecking) return;
     
     _isChecking = true;
     _error = null;

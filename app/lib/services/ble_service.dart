@@ -79,6 +79,7 @@ class BleService extends ChangeNotifier {
   ActivityData get activity => _activity;
   bool get isConnected => _state == BleState.connected;
   bool get demoMode => _demoMode;
+  double get temperature => 0;
   int get batteryLevel => _batteryLevel;
   List<DiscoveredDevice> get discoveredDevices => _discoveredDevices;
   WatchInfo get watchInfo => _watchInfo;
@@ -302,6 +303,8 @@ class BleService extends ChangeNotifier {
       notifyListeners();
     });
   }
+
+  void enableDemoMode() => startDemo();
 
   void stopDemo() {
     _demoTimer?.cancel();

@@ -72,6 +72,7 @@ uint32_t lastSample = 0;
 uint32_t lastPrune = 0;
 uint32_t lastDisp = 0;
 uint32_t lastSosDown = 0;
+bool sosTriggered = false;
 int face = 0;  // 0 clock 1 hr 2 steps
 
 bool histSending = false;
@@ -119,9 +120,12 @@ String dayPath(uint32_t t) {
 void pruneOld() {
   File root = LittleFS.open("/d");
   if (!root || !root.isDirectory()) return;
-  uint32_t cut = nowUnix() > (uint32_t)RETAIN_DAYS * 86400UL
-                     ? nowUnix() - (uint32_t)RETAIN_DAYS * 86400UL
-                     : 0;
+  char cutoffKey[9] = "00000000";
+  time_t cutoff = (time_t)nowUnix() - (time_t)RETAIN_DAYS * 86400;
+  struct tm cutoffTm;
+  gmtime_r(&cutoff, &cutoffTm);
+  snprintf(cutoffKey, sizeof(cutoffKey), "%04d%02d%02d",
+           cutoffTm.tm_year + 1900, cutoffTm.tm_mon + 1, cutoffTm.tm_mday);
   File f = root.openNextFile();
   while (f) {
     String name = String(f.name());
@@ -133,12 +137,9 @@ void pruneOld() {
       int y = base.substring(0, 4).toInt();
       int m = base.substring(4, 6).toInt();
       int d = base.substring(6, 8).toInt();
-      struct tm tm = {};
-      tm.tm_year = y - 1900;
-      tm.tm_mon = m - 1;
-      tm.tm_mday = d;
-      time_t fileT = mktime(&tm);
-      if (cut > 0 && (uint32_t)fileT < cut) {
+      char fileKey[9];
+      snprintf(fileKey, sizeof(fileKey), "%04d%02d%02d", y, m, d);
+      if (strcmp(fileKey, cutoffKey) < 0) {
         LittleFS.remove(name.startsWith("/") ? name : String("/d/") + base);
       }
     }
@@ -169,7 +170,9 @@ int countSamples() {
   File f = root.openNextFile();
   while (f) {
     if (!f.isDirectory()) {
-      n += (int)(f.size() / 24);  // rough
+      while (f.available()) {
+        if (f.read() == '\n') n++;
+      }
     }
     f.close();
     f = root.openNextFile();
@@ -234,6 +237,7 @@ void handleCmd(const String &raw) {
     }
     return;
   }
+  if (!paired) return;
   if (strcmp(op, "time") == 0) {
     unixTime = doc["unix"] | 0;
     bootMs = millis();
@@ -540,13 +544,14 @@ void loop() {
   }
   if (digitalRead(PIN_BTN_SOS) == LOW) {
     if (lastSosDown == 0) lastSosDown = ms;
-    if (ms - lastSosDown > 2000) {
+    if (!sosTriggered && ms - lastSosDown > 2000) {
       fall = true;
       vibe(600);
-      lastSosDown = ms + 10000;
+      sosTriggered = true;
     }
   } else {
     lastSosDown = 0;
+    sosTriggered = false;
   }
 
   if (ms - lastLive >= LIVE_EVERY_MS) {

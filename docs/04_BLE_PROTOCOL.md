@@ -1,0 +1,931 @@
+# Veyro BLE Protocol Guide
+
+## Purpose
+This is a beginner-friendly engineering guide for the Veyro ESP32 smartwatch prototype. It is intentionally operational: perform the checks, record evidence, and stop when a safety or evidence condition is not met.
+
+## Scope
+the implemented protocol contract, pairing flow, and compatibility checks. The repository is the source of truth for implemented behavior. The executable anchors are firmware/esp32/DigitalSaverWatch/DigitalSaverWatch.ino, pins.h, protocol.h, platformio.ini, app/lib/services/ble_service.dart, app/lib/services/veyro_protocol.dart, and app/lib/services/local_store.dart.
+
+## Product boundary
+Veyro is a wellness prototype, not a medical device. It has no clinical validation. Current firmware has rough SpO2, zero blood pressure fields, threshold fall detection, and no validated diagnosis capability. Never use it to diagnose, triage, or replace professional care.
+
+## Evidence rules
+Use UNKNOWN when an item has not been inspected. Use MUST MEASURE for a physical or electrical value. Use MUST CONFIRM FROM DATASHEET for a rating, chemistry, protection feature, or component behavior. Do not turn a README claim into an acceptance criterion without a measurement.
+
+## Authoritative implementation facts
+The target is an ESP32-WROOM-32 DevKit with 4 MB flash and no PSRAM. The firmware uses I2C at GPIO21 SDA and GPIO22 SCL, GPIO25 for vibration control, GPIO4 red LED, GPIO16 green LED, GPIO17 mode button, GPIO32 SOS button, GPIO34 battery ADC, and OLED address 0x3C. The bus contains MAX30102, MPU6050, and SSD1306 devices; all actual addresses must be scanned.
+
+## Required record
+For every check below record date, operator, build or hardware identity, instrument, observed result, pass or fail, and next action. A blank record is not evidence.
+
+## Safety stop
+Stop immediately for smoke, swelling, odor, exposed battery conductor, unexpected heat, unstable current, short circuit, damaged insulation, or a motor that runs without command. Disconnect power only when doing so is safe, isolate the assembly, and escalate.
+
+## Stage checklists
+
+## Stage 1: UUID inventory
+This stage changes the acceptance context. Repeat the check only after the stage condition is met; record a new result rather than copying an old result.
+- [ ] 001. Stage 1 acceptance: Identify the exact board as ESP32-WROOM-32 DevKit before assembly; record vendor and board revision.
+- [ ] 002. Stage 1 acceptance: Count flash as 4 MB only when the board label or build report confirms it; PSRAM is not present in the stated target.
+- [ ] 003. Stage 1 acceptance: Identify the MAX30102 module by marking and datasheet; module identity is not interchangeable with the bare IC.
+- [ ] 004. Stage 1 acceptance: Identify the MPU6050 breakout, regulator, and address by marking; UNKNOWN until inspected.
+- [ ] 005. Stage 1 acceptance: Identify the SSD1306 display controller, resolution, supply range, and I2C address; MUST CONFIRM FROM DATASHEET.
+- [ ] 006. Stage 1 acceptance: Identify the battery chemistry, nominal voltage, capacity, connector, protection, and source; never infer these from package size.
+- [ ] 007. Stage 1 acceptance: Identify the charger board model and whether it includes protection; a board sold as TP4056 is not proof of protection.
+- [ ] 008. Stage 1 acceptance: Identify motor voltage, stall current, LED polarity, button type, resistor values, and wire gauge before wiring.
+- [ ] 009. Stage 1 acceptance: Record approximate physical fit measurements for every part; enclosure dimensions remain UNKNOWN until measured.
+- [ ] 010. Stage 1 acceptance: Measure board, sensor, battery, motor, display, and connector thickness with calipers; record maximum and minimum.
+- [ ] 011. Stage 1 acceptance: Measure the wrist-side sensor opening and optical contact geometry; do not assume a module window fits a wrist.
+- [ ] 012. Stage 1 acceptance: Mark all fit assumptions as APPROXIMATE until a physical mockup proves clearance and service access.
+- [ ] 013. Stage 1 acceptance: Confirm the ESP32 logic rail is 3.3 V at the module pins; MUST CONFIRM FROM DATASHEET for every breakout.
+- [ ] 014. Stage 1 acceptance: Confirm each I2C breakout tolerates 3.3 V and does not pull SDA or SCL to 5 V; stop if unknown.
+- [ ] 015. Stage 1 acceptance: Use one common ground reference and verify continuity before applying power.
+- [ ] 016. Stage 1 acceptance: Use GPIO21 for I2C SDA because pins.h is authoritative; do not create a second pin map.
+- [ ] 017. Stage 1 acceptance: Use GPIO22 for I2C SCL because pins.h is authoritative; do not substitute pins without source changes.
+- [ ] 018. Stage 1 acceptance: Run an I2C scan with modules disconnected and connected one at a time; record every address.
+- [ ] 019. Stage 1 acceptance: Check for I2C address conflicts among MAX30102, MPU6050, and SSD1306; conflict status is MUST MEASURE.
+- [ ] 020. Stage 1 acceptance: Confirm pull-up voltage and effective resistance on the shared I2C bus; excessive parallel pull-ups can break the bus.
+- [ ] 021. Stage 1 acceptance: Keep I2C wires short for the 400 kHz firmware setting; exact maximum length is UNKNOWN and MUST MEASURE.
+- [ ] 022. Stage 1 acceptance: Wire GPIO25 only to a validated motor driver input; never drive a motor directly from an ESP32 GPIO.
+- [ ] 023. Stage 1 acceptance: Wire GPIO4 to the red LED through a current-limiting resistor; verify polarity and current.
+- [ ] 024. Stage 1 acceptance: Wire GPIO16 to the green LED through a current-limiting resistor; verify polarity and current.
+- [ ] 025. Stage 1 acceptance: Wire the mode button to GPIO17 and ground; firmware uses INPUT_PULLUP and active-low logic.
+- [ ] 026. Stage 1 acceptance: Wire the SOS button to GPIO32 and ground; firmware uses INPUT_PULLUP and a two-second hold.
+- [ ] 027. Stage 1 acceptance: Wire the battery divider to GPIO34 exactly as BAT+ through R1 to GPIO34 through R2 to ground.
+- [ ] 028. Stage 1 acceptance: Use two 100k resistors only after measuring their actual values; divider tolerance affects battery display.
+- [ ] 029. Stage 1 acceptance: Remember GPIO34 is input-only and has no internal pull-up; never use it as a control output.
+- [ ] 030. Stage 1 acceptance: Confirm the ADC divider cannot exceed the ADC safe input range at the battery maximum; MUST CONFIRM FROM DATASHEET.
+- [ ] 031. Stage 1 acceptance: Compare the GPIO34 ADC reading against a multimeter at multiple known battery voltages.
+- [ ] 032. Stage 1 acceptance: Check ADC attenuation and calibration assumptions; current code documents 12-bit conversion but accuracy is UNKNOWN.
+- [ ] 033. Stage 1 acceptance: Calculate divider load and battery drain; record the measured quiescent current.
+- [ ] 034. Stage 1 acceptance: Use a current-limited bench supply for first power-up when possible; set a conservative current limit.
+- [ ] 035. Stage 1 acceptance: Inspect for shorts between BAT+, 3V3, 5V, and ground before installing a LiPo.
+- [ ] 036. Stage 1 acceptance: Never connect a bare LiPo to an unverified TP4056 board.
+- [ ] 037. Stage 1 acceptance: Never wear the prototype while charging and never leave charging unattended.
+- [ ] 038. Stage 1 acceptance: Confirm charger input voltage, charge current, termination behavior, and thermal limits from its datasheet.
+- [ ] 039. Stage 1 acceptance: Confirm whether the TP4056 board routes protected output or raw battery pads; UNKNOWN until traced or measured.
+- [ ] 040. Stage 1 acceptance: Provide a separate protection solution when the charger board lacks overcharge, overdischarge, and short-circuit protection.
+- [ ] 041. Stage 1 acceptance: Confirm battery protection cutoff thresholds and continuous current rating from the battery datasheet.
+- [ ] 042. Stage 1 acceptance: Inspect the LiPo for swelling, puncture, torn insulation, heat, or odor; stop immediately on any defect.
+- [ ] 043. Stage 1 acceptance: Keep the battery away from sharp headers, solder points, motor edges, and enclosure screws.
+- [ ] 044. Stage 1 acceptance: Add strain relief at battery, USB, sensor, and button wires; a solder joint is not a cable anchor.
+- [ ] 045. Stage 1 acceptance: Use insulation and a physical separator so conductive hardware cannot contact the cell.
+- [ ] 046. Stage 1 acceptance: Confirm enclosure clearance around the battery and charging connector; do not compress the cell.
+- [ ] 047. Stage 1 acceptance: Keep the optical sensor window flush and stable against the intended test surface; wrist wearability is UNKNOWN.
+- [ ] 048. Stage 1 acceptance: Provide motor clearance so vibration cannot touch the battery or crack solder joints.
+- [ ] 049. Stage 1 acceptance: Provide display, button, LED, and USB access without forcing the enclosure open.
+- [ ] 050. Stage 1 acceptance: Round or shield enclosure edges that can contact skin; material biocompatibility is UNKNOWN.
+- [ ] 051. Stage 1 acceptance: Label the enclosure prototype and revision; do not claim water resistance without a documented test.
+- [ ] 052. Stage 1 acceptance: Use ESD controls, ventilation, eye protection, and a safe soldering surface.
+- [ ] 053. Stage 1 acceptance: Inspect solder joints for bridges, cold joints, lifted pads, and insufficient wetting.
+- [ ] 054. Stage 1 acceptance: Clean flux residue using a process compatible with the boards and battery; document the solvent.
+- [ ] 055. Stage 1 acceptance: Use a continuity checklist before every powered test.
+- [ ] 056. Stage 1 acceptance: Flash with PlatformIO environment esp32dev and the repository platform version 6.8.1.
+- [ ] 057. Stage 1 acceptance: Use 921600 upload speed only when the cable and board are reliable; lower it for failed uploads.
+- [ ] 058. Stage 1 acceptance: Use 115200 serial monitor speed and record the complete boot banner.
+- [ ] 059. Stage 1 acceptance: Confirm the serial banner reports firmware version, PIN, PPG, MPU, and OLED presence.
+- [ ] 060. Stage 1 acceptance: Confirm LittleFS mounts; record any LittleFS fail message and stop release testing if storage is unavailable.
+- [ ] 061. Stage 1 acceptance: Confirm Preferences loads or creates the six-digit PIN and preserves it across reset.
+- [ ] 062. Stage 1 acceptance: Confirm BLE advertises as Veyro with the service UUID from protocol.h.
+- [ ] 063. Stage 1 acceptance: Confirm the app discovers the same service and characteristic UUIDs from veyro_protocol.dart.
+- [ ] 064. Stage 1 acceptance: Confirm BLE pairing sends the displayed six-digit PIN and that wrong PINs remain rejected.
+- [ ] 065. Stage 1 acceptance: Remember BLE link encryption is not established by the application PIN flow; production security is still required.
+- [ ] 066. Stage 1 acceptance: Treat BLE notifications and local files as prototype data paths; threat modeling and hardening are incomplete.
+- [ ] 067. Stage 1 acceptance: Confirm the app requests platform-specific Bluetooth permissions before scanning.
+- [ ] 068. Stage 1 acceptance: Confirm the app sends UTC time before relying on timestamps; otherwise firmware uses its fallback epoch behavior.
+- [ ] 069. Stage 1 acceptance: Confirm live JSON fields are hr, spo2, bps, bpd, hrv, steps, fall, bat, and ts.
+- [ ] 070. Stage 1 acceptance: Confirm history rows use unix,hr,spo2,sys,dia,hrv,steps,fall,battery.
+- [ ] 071. Stage 1 acceptance: Confirm history completion is the JSON message with v 1 and done 1.
+- [ ] 072. Stage 1 acceptance: Confirm failed or interrupted sync does not delete existing local app records.
+- [ ] 073. Stage 1 acceptance: Confirm LocalStore deduplicates rows by Unix timestamp and stores day files locally.
+- [ ] 074. Stage 1 acceptance: Confirm the watch stores UTC day files under LittleFS /d and prunes beyond 60 retention days.
+- [ ] 075. Stage 1 acceptance: Label rough SpO2 output as experimental; the firmware uses a rough ratio placeholder, not a clinical algorithm.
+- [ ] 076. Stage 1 acceptance: Label blood pressure as unavailable; current firmware explicitly sends zero systolic and diastolic values.
+- [ ] 077. Stage 1 acceptance: Label fall detection as threshold-based and prone to false positives; it is not validated emergency detection.
+- [ ] 078. Stage 1 acceptance: Label HR and HRV as wellness signals until reference comparison and repeatability testing exist.
+- [ ] 079. Stage 1 acceptance: Create a fixture for I2C scan, serial capture, BLE discovery, pairing, sync, buttons, LEDs, motor, and ADC.
+- [ ] 080. Stage 1 acceptance: Create a known-good firmware image and record its hash; exact artifact hash is UNKNOWN until built.
+- [ ] 081. Stage 1 acceptance: Use a sacrificial board for first flash and first battery test.
+- [ ] 082. Stage 1 acceptance: Record board serial, component lots, battery identity, enclosure revision, firmware, app, operator, date, and defects.
+- [ ] 083. Stage 1 acceptance: Define a safety stop for heat, smoke, swelling, exposed conductors, unstable current, or unexpected motor behavior.
+- [ ] 084. Stage 1 acceptance: Define a technical stop for missing sensor, conflicting address, failed storage, failed BLE, corrupt row, or unsafe voltage.
+- [ ] 085. Stage 1 acceptance: Do not release a wearable build until mechanical, electrical, firmware, app, safety, and data gates all pass.
+- [ ] 086. Stage 1 acceptance: Keep every unknown in the test record with an owner, measurement method, and due date.
+Stage 1 disposition: PASS / FAIL / BLOCKED. Evidence location: UNKNOWN until recorded.
+
+## Stage 2: advertising proof
+This stage changes the acceptance context. Repeat the check only after the stage condition is met; record a new result rather than copying an old result.
+- [ ] 001. Stage 2 acceptance: Identify the exact board as ESP32-WROOM-32 DevKit before assembly; record vendor and board revision.
+- [ ] 002. Stage 2 acceptance: Count flash as 4 MB only when the board label or build report confirms it; PSRAM is not present in the stated target.
+- [ ] 003. Stage 2 acceptance: Identify the MAX30102 module by marking and datasheet; module identity is not interchangeable with the bare IC.
+- [ ] 004. Stage 2 acceptance: Identify the MPU6050 breakout, regulator, and address by marking; UNKNOWN until inspected.
+- [ ] 005. Stage 2 acceptance: Identify the SSD1306 display controller, resolution, supply range, and I2C address; MUST CONFIRM FROM DATASHEET.
+- [ ] 006. Stage 2 acceptance: Identify the battery chemistry, nominal voltage, capacity, connector, protection, and source; never infer these from package size.
+- [ ] 007. Stage 2 acceptance: Identify the charger board model and whether it includes protection; a board sold as TP4056 is not proof of protection.
+- [ ] 008. Stage 2 acceptance: Identify motor voltage, stall current, LED polarity, button type, resistor values, and wire gauge before wiring.
+- [ ] 009. Stage 2 acceptance: Record approximate physical fit measurements for every part; enclosure dimensions remain UNKNOWN until measured.
+- [ ] 010. Stage 2 acceptance: Measure board, sensor, battery, motor, display, and connector thickness with calipers; record maximum and minimum.
+- [ ] 011. Stage 2 acceptance: Measure the wrist-side sensor opening and optical contact geometry; do not assume a module window fits a wrist.
+- [ ] 012. Stage 2 acceptance: Mark all fit assumptions as APPROXIMATE until a physical mockup proves clearance and service access.
+- [ ] 013. Stage 2 acceptance: Confirm the ESP32 logic rail is 3.3 V at the module pins; MUST CONFIRM FROM DATASHEET for every breakout.
+- [ ] 014. Stage 2 acceptance: Confirm each I2C breakout tolerates 3.3 V and does not pull SDA or SCL to 5 V; stop if unknown.
+- [ ] 015. Stage 2 acceptance: Use one common ground reference and verify continuity before applying power.
+- [ ] 016. Stage 2 acceptance: Use GPIO21 for I2C SDA because pins.h is authoritative; do not create a second pin map.
+- [ ] 017. Stage 2 acceptance: Use GPIO22 for I2C SCL because pins.h is authoritative; do not substitute pins without source changes.
+- [ ] 018. Stage 2 acceptance: Run an I2C scan with modules disconnected and connected one at a time; record every address.
+- [ ] 019. Stage 2 acceptance: Check for I2C address conflicts among MAX30102, MPU6050, and SSD1306; conflict status is MUST MEASURE.
+- [ ] 020. Stage 2 acceptance: Confirm pull-up voltage and effective resistance on the shared I2C bus; excessive parallel pull-ups can break the bus.
+- [ ] 021. Stage 2 acceptance: Keep I2C wires short for the 400 kHz firmware setting; exact maximum length is UNKNOWN and MUST MEASURE.
+- [ ] 022. Stage 2 acceptance: Wire GPIO25 only to a validated motor driver input; never drive a motor directly from an ESP32 GPIO.
+- [ ] 023. Stage 2 acceptance: Wire GPIO4 to the red LED through a current-limiting resistor; verify polarity and current.
+- [ ] 024. Stage 2 acceptance: Wire GPIO16 to the green LED through a current-limiting resistor; verify polarity and current.
+- [ ] 025. Stage 2 acceptance: Wire the mode button to GPIO17 and ground; firmware uses INPUT_PULLUP and active-low logic.
+- [ ] 026. Stage 2 acceptance: Wire the SOS button to GPIO32 and ground; firmware uses INPUT_PULLUP and a two-second hold.
+- [ ] 027. Stage 2 acceptance: Wire the battery divider to GPIO34 exactly as BAT+ through R1 to GPIO34 through R2 to ground.
+- [ ] 028. Stage 2 acceptance: Use two 100k resistors only after measuring their actual values; divider tolerance affects battery display.
+- [ ] 029. Stage 2 acceptance: Remember GPIO34 is input-only and has no internal pull-up; never use it as a control output.
+- [ ] 030. Stage 2 acceptance: Confirm the ADC divider cannot exceed the ADC safe input range at the battery maximum; MUST CONFIRM FROM DATASHEET.
+- [ ] 031. Stage 2 acceptance: Compare the GPIO34 ADC reading against a multimeter at multiple known battery voltages.
+- [ ] 032. Stage 2 acceptance: Check ADC attenuation and calibration assumptions; current code documents 12-bit conversion but accuracy is UNKNOWN.
+- [ ] 033. Stage 2 acceptance: Calculate divider load and battery drain; record the measured quiescent current.
+- [ ] 034. Stage 2 acceptance: Use a current-limited bench supply for first power-up when possible; set a conservative current limit.
+- [ ] 035. Stage 2 acceptance: Inspect for shorts between BAT+, 3V3, 5V, and ground before installing a LiPo.
+- [ ] 036. Stage 2 acceptance: Never connect a bare LiPo to an unverified TP4056 board.
+- [ ] 037. Stage 2 acceptance: Never wear the prototype while charging and never leave charging unattended.
+- [ ] 038. Stage 2 acceptance: Confirm charger input voltage, charge current, termination behavior, and thermal limits from its datasheet.
+- [ ] 039. Stage 2 acceptance: Confirm whether the TP4056 board routes protected output or raw battery pads; UNKNOWN until traced or measured.
+- [ ] 040. Stage 2 acceptance: Provide a separate protection solution when the charger board lacks overcharge, overdischarge, and short-circuit protection.
+- [ ] 041. Stage 2 acceptance: Confirm battery protection cutoff thresholds and continuous current rating from the battery datasheet.
+- [ ] 042. Stage 2 acceptance: Inspect the LiPo for swelling, puncture, torn insulation, heat, or odor; stop immediately on any defect.
+- [ ] 043. Stage 2 acceptance: Keep the battery away from sharp headers, solder points, motor edges, and enclosure screws.
+- [ ] 044. Stage 2 acceptance: Add strain relief at battery, USB, sensor, and button wires; a solder joint is not a cable anchor.
+- [ ] 045. Stage 2 acceptance: Use insulation and a physical separator so conductive hardware cannot contact the cell.
+- [ ] 046. Stage 2 acceptance: Confirm enclosure clearance around the battery and charging connector; do not compress the cell.
+- [ ] 047. Stage 2 acceptance: Keep the optical sensor window flush and stable against the intended test surface; wrist wearability is UNKNOWN.
+- [ ] 048. Stage 2 acceptance: Provide motor clearance so vibration cannot touch the battery or crack solder joints.
+- [ ] 049. Stage 2 acceptance: Provide display, button, LED, and USB access without forcing the enclosure open.
+- [ ] 050. Stage 2 acceptance: Round or shield enclosure edges that can contact skin; material biocompatibility is UNKNOWN.
+- [ ] 051. Stage 2 acceptance: Label the enclosure prototype and revision; do not claim water resistance without a documented test.
+- [ ] 052. Stage 2 acceptance: Use ESD controls, ventilation, eye protection, and a safe soldering surface.
+- [ ] 053. Stage 2 acceptance: Inspect solder joints for bridges, cold joints, lifted pads, and insufficient wetting.
+- [ ] 054. Stage 2 acceptance: Clean flux residue using a process compatible with the boards and battery; document the solvent.
+- [ ] 055. Stage 2 acceptance: Use a continuity checklist before every powered test.
+- [ ] 056. Stage 2 acceptance: Flash with PlatformIO environment esp32dev and the repository platform version 6.8.1.
+- [ ] 057. Stage 2 acceptance: Use 921600 upload speed only when the cable and board are reliable; lower it for failed uploads.
+- [ ] 058. Stage 2 acceptance: Use 115200 serial monitor speed and record the complete boot banner.
+- [ ] 059. Stage 2 acceptance: Confirm the serial banner reports firmware version, PIN, PPG, MPU, and OLED presence.
+- [ ] 060. Stage 2 acceptance: Confirm LittleFS mounts; record any LittleFS fail message and stop release testing if storage is unavailable.
+- [ ] 061. Stage 2 acceptance: Confirm Preferences loads or creates the six-digit PIN and preserves it across reset.
+- [ ] 062. Stage 2 acceptance: Confirm BLE advertises as Veyro with the service UUID from protocol.h.
+- [ ] 063. Stage 2 acceptance: Confirm the app discovers the same service and characteristic UUIDs from veyro_protocol.dart.
+- [ ] 064. Stage 2 acceptance: Confirm BLE pairing sends the displayed six-digit PIN and that wrong PINs remain rejected.
+- [ ] 065. Stage 2 acceptance: Remember BLE link encryption is not established by the application PIN flow; production security is still required.
+- [ ] 066. Stage 2 acceptance: Treat BLE notifications and local files as prototype data paths; threat modeling and hardening are incomplete.
+- [ ] 067. Stage 2 acceptance: Confirm the app requests platform-specific Bluetooth permissions before scanning.
+- [ ] 068. Stage 2 acceptance: Confirm the app sends UTC time before relying on timestamps; otherwise firmware uses its fallback epoch behavior.
+- [ ] 069. Stage 2 acceptance: Confirm live JSON fields are hr, spo2, bps, bpd, hrv, steps, fall, bat, and ts.
+- [ ] 070. Stage 2 acceptance: Confirm history rows use unix,hr,spo2,sys,dia,hrv,steps,fall,battery.
+- [ ] 071. Stage 2 acceptance: Confirm history completion is the JSON message with v 1 and done 1.
+- [ ] 072. Stage 2 acceptance: Confirm failed or interrupted sync does not delete existing local app records.
+- [ ] 073. Stage 2 acceptance: Confirm LocalStore deduplicates rows by Unix timestamp and stores day files locally.
+- [ ] 074. Stage 2 acceptance: Confirm the watch stores UTC day files under LittleFS /d and prunes beyond 60 retention days.
+- [ ] 075. Stage 2 acceptance: Label rough SpO2 output as experimental; the firmware uses a rough ratio placeholder, not a clinical algorithm.
+- [ ] 076. Stage 2 acceptance: Label blood pressure as unavailable; current firmware explicitly sends zero systolic and diastolic values.
+- [ ] 077. Stage 2 acceptance: Label fall detection as threshold-based and prone to false positives; it is not validated emergency detection.
+- [ ] 078. Stage 2 acceptance: Label HR and HRV as wellness signals until reference comparison and repeatability testing exist.
+- [ ] 079. Stage 2 acceptance: Create a fixture for I2C scan, serial capture, BLE discovery, pairing, sync, buttons, LEDs, motor, and ADC.
+- [ ] 080. Stage 2 acceptance: Create a known-good firmware image and record its hash; exact artifact hash is UNKNOWN until built.
+- [ ] 081. Stage 2 acceptance: Use a sacrificial board for first flash and first battery test.
+- [ ] 082. Stage 2 acceptance: Record board serial, component lots, battery identity, enclosure revision, firmware, app, operator, date, and defects.
+- [ ] 083. Stage 2 acceptance: Define a safety stop for heat, smoke, swelling, exposed conductors, unstable current, or unexpected motor behavior.
+- [ ] 084. Stage 2 acceptance: Define a technical stop for missing sensor, conflicting address, failed storage, failed BLE, corrupt row, or unsafe voltage.
+- [ ] 085. Stage 2 acceptance: Do not release a wearable build until mechanical, electrical, firmware, app, safety, and data gates all pass.
+- [ ] 086. Stage 2 acceptance: Keep every unknown in the test record with an owner, measurement method, and due date.
+Stage 2 disposition: PASS / FAIL / BLOCKED. Evidence location: UNKNOWN until recorded.
+
+## Stage 3: service discovery
+This stage changes the acceptance context. Repeat the check only after the stage condition is met; record a new result rather than copying an old result.
+- [ ] 001. Stage 3 acceptance: Identify the exact board as ESP32-WROOM-32 DevKit before assembly; record vendor and board revision.
+- [ ] 002. Stage 3 acceptance: Count flash as 4 MB only when the board label or build report confirms it; PSRAM is not present in the stated target.
+- [ ] 003. Stage 3 acceptance: Identify the MAX30102 module by marking and datasheet; module identity is not interchangeable with the bare IC.
+- [ ] 004. Stage 3 acceptance: Identify the MPU6050 breakout, regulator, and address by marking; UNKNOWN until inspected.
+- [ ] 005. Stage 3 acceptance: Identify the SSD1306 display controller, resolution, supply range, and I2C address; MUST CONFIRM FROM DATASHEET.
+- [ ] 006. Stage 3 acceptance: Identify the battery chemistry, nominal voltage, capacity, connector, protection, and source; never infer these from package size.
+- [ ] 007. Stage 3 acceptance: Identify the charger board model and whether it includes protection; a board sold as TP4056 is not proof of protection.
+- [ ] 008. Stage 3 acceptance: Identify motor voltage, stall current, LED polarity, button type, resistor values, and wire gauge before wiring.
+- [ ] 009. Stage 3 acceptance: Record approximate physical fit measurements for every part; enclosure dimensions remain UNKNOWN until measured.
+- [ ] 010. Stage 3 acceptance: Measure board, sensor, battery, motor, display, and connector thickness with calipers; record maximum and minimum.
+- [ ] 011. Stage 3 acceptance: Measure the wrist-side sensor opening and optical contact geometry; do not assume a module window fits a wrist.
+- [ ] 012. Stage 3 acceptance: Mark all fit assumptions as APPROXIMATE until a physical mockup proves clearance and service access.
+- [ ] 013. Stage 3 acceptance: Confirm the ESP32 logic rail is 3.3 V at the module pins; MUST CONFIRM FROM DATASHEET for every breakout.
+- [ ] 014. Stage 3 acceptance: Confirm each I2C breakout tolerates 3.3 V and does not pull SDA or SCL to 5 V; stop if unknown.
+- [ ] 015. Stage 3 acceptance: Use one common ground reference and verify continuity before applying power.
+- [ ] 016. Stage 3 acceptance: Use GPIO21 for I2C SDA because pins.h is authoritative; do not create a second pin map.
+- [ ] 017. Stage 3 acceptance: Use GPIO22 for I2C SCL because pins.h is authoritative; do not substitute pins without source changes.
+- [ ] 018. Stage 3 acceptance: Run an I2C scan with modules disconnected and connected one at a time; record every address.
+- [ ] 019. Stage 3 acceptance: Check for I2C address conflicts among MAX30102, MPU6050, and SSD1306; conflict status is MUST MEASURE.
+- [ ] 020. Stage 3 acceptance: Confirm pull-up voltage and effective resistance on the shared I2C bus; excessive parallel pull-ups can break the bus.
+- [ ] 021. Stage 3 acceptance: Keep I2C wires short for the 400 kHz firmware setting; exact maximum length is UNKNOWN and MUST MEASURE.
+- [ ] 022. Stage 3 acceptance: Wire GPIO25 only to a validated motor driver input; never drive a motor directly from an ESP32 GPIO.
+- [ ] 023. Stage 3 acceptance: Wire GPIO4 to the red LED through a current-limiting resistor; verify polarity and current.
+- [ ] 024. Stage 3 acceptance: Wire GPIO16 to the green LED through a current-limiting resistor; verify polarity and current.
+- [ ] 025. Stage 3 acceptance: Wire the mode button to GPIO17 and ground; firmware uses INPUT_PULLUP and active-low logic.
+- [ ] 026. Stage 3 acceptance: Wire the SOS button to GPIO32 and ground; firmware uses INPUT_PULLUP and a two-second hold.
+- [ ] 027. Stage 3 acceptance: Wire the battery divider to GPIO34 exactly as BAT+ through R1 to GPIO34 through R2 to ground.
+- [ ] 028. Stage 3 acceptance: Use two 100k resistors only after measuring their actual values; divider tolerance affects battery display.
+- [ ] 029. Stage 3 acceptance: Remember GPIO34 is input-only and has no internal pull-up; never use it as a control output.
+- [ ] 030. Stage 3 acceptance: Confirm the ADC divider cannot exceed the ADC safe input range at the battery maximum; MUST CONFIRM FROM DATASHEET.
+- [ ] 031. Stage 3 acceptance: Compare the GPIO34 ADC reading against a multimeter at multiple known battery voltages.
+- [ ] 032. Stage 3 acceptance: Check ADC attenuation and calibration assumptions; current code documents 12-bit conversion but accuracy is UNKNOWN.
+- [ ] 033. Stage 3 acceptance: Calculate divider load and battery drain; record the measured quiescent current.
+- [ ] 034. Stage 3 acceptance: Use a current-limited bench supply for first power-up when possible; set a conservative current limit.
+- [ ] 035. Stage 3 acceptance: Inspect for shorts between BAT+, 3V3, 5V, and ground before installing a LiPo.
+- [ ] 036. Stage 3 acceptance: Never connect a bare LiPo to an unverified TP4056 board.
+- [ ] 037. Stage 3 acceptance: Never wear the prototype while charging and never leave charging unattended.
+- [ ] 038. Stage 3 acceptance: Confirm charger input voltage, charge current, termination behavior, and thermal limits from its datasheet.
+- [ ] 039. Stage 3 acceptance: Confirm whether the TP4056 board routes protected output or raw battery pads; UNKNOWN until traced or measured.
+- [ ] 040. Stage 3 acceptance: Provide a separate protection solution when the charger board lacks overcharge, overdischarge, and short-circuit protection.
+- [ ] 041. Stage 3 acceptance: Confirm battery protection cutoff thresholds and continuous current rating from the battery datasheet.
+- [ ] 042. Stage 3 acceptance: Inspect the LiPo for swelling, puncture, torn insulation, heat, or odor; stop immediately on any defect.
+- [ ] 043. Stage 3 acceptance: Keep the battery away from sharp headers, solder points, motor edges, and enclosure screws.
+- [ ] 044. Stage 3 acceptance: Add strain relief at battery, USB, sensor, and button wires; a solder joint is not a cable anchor.
+- [ ] 045. Stage 3 acceptance: Use insulation and a physical separator so conductive hardware cannot contact the cell.
+- [ ] 046. Stage 3 acceptance: Confirm enclosure clearance around the battery and charging connector; do not compress the cell.
+- [ ] 047. Stage 3 acceptance: Keep the optical sensor window flush and stable against the intended test surface; wrist wearability is UNKNOWN.
+- [ ] 048. Stage 3 acceptance: Provide motor clearance so vibration cannot touch the battery or crack solder joints.
+- [ ] 049. Stage 3 acceptance: Provide display, button, LED, and USB access without forcing the enclosure open.
+- [ ] 050. Stage 3 acceptance: Round or shield enclosure edges that can contact skin; material biocompatibility is UNKNOWN.
+- [ ] 051. Stage 3 acceptance: Label the enclosure prototype and revision; do not claim water resistance without a documented test.
+- [ ] 052. Stage 3 acceptance: Use ESD controls, ventilation, eye protection, and a safe soldering surface.
+- [ ] 053. Stage 3 acceptance: Inspect solder joints for bridges, cold joints, lifted pads, and insufficient wetting.
+- [ ] 054. Stage 3 acceptance: Clean flux residue using a process compatible with the boards and battery; document the solvent.
+- [ ] 055. Stage 3 acceptance: Use a continuity checklist before every powered test.
+- [ ] 056. Stage 3 acceptance: Flash with PlatformIO environment esp32dev and the repository platform version 6.8.1.
+- [ ] 057. Stage 3 acceptance: Use 921600 upload speed only when the cable and board are reliable; lower it for failed uploads.
+- [ ] 058. Stage 3 acceptance: Use 115200 serial monitor speed and record the complete boot banner.
+- [ ] 059. Stage 3 acceptance: Confirm the serial banner reports firmware version, PIN, PPG, MPU, and OLED presence.
+- [ ] 060. Stage 3 acceptance: Confirm LittleFS mounts; record any LittleFS fail message and stop release testing if storage is unavailable.
+- [ ] 061. Stage 3 acceptance: Confirm Preferences loads or creates the six-digit PIN and preserves it across reset.
+- [ ] 062. Stage 3 acceptance: Confirm BLE advertises as Veyro with the service UUID from protocol.h.
+- [ ] 063. Stage 3 acceptance: Confirm the app discovers the same service and characteristic UUIDs from veyro_protocol.dart.
+- [ ] 064. Stage 3 acceptance: Confirm BLE pairing sends the displayed six-digit PIN and that wrong PINs remain rejected.
+- [ ] 065. Stage 3 acceptance: Remember BLE link encryption is not established by the application PIN flow; production security is still required.
+- [ ] 066. Stage 3 acceptance: Treat BLE notifications and local files as prototype data paths; threat modeling and hardening are incomplete.
+- [ ] 067. Stage 3 acceptance: Confirm the app requests platform-specific Bluetooth permissions before scanning.
+- [ ] 068. Stage 3 acceptance: Confirm the app sends UTC time before relying on timestamps; otherwise firmware uses its fallback epoch behavior.
+- [ ] 069. Stage 3 acceptance: Confirm live JSON fields are hr, spo2, bps, bpd, hrv, steps, fall, bat, and ts.
+- [ ] 070. Stage 3 acceptance: Confirm history rows use unix,hr,spo2,sys,dia,hrv,steps,fall,battery.
+- [ ] 071. Stage 3 acceptance: Confirm history completion is the JSON message with v 1 and done 1.
+- [ ] 072. Stage 3 acceptance: Confirm failed or interrupted sync does not delete existing local app records.
+- [ ] 073. Stage 3 acceptance: Confirm LocalStore deduplicates rows by Unix timestamp and stores day files locally.
+- [ ] 074. Stage 3 acceptance: Confirm the watch stores UTC day files under LittleFS /d and prunes beyond 60 retention days.
+- [ ] 075. Stage 3 acceptance: Label rough SpO2 output as experimental; the firmware uses a rough ratio placeholder, not a clinical algorithm.
+- [ ] 076. Stage 3 acceptance: Label blood pressure as unavailable; current firmware explicitly sends zero systolic and diastolic values.
+- [ ] 077. Stage 3 acceptance: Label fall detection as threshold-based and prone to false positives; it is not validated emergency detection.
+- [ ] 078. Stage 3 acceptance: Label HR and HRV as wellness signals until reference comparison and repeatability testing exist.
+- [ ] 079. Stage 3 acceptance: Create a fixture for I2C scan, serial capture, BLE discovery, pairing, sync, buttons, LEDs, motor, and ADC.
+- [ ] 080. Stage 3 acceptance: Create a known-good firmware image and record its hash; exact artifact hash is UNKNOWN until built.
+- [ ] 081. Stage 3 acceptance: Use a sacrificial board for first flash and first battery test.
+- [ ] 082. Stage 3 acceptance: Record board serial, component lots, battery identity, enclosure revision, firmware, app, operator, date, and defects.
+- [ ] 083. Stage 3 acceptance: Define a safety stop for heat, smoke, swelling, exposed conductors, unstable current, or unexpected motor behavior.
+- [ ] 084. Stage 3 acceptance: Define a technical stop for missing sensor, conflicting address, failed storage, failed BLE, corrupt row, or unsafe voltage.
+- [ ] 085. Stage 3 acceptance: Do not release a wearable build until mechanical, electrical, firmware, app, safety, and data gates all pass.
+- [ ] 086. Stage 3 acceptance: Keep every unknown in the test record with an owner, measurement method, and due date.
+Stage 3 disposition: PASS / FAIL / BLOCKED. Evidence location: UNKNOWN until recorded.
+
+## Stage 4: live notifications
+This stage changes the acceptance context. Repeat the check only after the stage condition is met; record a new result rather than copying an old result.
+- [ ] 001. Stage 4 acceptance: Identify the exact board as ESP32-WROOM-32 DevKit before assembly; record vendor and board revision.
+- [ ] 002. Stage 4 acceptance: Count flash as 4 MB only when the board label or build report confirms it; PSRAM is not present in the stated target.
+- [ ] 003. Stage 4 acceptance: Identify the MAX30102 module by marking and datasheet; module identity is not interchangeable with the bare IC.
+- [ ] 004. Stage 4 acceptance: Identify the MPU6050 breakout, regulator, and address by marking; UNKNOWN until inspected.
+- [ ] 005. Stage 4 acceptance: Identify the SSD1306 display controller, resolution, supply range, and I2C address; MUST CONFIRM FROM DATASHEET.
+- [ ] 006. Stage 4 acceptance: Identify the battery chemistry, nominal voltage, capacity, connector, protection, and source; never infer these from package size.
+- [ ] 007. Stage 4 acceptance: Identify the charger board model and whether it includes protection; a board sold as TP4056 is not proof of protection.
+- [ ] 008. Stage 4 acceptance: Identify motor voltage, stall current, LED polarity, button type, resistor values, and wire gauge before wiring.
+- [ ] 009. Stage 4 acceptance: Record approximate physical fit measurements for every part; enclosure dimensions remain UNKNOWN until measured.
+- [ ] 010. Stage 4 acceptance: Measure board, sensor, battery, motor, display, and connector thickness with calipers; record maximum and minimum.
+- [ ] 011. Stage 4 acceptance: Measure the wrist-side sensor opening and optical contact geometry; do not assume a module window fits a wrist.
+- [ ] 012. Stage 4 acceptance: Mark all fit assumptions as APPROXIMATE until a physical mockup proves clearance and service access.
+- [ ] 013. Stage 4 acceptance: Confirm the ESP32 logic rail is 3.3 V at the module pins; MUST CONFIRM FROM DATASHEET for every breakout.
+- [ ] 014. Stage 4 acceptance: Confirm each I2C breakout tolerates 3.3 V and does not pull SDA or SCL to 5 V; stop if unknown.
+- [ ] 015. Stage 4 acceptance: Use one common ground reference and verify continuity before applying power.
+- [ ] 016. Stage 4 acceptance: Use GPIO21 for I2C SDA because pins.h is authoritative; do not create a second pin map.
+- [ ] 017. Stage 4 acceptance: Use GPIO22 for I2C SCL because pins.h is authoritative; do not substitute pins without source changes.
+- [ ] 018. Stage 4 acceptance: Run an I2C scan with modules disconnected and connected one at a time; record every address.
+- [ ] 019. Stage 4 acceptance: Check for I2C address conflicts among MAX30102, MPU6050, and SSD1306; conflict status is MUST MEASURE.
+- [ ] 020. Stage 4 acceptance: Confirm pull-up voltage and effective resistance on the shared I2C bus; excessive parallel pull-ups can break the bus.
+- [ ] 021. Stage 4 acceptance: Keep I2C wires short for the 400 kHz firmware setting; exact maximum length is UNKNOWN and MUST MEASURE.
+- [ ] 022. Stage 4 acceptance: Wire GPIO25 only to a validated motor driver input; never drive a motor directly from an ESP32 GPIO.
+- [ ] 023. Stage 4 acceptance: Wire GPIO4 to the red LED through a current-limiting resistor; verify polarity and current.
+- [ ] 024. Stage 4 acceptance: Wire GPIO16 to the green LED through a current-limiting resistor; verify polarity and current.
+- [ ] 025. Stage 4 acceptance: Wire the mode button to GPIO17 and ground; firmware uses INPUT_PULLUP and active-low logic.
+- [ ] 026. Stage 4 acceptance: Wire the SOS button to GPIO32 and ground; firmware uses INPUT_PULLUP and a two-second hold.
+- [ ] 027. Stage 4 acceptance: Wire the battery divider to GPIO34 exactly as BAT+ through R1 to GPIO34 through R2 to ground.
+- [ ] 028. Stage 4 acceptance: Use two 100k resistors only after measuring their actual values; divider tolerance affects battery display.
+- [ ] 029. Stage 4 acceptance: Remember GPIO34 is input-only and has no internal pull-up; never use it as a control output.
+- [ ] 030. Stage 4 acceptance: Confirm the ADC divider cannot exceed the ADC safe input range at the battery maximum; MUST CONFIRM FROM DATASHEET.
+- [ ] 031. Stage 4 acceptance: Compare the GPIO34 ADC reading against a multimeter at multiple known battery voltages.
+- [ ] 032. Stage 4 acceptance: Check ADC attenuation and calibration assumptions; current code documents 12-bit conversion but accuracy is UNKNOWN.
+- [ ] 033. Stage 4 acceptance: Calculate divider load and battery drain; record the measured quiescent current.
+- [ ] 034. Stage 4 acceptance: Use a current-limited bench supply for first power-up when possible; set a conservative current limit.
+- [ ] 035. Stage 4 acceptance: Inspect for shorts between BAT+, 3V3, 5V, and ground before installing a LiPo.
+- [ ] 036. Stage 4 acceptance: Never connect a bare LiPo to an unverified TP4056 board.
+- [ ] 037. Stage 4 acceptance: Never wear the prototype while charging and never leave charging unattended.
+- [ ] 038. Stage 4 acceptance: Confirm charger input voltage, charge current, termination behavior, and thermal limits from its datasheet.
+- [ ] 039. Stage 4 acceptance: Confirm whether the TP4056 board routes protected output or raw battery pads; UNKNOWN until traced or measured.
+- [ ] 040. Stage 4 acceptance: Provide a separate protection solution when the charger board lacks overcharge, overdischarge, and short-circuit protection.
+- [ ] 041. Stage 4 acceptance: Confirm battery protection cutoff thresholds and continuous current rating from the battery datasheet.
+- [ ] 042. Stage 4 acceptance: Inspect the LiPo for swelling, puncture, torn insulation, heat, or odor; stop immediately on any defect.
+- [ ] 043. Stage 4 acceptance: Keep the battery away from sharp headers, solder points, motor edges, and enclosure screws.
+- [ ] 044. Stage 4 acceptance: Add strain relief at battery, USB, sensor, and button wires; a solder joint is not a cable anchor.
+- [ ] 045. Stage 4 acceptance: Use insulation and a physical separator so conductive hardware cannot contact the cell.
+- [ ] 046. Stage 4 acceptance: Confirm enclosure clearance around the battery and charging connector; do not compress the cell.
+- [ ] 047. Stage 4 acceptance: Keep the optical sensor window flush and stable against the intended test surface; wrist wearability is UNKNOWN.
+- [ ] 048. Stage 4 acceptance: Provide motor clearance so vibration cannot touch the battery or crack solder joints.
+- [ ] 049. Stage 4 acceptance: Provide display, button, LED, and USB access without forcing the enclosure open.
+- [ ] 050. Stage 4 acceptance: Round or shield enclosure edges that can contact skin; material biocompatibility is UNKNOWN.
+- [ ] 051. Stage 4 acceptance: Label the enclosure prototype and revision; do not claim water resistance without a documented test.
+- [ ] 052. Stage 4 acceptance: Use ESD controls, ventilation, eye protection, and a safe soldering surface.
+- [ ] 053. Stage 4 acceptance: Inspect solder joints for bridges, cold joints, lifted pads, and insufficient wetting.
+- [ ] 054. Stage 4 acceptance: Clean flux residue using a process compatible with the boards and battery; document the solvent.
+- [ ] 055. Stage 4 acceptance: Use a continuity checklist before every powered test.
+- [ ] 056. Stage 4 acceptance: Flash with PlatformIO environment esp32dev and the repository platform version 6.8.1.
+- [ ] 057. Stage 4 acceptance: Use 921600 upload speed only when the cable and board are reliable; lower it for failed uploads.
+- [ ] 058. Stage 4 acceptance: Use 115200 serial monitor speed and record the complete boot banner.
+- [ ] 059. Stage 4 acceptance: Confirm the serial banner reports firmware version, PIN, PPG, MPU, and OLED presence.
+- [ ] 060. Stage 4 acceptance: Confirm LittleFS mounts; record any LittleFS fail message and stop release testing if storage is unavailable.
+- [ ] 061. Stage 4 acceptance: Confirm Preferences loads or creates the six-digit PIN and preserves it across reset.
+- [ ] 062. Stage 4 acceptance: Confirm BLE advertises as Veyro with the service UUID from protocol.h.
+- [ ] 063. Stage 4 acceptance: Confirm the app discovers the same service and characteristic UUIDs from veyro_protocol.dart.
+- [ ] 064. Stage 4 acceptance: Confirm BLE pairing sends the displayed six-digit PIN and that wrong PINs remain rejected.
+- [ ] 065. Stage 4 acceptance: Remember BLE link encryption is not established by the application PIN flow; production security is still required.
+- [ ] 066. Stage 4 acceptance: Treat BLE notifications and local files as prototype data paths; threat modeling and hardening are incomplete.
+- [ ] 067. Stage 4 acceptance: Confirm the app requests platform-specific Bluetooth permissions before scanning.
+- [ ] 068. Stage 4 acceptance: Confirm the app sends UTC time before relying on timestamps; otherwise firmware uses its fallback epoch behavior.
+- [ ] 069. Stage 4 acceptance: Confirm live JSON fields are hr, spo2, bps, bpd, hrv, steps, fall, bat, and ts.
+- [ ] 070. Stage 4 acceptance: Confirm history rows use unix,hr,spo2,sys,dia,hrv,steps,fall,battery.
+- [ ] 071. Stage 4 acceptance: Confirm history completion is the JSON message with v 1 and done 1.
+- [ ] 072. Stage 4 acceptance: Confirm failed or interrupted sync does not delete existing local app records.
+- [ ] 073. Stage 4 acceptance: Confirm LocalStore deduplicates rows by Unix timestamp and stores day files locally.
+- [ ] 074. Stage 4 acceptance: Confirm the watch stores UTC day files under LittleFS /d and prunes beyond 60 retention days.
+- [ ] 075. Stage 4 acceptance: Label rough SpO2 output as experimental; the firmware uses a rough ratio placeholder, not a clinical algorithm.
+- [ ] 076. Stage 4 acceptance: Label blood pressure as unavailable; current firmware explicitly sends zero systolic and diastolic values.
+- [ ] 077. Stage 4 acceptance: Label fall detection as threshold-based and prone to false positives; it is not validated emergency detection.
+- [ ] 078. Stage 4 acceptance: Label HR and HRV as wellness signals until reference comparison and repeatability testing exist.
+- [ ] 079. Stage 4 acceptance: Create a fixture for I2C scan, serial capture, BLE discovery, pairing, sync, buttons, LEDs, motor, and ADC.
+- [ ] 080. Stage 4 acceptance: Create a known-good firmware image and record its hash; exact artifact hash is UNKNOWN until built.
+- [ ] 081. Stage 4 acceptance: Use a sacrificial board for first flash and first battery test.
+- [ ] 082. Stage 4 acceptance: Record board serial, component lots, battery identity, enclosure revision, firmware, app, operator, date, and defects.
+- [ ] 083. Stage 4 acceptance: Define a safety stop for heat, smoke, swelling, exposed conductors, unstable current, or unexpected motor behavior.
+- [ ] 084. Stage 4 acceptance: Define a technical stop for missing sensor, conflicting address, failed storage, failed BLE, corrupt row, or unsafe voltage.
+- [ ] 085. Stage 4 acceptance: Do not release a wearable build until mechanical, electrical, firmware, app, safety, and data gates all pass.
+- [ ] 086. Stage 4 acceptance: Keep every unknown in the test record with an owner, measurement method, and due date.
+Stage 4 disposition: PASS / FAIL / BLOCKED. Evidence location: UNKNOWN until recorded.
+
+## Stage 5: PIN pairing
+This stage changes the acceptance context. Repeat the check only after the stage condition is met; record a new result rather than copying an old result.
+- [ ] 001. Stage 5 acceptance: Identify the exact board as ESP32-WROOM-32 DevKit before assembly; record vendor and board revision.
+- [ ] 002. Stage 5 acceptance: Count flash as 4 MB only when the board label or build report confirms it; PSRAM is not present in the stated target.
+- [ ] 003. Stage 5 acceptance: Identify the MAX30102 module by marking and datasheet; module identity is not interchangeable with the bare IC.
+- [ ] 004. Stage 5 acceptance: Identify the MPU6050 breakout, regulator, and address by marking; UNKNOWN until inspected.
+- [ ] 005. Stage 5 acceptance: Identify the SSD1306 display controller, resolution, supply range, and I2C address; MUST CONFIRM FROM DATASHEET.
+- [ ] 006. Stage 5 acceptance: Identify the battery chemistry, nominal voltage, capacity, connector, protection, and source; never infer these from package size.
+- [ ] 007. Stage 5 acceptance: Identify the charger board model and whether it includes protection; a board sold as TP4056 is not proof of protection.
+- [ ] 008. Stage 5 acceptance: Identify motor voltage, stall current, LED polarity, button type, resistor values, and wire gauge before wiring.
+- [ ] 009. Stage 5 acceptance: Record approximate physical fit measurements for every part; enclosure dimensions remain UNKNOWN until measured.
+- [ ] 010. Stage 5 acceptance: Measure board, sensor, battery, motor, display, and connector thickness with calipers; record maximum and minimum.
+- [ ] 011. Stage 5 acceptance: Measure the wrist-side sensor opening and optical contact geometry; do not assume a module window fits a wrist.
+- [ ] 012. Stage 5 acceptance: Mark all fit assumptions as APPROXIMATE until a physical mockup proves clearance and service access.
+- [ ] 013. Stage 5 acceptance: Confirm the ESP32 logic rail is 3.3 V at the module pins; MUST CONFIRM FROM DATASHEET for every breakout.
+- [ ] 014. Stage 5 acceptance: Confirm each I2C breakout tolerates 3.3 V and does not pull SDA or SCL to 5 V; stop if unknown.
+- [ ] 015. Stage 5 acceptance: Use one common ground reference and verify continuity before applying power.
+- [ ] 016. Stage 5 acceptance: Use GPIO21 for I2C SDA because pins.h is authoritative; do not create a second pin map.
+- [ ] 017. Stage 5 acceptance: Use GPIO22 for I2C SCL because pins.h is authoritative; do not substitute pins without source changes.
+- [ ] 018. Stage 5 acceptance: Run an I2C scan with modules disconnected and connected one at a time; record every address.
+- [ ] 019. Stage 5 acceptance: Check for I2C address conflicts among MAX30102, MPU6050, and SSD1306; conflict status is MUST MEASURE.
+- [ ] 020. Stage 5 acceptance: Confirm pull-up voltage and effective resistance on the shared I2C bus; excessive parallel pull-ups can break the bus.
+- [ ] 021. Stage 5 acceptance: Keep I2C wires short for the 400 kHz firmware setting; exact maximum length is UNKNOWN and MUST MEASURE.
+- [ ] 022. Stage 5 acceptance: Wire GPIO25 only to a validated motor driver input; never drive a motor directly from an ESP32 GPIO.
+- [ ] 023. Stage 5 acceptance: Wire GPIO4 to the red LED through a current-limiting resistor; verify polarity and current.
+- [ ] 024. Stage 5 acceptance: Wire GPIO16 to the green LED through a current-limiting resistor; verify polarity and current.
+- [ ] 025. Stage 5 acceptance: Wire the mode button to GPIO17 and ground; firmware uses INPUT_PULLUP and active-low logic.
+- [ ] 026. Stage 5 acceptance: Wire the SOS button to GPIO32 and ground; firmware uses INPUT_PULLUP and a two-second hold.
+- [ ] 027. Stage 5 acceptance: Wire the battery divider to GPIO34 exactly as BAT+ through R1 to GPIO34 through R2 to ground.
+- [ ] 028. Stage 5 acceptance: Use two 100k resistors only after measuring their actual values; divider tolerance affects battery display.
+- [ ] 029. Stage 5 acceptance: Remember GPIO34 is input-only and has no internal pull-up; never use it as a control output.
+- [ ] 030. Stage 5 acceptance: Confirm the ADC divider cannot exceed the ADC safe input range at the battery maximum; MUST CONFIRM FROM DATASHEET.
+- [ ] 031. Stage 5 acceptance: Compare the GPIO34 ADC reading against a multimeter at multiple known battery voltages.
+- [ ] 032. Stage 5 acceptance: Check ADC attenuation and calibration assumptions; current code documents 12-bit conversion but accuracy is UNKNOWN.
+- [ ] 033. Stage 5 acceptance: Calculate divider load and battery drain; record the measured quiescent current.
+- [ ] 034. Stage 5 acceptance: Use a current-limited bench supply for first power-up when possible; set a conservative current limit.
+- [ ] 035. Stage 5 acceptance: Inspect for shorts between BAT+, 3V3, 5V, and ground before installing a LiPo.
+- [ ] 036. Stage 5 acceptance: Never connect a bare LiPo to an unverified TP4056 board.
+- [ ] 037. Stage 5 acceptance: Never wear the prototype while charging and never leave charging unattended.
+- [ ] 038. Stage 5 acceptance: Confirm charger input voltage, charge current, termination behavior, and thermal limits from its datasheet.
+- [ ] 039. Stage 5 acceptance: Confirm whether the TP4056 board routes protected output or raw battery pads; UNKNOWN until traced or measured.
+- [ ] 040. Stage 5 acceptance: Provide a separate protection solution when the charger board lacks overcharge, overdischarge, and short-circuit protection.
+- [ ] 041. Stage 5 acceptance: Confirm battery protection cutoff thresholds and continuous current rating from the battery datasheet.
+- [ ] 042. Stage 5 acceptance: Inspect the LiPo for swelling, puncture, torn insulation, heat, or odor; stop immediately on any defect.
+- [ ] 043. Stage 5 acceptance: Keep the battery away from sharp headers, solder points, motor edges, and enclosure screws.
+- [ ] 044. Stage 5 acceptance: Add strain relief at battery, USB, sensor, and button wires; a solder joint is not a cable anchor.
+- [ ] 045. Stage 5 acceptance: Use insulation and a physical separator so conductive hardware cannot contact the cell.
+- [ ] 046. Stage 5 acceptance: Confirm enclosure clearance around the battery and charging connector; do not compress the cell.
+- [ ] 047. Stage 5 acceptance: Keep the optical sensor window flush and stable against the intended test surface; wrist wearability is UNKNOWN.
+- [ ] 048. Stage 5 acceptance: Provide motor clearance so vibration cannot touch the battery or crack solder joints.
+- [ ] 049. Stage 5 acceptance: Provide display, button, LED, and USB access without forcing the enclosure open.
+- [ ] 050. Stage 5 acceptance: Round or shield enclosure edges that can contact skin; material biocompatibility is UNKNOWN.
+- [ ] 051. Stage 5 acceptance: Label the enclosure prototype and revision; do not claim water resistance without a documented test.
+- [ ] 052. Stage 5 acceptance: Use ESD controls, ventilation, eye protection, and a safe soldering surface.
+- [ ] 053. Stage 5 acceptance: Inspect solder joints for bridges, cold joints, lifted pads, and insufficient wetting.
+- [ ] 054. Stage 5 acceptance: Clean flux residue using a process compatible with the boards and battery; document the solvent.
+- [ ] 055. Stage 5 acceptance: Use a continuity checklist before every powered test.
+- [ ] 056. Stage 5 acceptance: Flash with PlatformIO environment esp32dev and the repository platform version 6.8.1.
+- [ ] 057. Stage 5 acceptance: Use 921600 upload speed only when the cable and board are reliable; lower it for failed uploads.
+- [ ] 058. Stage 5 acceptance: Use 115200 serial monitor speed and record the complete boot banner.
+- [ ] 059. Stage 5 acceptance: Confirm the serial banner reports firmware version, PIN, PPG, MPU, and OLED presence.
+- [ ] 060. Stage 5 acceptance: Confirm LittleFS mounts; record any LittleFS fail message and stop release testing if storage is unavailable.
+- [ ] 061. Stage 5 acceptance: Confirm Preferences loads or creates the six-digit PIN and preserves it across reset.
+- [ ] 062. Stage 5 acceptance: Confirm BLE advertises as Veyro with the service UUID from protocol.h.
+- [ ] 063. Stage 5 acceptance: Confirm the app discovers the same service and characteristic UUIDs from veyro_protocol.dart.
+- [ ] 064. Stage 5 acceptance: Confirm BLE pairing sends the displayed six-digit PIN and that wrong PINs remain rejected.
+- [ ] 065. Stage 5 acceptance: Remember BLE link encryption is not established by the application PIN flow; production security is still required.
+- [ ] 066. Stage 5 acceptance: Treat BLE notifications and local files as prototype data paths; threat modeling and hardening are incomplete.
+- [ ] 067. Stage 5 acceptance: Confirm the app requests platform-specific Bluetooth permissions before scanning.
+- [ ] 068. Stage 5 acceptance: Confirm the app sends UTC time before relying on timestamps; otherwise firmware uses its fallback epoch behavior.
+- [ ] 069. Stage 5 acceptance: Confirm live JSON fields are hr, spo2, bps, bpd, hrv, steps, fall, bat, and ts.
+- [ ] 070. Stage 5 acceptance: Confirm history rows use unix,hr,spo2,sys,dia,hrv,steps,fall,battery.
+- [ ] 071. Stage 5 acceptance: Confirm history completion is the JSON message with v 1 and done 1.
+- [ ] 072. Stage 5 acceptance: Confirm failed or interrupted sync does not delete existing local app records.
+- [ ] 073. Stage 5 acceptance: Confirm LocalStore deduplicates rows by Unix timestamp and stores day files locally.
+- [ ] 074. Stage 5 acceptance: Confirm the watch stores UTC day files under LittleFS /d and prunes beyond 60 retention days.
+- [ ] 075. Stage 5 acceptance: Label rough SpO2 output as experimental; the firmware uses a rough ratio placeholder, not a clinical algorithm.
+- [ ] 076. Stage 5 acceptance: Label blood pressure as unavailable; current firmware explicitly sends zero systolic and diastolic values.
+- [ ] 077. Stage 5 acceptance: Label fall detection as threshold-based and prone to false positives; it is not validated emergency detection.
+- [ ] 078. Stage 5 acceptance: Label HR and HRV as wellness signals until reference comparison and repeatability testing exist.
+- [ ] 079. Stage 5 acceptance: Create a fixture for I2C scan, serial capture, BLE discovery, pairing, sync, buttons, LEDs, motor, and ADC.
+- [ ] 080. Stage 5 acceptance: Create a known-good firmware image and record its hash; exact artifact hash is UNKNOWN until built.
+- [ ] 081. Stage 5 acceptance: Use a sacrificial board for first flash and first battery test.
+- [ ] 082. Stage 5 acceptance: Record board serial, component lots, battery identity, enclosure revision, firmware, app, operator, date, and defects.
+- [ ] 083. Stage 5 acceptance: Define a safety stop for heat, smoke, swelling, exposed conductors, unstable current, or unexpected motor behavior.
+- [ ] 084. Stage 5 acceptance: Define a technical stop for missing sensor, conflicting address, failed storage, failed BLE, corrupt row, or unsafe voltage.
+- [ ] 085. Stage 5 acceptance: Do not release a wearable build until mechanical, electrical, firmware, app, safety, and data gates all pass.
+- [ ] 086. Stage 5 acceptance: Keep every unknown in the test record with an owner, measurement method, and due date.
+Stage 5 disposition: PASS / FAIL / BLOCKED. Evidence location: UNKNOWN until recorded.
+
+## Stage 6: time command
+This stage changes the acceptance context. Repeat the check only after the stage condition is met; record a new result rather than copying an old result.
+- [ ] 001. Stage 6 acceptance: Identify the exact board as ESP32-WROOM-32 DevKit before assembly; record vendor and board revision.
+- [ ] 002. Stage 6 acceptance: Count flash as 4 MB only when the board label or build report confirms it; PSRAM is not present in the stated target.
+- [ ] 003. Stage 6 acceptance: Identify the MAX30102 module by marking and datasheet; module identity is not interchangeable with the bare IC.
+- [ ] 004. Stage 6 acceptance: Identify the MPU6050 breakout, regulator, and address by marking; UNKNOWN until inspected.
+- [ ] 005. Stage 6 acceptance: Identify the SSD1306 display controller, resolution, supply range, and I2C address; MUST CONFIRM FROM DATASHEET.
+- [ ] 006. Stage 6 acceptance: Identify the battery chemistry, nominal voltage, capacity, connector, protection, and source; never infer these from package size.
+- [ ] 007. Stage 6 acceptance: Identify the charger board model and whether it includes protection; a board sold as TP4056 is not proof of protection.
+- [ ] 008. Stage 6 acceptance: Identify motor voltage, stall current, LED polarity, button type, resistor values, and wire gauge before wiring.
+- [ ] 009. Stage 6 acceptance: Record approximate physical fit measurements for every part; enclosure dimensions remain UNKNOWN until measured.
+- [ ] 010. Stage 6 acceptance: Measure board, sensor, battery, motor, display, and connector thickness with calipers; record maximum and minimum.
+- [ ] 011. Stage 6 acceptance: Measure the wrist-side sensor opening and optical contact geometry; do not assume a module window fits a wrist.
+- [ ] 012. Stage 6 acceptance: Mark all fit assumptions as APPROXIMATE until a physical mockup proves clearance and service access.
+- [ ] 013. Stage 6 acceptance: Confirm the ESP32 logic rail is 3.3 V at the module pins; MUST CONFIRM FROM DATASHEET for every breakout.
+- [ ] 014. Stage 6 acceptance: Confirm each I2C breakout tolerates 3.3 V and does not pull SDA or SCL to 5 V; stop if unknown.
+- [ ] 015. Stage 6 acceptance: Use one common ground reference and verify continuity before applying power.
+- [ ] 016. Stage 6 acceptance: Use GPIO21 for I2C SDA because pins.h is authoritative; do not create a second pin map.
+- [ ] 017. Stage 6 acceptance: Use GPIO22 for I2C SCL because pins.h is authoritative; do not substitute pins without source changes.
+- [ ] 018. Stage 6 acceptance: Run an I2C scan with modules disconnected and connected one at a time; record every address.
+- [ ] 019. Stage 6 acceptance: Check for I2C address conflicts among MAX30102, MPU6050, and SSD1306; conflict status is MUST MEASURE.
+- [ ] 020. Stage 6 acceptance: Confirm pull-up voltage and effective resistance on the shared I2C bus; excessive parallel pull-ups can break the bus.
+- [ ] 021. Stage 6 acceptance: Keep I2C wires short for the 400 kHz firmware setting; exact maximum length is UNKNOWN and MUST MEASURE.
+- [ ] 022. Stage 6 acceptance: Wire GPIO25 only to a validated motor driver input; never drive a motor directly from an ESP32 GPIO.
+- [ ] 023. Stage 6 acceptance: Wire GPIO4 to the red LED through a current-limiting resistor; verify polarity and current.
+- [ ] 024. Stage 6 acceptance: Wire GPIO16 to the green LED through a current-limiting resistor; verify polarity and current.
+- [ ] 025. Stage 6 acceptance: Wire the mode button to GPIO17 and ground; firmware uses INPUT_PULLUP and active-low logic.
+- [ ] 026. Stage 6 acceptance: Wire the SOS button to GPIO32 and ground; firmware uses INPUT_PULLUP and a two-second hold.
+- [ ] 027. Stage 6 acceptance: Wire the battery divider to GPIO34 exactly as BAT+ through R1 to GPIO34 through R2 to ground.
+- [ ] 028. Stage 6 acceptance: Use two 100k resistors only after measuring their actual values; divider tolerance affects battery display.
+- [ ] 029. Stage 6 acceptance: Remember GPIO34 is input-only and has no internal pull-up; never use it as a control output.
+- [ ] 030. Stage 6 acceptance: Confirm the ADC divider cannot exceed the ADC safe input range at the battery maximum; MUST CONFIRM FROM DATASHEET.
+- [ ] 031. Stage 6 acceptance: Compare the GPIO34 ADC reading against a multimeter at multiple known battery voltages.
+- [ ] 032. Stage 6 acceptance: Check ADC attenuation and calibration assumptions; current code documents 12-bit conversion but accuracy is UNKNOWN.
+- [ ] 033. Stage 6 acceptance: Calculate divider load and battery drain; record the measured quiescent current.
+- [ ] 034. Stage 6 acceptance: Use a current-limited bench supply for first power-up when possible; set a conservative current limit.
+- [ ] 035. Stage 6 acceptance: Inspect for shorts between BAT+, 3V3, 5V, and ground before installing a LiPo.
+- [ ] 036. Stage 6 acceptance: Never connect a bare LiPo to an unverified TP4056 board.
+- [ ] 037. Stage 6 acceptance: Never wear the prototype while charging and never leave charging unattended.
+- [ ] 038. Stage 6 acceptance: Confirm charger input voltage, charge current, termination behavior, and thermal limits from its datasheet.
+- [ ] 039. Stage 6 acceptance: Confirm whether the TP4056 board routes protected output or raw battery pads; UNKNOWN until traced or measured.
+- [ ] 040. Stage 6 acceptance: Provide a separate protection solution when the charger board lacks overcharge, overdischarge, and short-circuit protection.
+- [ ] 041. Stage 6 acceptance: Confirm battery protection cutoff thresholds and continuous current rating from the battery datasheet.
+- [ ] 042. Stage 6 acceptance: Inspect the LiPo for swelling, puncture, torn insulation, heat, or odor; stop immediately on any defect.
+- [ ] 043. Stage 6 acceptance: Keep the battery away from sharp headers, solder points, motor edges, and enclosure screws.
+- [ ] 044. Stage 6 acceptance: Add strain relief at battery, USB, sensor, and button wires; a solder joint is not a cable anchor.
+- [ ] 045. Stage 6 acceptance: Use insulation and a physical separator so conductive hardware cannot contact the cell.
+- [ ] 046. Stage 6 acceptance: Confirm enclosure clearance around the battery and charging connector; do not compress the cell.
+- [ ] 047. Stage 6 acceptance: Keep the optical sensor window flush and stable against the intended test surface; wrist wearability is UNKNOWN.
+- [ ] 048. Stage 6 acceptance: Provide motor clearance so vibration cannot touch the battery or crack solder joints.
+- [ ] 049. Stage 6 acceptance: Provide display, button, LED, and USB access without forcing the enclosure open.
+- [ ] 050. Stage 6 acceptance: Round or shield enclosure edges that can contact skin; material biocompatibility is UNKNOWN.
+- [ ] 051. Stage 6 acceptance: Label the enclosure prototype and revision; do not claim water resistance without a documented test.
+- [ ] 052. Stage 6 acceptance: Use ESD controls, ventilation, eye protection, and a safe soldering surface.
+- [ ] 053. Stage 6 acceptance: Inspect solder joints for bridges, cold joints, lifted pads, and insufficient wetting.
+- [ ] 054. Stage 6 acceptance: Clean flux residue using a process compatible with the boards and battery; document the solvent.
+- [ ] 055. Stage 6 acceptance: Use a continuity checklist before every powered test.
+- [ ] 056. Stage 6 acceptance: Flash with PlatformIO environment esp32dev and the repository platform version 6.8.1.
+- [ ] 057. Stage 6 acceptance: Use 921600 upload speed only when the cable and board are reliable; lower it for failed uploads.
+- [ ] 058. Stage 6 acceptance: Use 115200 serial monitor speed and record the complete boot banner.
+- [ ] 059. Stage 6 acceptance: Confirm the serial banner reports firmware version, PIN, PPG, MPU, and OLED presence.
+- [ ] 060. Stage 6 acceptance: Confirm LittleFS mounts; record any LittleFS fail message and stop release testing if storage is unavailable.
+- [ ] 061. Stage 6 acceptance: Confirm Preferences loads or creates the six-digit PIN and preserves it across reset.
+- [ ] 062. Stage 6 acceptance: Confirm BLE advertises as Veyro with the service UUID from protocol.h.
+- [ ] 063. Stage 6 acceptance: Confirm the app discovers the same service and characteristic UUIDs from veyro_protocol.dart.
+- [ ] 064. Stage 6 acceptance: Confirm BLE pairing sends the displayed six-digit PIN and that wrong PINs remain rejected.
+- [ ] 065. Stage 6 acceptance: Remember BLE link encryption is not established by the application PIN flow; production security is still required.
+- [ ] 066. Stage 6 acceptance: Treat BLE notifications and local files as prototype data paths; threat modeling and hardening are incomplete.
+- [ ] 067. Stage 6 acceptance: Confirm the app requests platform-specific Bluetooth permissions before scanning.
+- [ ] 068. Stage 6 acceptance: Confirm the app sends UTC time before relying on timestamps; otherwise firmware uses its fallback epoch behavior.
+- [ ] 069. Stage 6 acceptance: Confirm live JSON fields are hr, spo2, bps, bpd, hrv, steps, fall, bat, and ts.
+- [ ] 070. Stage 6 acceptance: Confirm history rows use unix,hr,spo2,sys,dia,hrv,steps,fall,battery.
+- [ ] 071. Stage 6 acceptance: Confirm history completion is the JSON message with v 1 and done 1.
+- [ ] 072. Stage 6 acceptance: Confirm failed or interrupted sync does not delete existing local app records.
+- [ ] 073. Stage 6 acceptance: Confirm LocalStore deduplicates rows by Unix timestamp and stores day files locally.
+- [ ] 074. Stage 6 acceptance: Confirm the watch stores UTC day files under LittleFS /d and prunes beyond 60 retention days.
+- [ ] 075. Stage 6 acceptance: Label rough SpO2 output as experimental; the firmware uses a rough ratio placeholder, not a clinical algorithm.
+- [ ] 076. Stage 6 acceptance: Label blood pressure as unavailable; current firmware explicitly sends zero systolic and diastolic values.
+- [ ] 077. Stage 6 acceptance: Label fall detection as threshold-based and prone to false positives; it is not validated emergency detection.
+- [ ] 078. Stage 6 acceptance: Label HR and HRV as wellness signals until reference comparison and repeatability testing exist.
+- [ ] 079. Stage 6 acceptance: Create a fixture for I2C scan, serial capture, BLE discovery, pairing, sync, buttons, LEDs, motor, and ADC.
+- [ ] 080. Stage 6 acceptance: Create a known-good firmware image and record its hash; exact artifact hash is UNKNOWN until built.
+- [ ] 081. Stage 6 acceptance: Use a sacrificial board for first flash and first battery test.
+- [ ] 082. Stage 6 acceptance: Record board serial, component lots, battery identity, enclosure revision, firmware, app, operator, date, and defects.
+- [ ] 083. Stage 6 acceptance: Define a safety stop for heat, smoke, swelling, exposed conductors, unstable current, or unexpected motor behavior.
+- [ ] 084. Stage 6 acceptance: Define a technical stop for missing sensor, conflicting address, failed storage, failed BLE, corrupt row, or unsafe voltage.
+- [ ] 085. Stage 6 acceptance: Do not release a wearable build until mechanical, electrical, firmware, app, safety, and data gates all pass.
+- [ ] 086. Stage 6 acceptance: Keep every unknown in the test record with an owner, measurement method, and due date.
+Stage 6 disposition: PASS / FAIL / BLOCKED. Evidence location: UNKNOWN until recorded.
+
+## Stage 7: history sync
+This stage changes the acceptance context. Repeat the check only after the stage condition is met; record a new result rather than copying an old result.
+- [ ] 001. Stage 7 acceptance: Identify the exact board as ESP32-WROOM-32 DevKit before assembly; record vendor and board revision.
+- [ ] 002. Stage 7 acceptance: Count flash as 4 MB only when the board label or build report confirms it; PSRAM is not present in the stated target.
+- [ ] 003. Stage 7 acceptance: Identify the MAX30102 module by marking and datasheet; module identity is not interchangeable with the bare IC.
+- [ ] 004. Stage 7 acceptance: Identify the MPU6050 breakout, regulator, and address by marking; UNKNOWN until inspected.
+- [ ] 005. Stage 7 acceptance: Identify the SSD1306 display controller, resolution, supply range, and I2C address; MUST CONFIRM FROM DATASHEET.
+- [ ] 006. Stage 7 acceptance: Identify the battery chemistry, nominal voltage, capacity, connector, protection, and source; never infer these from package size.
+- [ ] 007. Stage 7 acceptance: Identify the charger board model and whether it includes protection; a board sold as TP4056 is not proof of protection.
+- [ ] 008. Stage 7 acceptance: Identify motor voltage, stall current, LED polarity, button type, resistor values, and wire gauge before wiring.
+- [ ] 009. Stage 7 acceptance: Record approximate physical fit measurements for every part; enclosure dimensions remain UNKNOWN until measured.
+- [ ] 010. Stage 7 acceptance: Measure board, sensor, battery, motor, display, and connector thickness with calipers; record maximum and minimum.
+- [ ] 011. Stage 7 acceptance: Measure the wrist-side sensor opening and optical contact geometry; do not assume a module window fits a wrist.
+- [ ] 012. Stage 7 acceptance: Mark all fit assumptions as APPROXIMATE until a physical mockup proves clearance and service access.
+- [ ] 013. Stage 7 acceptance: Confirm the ESP32 logic rail is 3.3 V at the module pins; MUST CONFIRM FROM DATASHEET for every breakout.
+- [ ] 014. Stage 7 acceptance: Confirm each I2C breakout tolerates 3.3 V and does not pull SDA or SCL to 5 V; stop if unknown.
+- [ ] 015. Stage 7 acceptance: Use one common ground reference and verify continuity before applying power.
+- [ ] 016. Stage 7 acceptance: Use GPIO21 for I2C SDA because pins.h is authoritative; do not create a second pin map.
+- [ ] 017. Stage 7 acceptance: Use GPIO22 for I2C SCL because pins.h is authoritative; do not substitute pins without source changes.
+- [ ] 018. Stage 7 acceptance: Run an I2C scan with modules disconnected and connected one at a time; record every address.
+- [ ] 019. Stage 7 acceptance: Check for I2C address conflicts among MAX30102, MPU6050, and SSD1306; conflict status is MUST MEASURE.
+- [ ] 020. Stage 7 acceptance: Confirm pull-up voltage and effective resistance on the shared I2C bus; excessive parallel pull-ups can break the bus.
+- [ ] 021. Stage 7 acceptance: Keep I2C wires short for the 400 kHz firmware setting; exact maximum length is UNKNOWN and MUST MEASURE.
+- [ ] 022. Stage 7 acceptance: Wire GPIO25 only to a validated motor driver input; never drive a motor directly from an ESP32 GPIO.
+- [ ] 023. Stage 7 acceptance: Wire GPIO4 to the red LED through a current-limiting resistor; verify polarity and current.
+- [ ] 024. Stage 7 acceptance: Wire GPIO16 to the green LED through a current-limiting resistor; verify polarity and current.
+- [ ] 025. Stage 7 acceptance: Wire the mode button to GPIO17 and ground; firmware uses INPUT_PULLUP and active-low logic.
+- [ ] 026. Stage 7 acceptance: Wire the SOS button to GPIO32 and ground; firmware uses INPUT_PULLUP and a two-second hold.
+- [ ] 027. Stage 7 acceptance: Wire the battery divider to GPIO34 exactly as BAT+ through R1 to GPIO34 through R2 to ground.
+- [ ] 028. Stage 7 acceptance: Use two 100k resistors only after measuring their actual values; divider tolerance affects battery display.
+- [ ] 029. Stage 7 acceptance: Remember GPIO34 is input-only and has no internal pull-up; never use it as a control output.
+- [ ] 030. Stage 7 acceptance: Confirm the ADC divider cannot exceed the ADC safe input range at the battery maximum; MUST CONFIRM FROM DATASHEET.
+- [ ] 031. Stage 7 acceptance: Compare the GPIO34 ADC reading against a multimeter at multiple known battery voltages.
+- [ ] 032. Stage 7 acceptance: Check ADC attenuation and calibration assumptions; current code documents 12-bit conversion but accuracy is UNKNOWN.
+- [ ] 033. Stage 7 acceptance: Calculate divider load and battery drain; record the measured quiescent current.
+- [ ] 034. Stage 7 acceptance: Use a current-limited bench supply for first power-up when possible; set a conservative current limit.
+- [ ] 035. Stage 7 acceptance: Inspect for shorts between BAT+, 3V3, 5V, and ground before installing a LiPo.
+- [ ] 036. Stage 7 acceptance: Never connect a bare LiPo to an unverified TP4056 board.
+- [ ] 037. Stage 7 acceptance: Never wear the prototype while charging and never leave charging unattended.
+- [ ] 038. Stage 7 acceptance: Confirm charger input voltage, charge current, termination behavior, and thermal limits from its datasheet.
+- [ ] 039. Stage 7 acceptance: Confirm whether the TP4056 board routes protected output or raw battery pads; UNKNOWN until traced or measured.
+- [ ] 040. Stage 7 acceptance: Provide a separate protection solution when the charger board lacks overcharge, overdischarge, and short-circuit protection.
+- [ ] 041. Stage 7 acceptance: Confirm battery protection cutoff thresholds and continuous current rating from the battery datasheet.
+- [ ] 042. Stage 7 acceptance: Inspect the LiPo for swelling, puncture, torn insulation, heat, or odor; stop immediately on any defect.
+- [ ] 043. Stage 7 acceptance: Keep the battery away from sharp headers, solder points, motor edges, and enclosure screws.
+- [ ] 044. Stage 7 acceptance: Add strain relief at battery, USB, sensor, and button wires; a solder joint is not a cable anchor.
+- [ ] 045. Stage 7 acceptance: Use insulation and a physical separator so conductive hardware cannot contact the cell.
+- [ ] 046. Stage 7 acceptance: Confirm enclosure clearance around the battery and charging connector; do not compress the cell.
+- [ ] 047. Stage 7 acceptance: Keep the optical sensor window flush and stable against the intended test surface; wrist wearability is UNKNOWN.
+- [ ] 048. Stage 7 acceptance: Provide motor clearance so vibration cannot touch the battery or crack solder joints.
+- [ ] 049. Stage 7 acceptance: Provide display, button, LED, and USB access without forcing the enclosure open.
+- [ ] 050. Stage 7 acceptance: Round or shield enclosure edges that can contact skin; material biocompatibility is UNKNOWN.
+- [ ] 051. Stage 7 acceptance: Label the enclosure prototype and revision; do not claim water resistance without a documented test.
+- [ ] 052. Stage 7 acceptance: Use ESD controls, ventilation, eye protection, and a safe soldering surface.
+- [ ] 053. Stage 7 acceptance: Inspect solder joints for bridges, cold joints, lifted pads, and insufficient wetting.
+- [ ] 054. Stage 7 acceptance: Clean flux residue using a process compatible with the boards and battery; document the solvent.
+- [ ] 055. Stage 7 acceptance: Use a continuity checklist before every powered test.
+- [ ] 056. Stage 7 acceptance: Flash with PlatformIO environment esp32dev and the repository platform version 6.8.1.
+- [ ] 057. Stage 7 acceptance: Use 921600 upload speed only when the cable and board are reliable; lower it for failed uploads.
+- [ ] 058. Stage 7 acceptance: Use 115200 serial monitor speed and record the complete boot banner.
+- [ ] 059. Stage 7 acceptance: Confirm the serial banner reports firmware version, PIN, PPG, MPU, and OLED presence.
+- [ ] 060. Stage 7 acceptance: Confirm LittleFS mounts; record any LittleFS fail message and stop release testing if storage is unavailable.
+- [ ] 061. Stage 7 acceptance: Confirm Preferences loads or creates the six-digit PIN and preserves it across reset.
+- [ ] 062. Stage 7 acceptance: Confirm BLE advertises as Veyro with the service UUID from protocol.h.
+- [ ] 063. Stage 7 acceptance: Confirm the app discovers the same service and characteristic UUIDs from veyro_protocol.dart.
+- [ ] 064. Stage 7 acceptance: Confirm BLE pairing sends the displayed six-digit PIN and that wrong PINs remain rejected.
+- [ ] 065. Stage 7 acceptance: Remember BLE link encryption is not established by the application PIN flow; production security is still required.
+- [ ] 066. Stage 7 acceptance: Treat BLE notifications and local files as prototype data paths; threat modeling and hardening are incomplete.
+- [ ] 067. Stage 7 acceptance: Confirm the app requests platform-specific Bluetooth permissions before scanning.
+- [ ] 068. Stage 7 acceptance: Confirm the app sends UTC time before relying on timestamps; otherwise firmware uses its fallback epoch behavior.
+- [ ] 069. Stage 7 acceptance: Confirm live JSON fields are hr, spo2, bps, bpd, hrv, steps, fall, bat, and ts.
+- [ ] 070. Stage 7 acceptance: Confirm history rows use unix,hr,spo2,sys,dia,hrv,steps,fall,battery.
+- [ ] 071. Stage 7 acceptance: Confirm history completion is the JSON message with v 1 and done 1.
+- [ ] 072. Stage 7 acceptance: Confirm failed or interrupted sync does not delete existing local app records.
+- [ ] 073. Stage 7 acceptance: Confirm LocalStore deduplicates rows by Unix timestamp and stores day files locally.
+- [ ] 074. Stage 7 acceptance: Confirm the watch stores UTC day files under LittleFS /d and prunes beyond 60 retention days.
+- [ ] 075. Stage 7 acceptance: Label rough SpO2 output as experimental; the firmware uses a rough ratio placeholder, not a clinical algorithm.
+- [ ] 076. Stage 7 acceptance: Label blood pressure as unavailable; current firmware explicitly sends zero systolic and diastolic values.
+- [ ] 077. Stage 7 acceptance: Label fall detection as threshold-based and prone to false positives; it is not validated emergency detection.
+- [ ] 078. Stage 7 acceptance: Label HR and HRV as wellness signals until reference comparison and repeatability testing exist.
+- [ ] 079. Stage 7 acceptance: Create a fixture for I2C scan, serial capture, BLE discovery, pairing, sync, buttons, LEDs, motor, and ADC.
+- [ ] 080. Stage 7 acceptance: Create a known-good firmware image and record its hash; exact artifact hash is UNKNOWN until built.
+- [ ] 081. Stage 7 acceptance: Use a sacrificial board for first flash and first battery test.
+- [ ] 082. Stage 7 acceptance: Record board serial, component lots, battery identity, enclosure revision, firmware, app, operator, date, and defects.
+- [ ] 083. Stage 7 acceptance: Define a safety stop for heat, smoke, swelling, exposed conductors, unstable current, or unexpected motor behavior.
+- [ ] 084. Stage 7 acceptance: Define a technical stop for missing sensor, conflicting address, failed storage, failed BLE, corrupt row, or unsafe voltage.
+- [ ] 085. Stage 7 acceptance: Do not release a wearable build until mechanical, electrical, firmware, app, safety, and data gates all pass.
+- [ ] 086. Stage 7 acceptance: Keep every unknown in the test record with an owner, measurement method, and due date.
+Stage 7 disposition: PASS / FAIL / BLOCKED. Evidence location: UNKNOWN until recorded.
+
+## Stage 8: reconnect behavior
+This stage changes the acceptance context. Repeat the check only after the stage condition is met; record a new result rather than copying an old result.
+- [ ] 001. Stage 8 acceptance: Identify the exact board as ESP32-WROOM-32 DevKit before assembly; record vendor and board revision.
+- [ ] 002. Stage 8 acceptance: Count flash as 4 MB only when the board label or build report confirms it; PSRAM is not present in the stated target.
+- [ ] 003. Stage 8 acceptance: Identify the MAX30102 module by marking and datasheet; module identity is not interchangeable with the bare IC.
+- [ ] 004. Stage 8 acceptance: Identify the MPU6050 breakout, regulator, and address by marking; UNKNOWN until inspected.
+- [ ] 005. Stage 8 acceptance: Identify the SSD1306 display controller, resolution, supply range, and I2C address; MUST CONFIRM FROM DATASHEET.
+- [ ] 006. Stage 8 acceptance: Identify the battery chemistry, nominal voltage, capacity, connector, protection, and source; never infer these from package size.
+- [ ] 007. Stage 8 acceptance: Identify the charger board model and whether it includes protection; a board sold as TP4056 is not proof of protection.
+- [ ] 008. Stage 8 acceptance: Identify motor voltage, stall current, LED polarity, button type, resistor values, and wire gauge before wiring.
+- [ ] 009. Stage 8 acceptance: Record approximate physical fit measurements for every part; enclosure dimensions remain UNKNOWN until measured.
+- [ ] 010. Stage 8 acceptance: Measure board, sensor, battery, motor, display, and connector thickness with calipers; record maximum and minimum.
+- [ ] 011. Stage 8 acceptance: Measure the wrist-side sensor opening and optical contact geometry; do not assume a module window fits a wrist.
+- [ ] 012. Stage 8 acceptance: Mark all fit assumptions as APPROXIMATE until a physical mockup proves clearance and service access.
+- [ ] 013. Stage 8 acceptance: Confirm the ESP32 logic rail is 3.3 V at the module pins; MUST CONFIRM FROM DATASHEET for every breakout.
+- [ ] 014. Stage 8 acceptance: Confirm each I2C breakout tolerates 3.3 V and does not pull SDA or SCL to 5 V; stop if unknown.
+- [ ] 015. Stage 8 acceptance: Use one common ground reference and verify continuity before applying power.
+- [ ] 016. Stage 8 acceptance: Use GPIO21 for I2C SDA because pins.h is authoritative; do not create a second pin map.
+- [ ] 017. Stage 8 acceptance: Use GPIO22 for I2C SCL because pins.h is authoritative; do not substitute pins without source changes.
+- [ ] 018. Stage 8 acceptance: Run an I2C scan with modules disconnected and connected one at a time; record every address.
+- [ ] 019. Stage 8 acceptance: Check for I2C address conflicts among MAX30102, MPU6050, and SSD1306; conflict status is MUST MEASURE.
+- [ ] 020. Stage 8 acceptance: Confirm pull-up voltage and effective resistance on the shared I2C bus; excessive parallel pull-ups can break the bus.
+- [ ] 021. Stage 8 acceptance: Keep I2C wires short for the 400 kHz firmware setting; exact maximum length is UNKNOWN and MUST MEASURE.
+- [ ] 022. Stage 8 acceptance: Wire GPIO25 only to a validated motor driver input; never drive a motor directly from an ESP32 GPIO.
+- [ ] 023. Stage 8 acceptance: Wire GPIO4 to the red LED through a current-limiting resistor; verify polarity and current.
+- [ ] 024. Stage 8 acceptance: Wire GPIO16 to the green LED through a current-limiting resistor; verify polarity and current.
+- [ ] 025. Stage 8 acceptance: Wire the mode button to GPIO17 and ground; firmware uses INPUT_PULLUP and active-low logic.
+- [ ] 026. Stage 8 acceptance: Wire the SOS button to GPIO32 and ground; firmware uses INPUT_PULLUP and a two-second hold.
+- [ ] 027. Stage 8 acceptance: Wire the battery divider to GPIO34 exactly as BAT+ through R1 to GPIO34 through R2 to ground.
+- [ ] 028. Stage 8 acceptance: Use two 100k resistors only after measuring their actual values; divider tolerance affects battery display.
+- [ ] 029. Stage 8 acceptance: Remember GPIO34 is input-only and has no internal pull-up; never use it as a control output.
+- [ ] 030. Stage 8 acceptance: Confirm the ADC divider cannot exceed the ADC safe input range at the battery maximum; MUST CONFIRM FROM DATASHEET.
+- [ ] 031. Stage 8 acceptance: Compare the GPIO34 ADC reading against a multimeter at multiple known battery voltages.
+- [ ] 032. Stage 8 acceptance: Check ADC attenuation and calibration assumptions; current code documents 12-bit conversion but accuracy is UNKNOWN.
+- [ ] 033. Stage 8 acceptance: Calculate divider load and battery drain; record the measured quiescent current.
+- [ ] 034. Stage 8 acceptance: Use a current-limited bench supply for first power-up when possible; set a conservative current limit.
+- [ ] 035. Stage 8 acceptance: Inspect for shorts between BAT+, 3V3, 5V, and ground before installing a LiPo.
+- [ ] 036. Stage 8 acceptance: Never connect a bare LiPo to an unverified TP4056 board.
+- [ ] 037. Stage 8 acceptance: Never wear the prototype while charging and never leave charging unattended.
+- [ ] 038. Stage 8 acceptance: Confirm charger input voltage, charge current, termination behavior, and thermal limits from its datasheet.
+- [ ] 039. Stage 8 acceptance: Confirm whether the TP4056 board routes protected output or raw battery pads; UNKNOWN until traced or measured.
+- [ ] 040. Stage 8 acceptance: Provide a separate protection solution when the charger board lacks overcharge, overdischarge, and short-circuit protection.
+- [ ] 041. Stage 8 acceptance: Confirm battery protection cutoff thresholds and continuous current rating from the battery datasheet.
+- [ ] 042. Stage 8 acceptance: Inspect the LiPo for swelling, puncture, torn insulation, heat, or odor; stop immediately on any defect.
+- [ ] 043. Stage 8 acceptance: Keep the battery away from sharp headers, solder points, motor edges, and enclosure screws.
+- [ ] 044. Stage 8 acceptance: Add strain relief at battery, USB, sensor, and button wires; a solder joint is not a cable anchor.
+- [ ] 045. Stage 8 acceptance: Use insulation and a physical separator so conductive hardware cannot contact the cell.
+- [ ] 046. Stage 8 acceptance: Confirm enclosure clearance around the battery and charging connector; do not compress the cell.
+- [ ] 047. Stage 8 acceptance: Keep the optical sensor window flush and stable against the intended test surface; wrist wearability is UNKNOWN.
+- [ ] 048. Stage 8 acceptance: Provide motor clearance so vibration cannot touch the battery or crack solder joints.
+- [ ] 049. Stage 8 acceptance: Provide display, button, LED, and USB access without forcing the enclosure open.
+- [ ] 050. Stage 8 acceptance: Round or shield enclosure edges that can contact skin; material biocompatibility is UNKNOWN.
+- [ ] 051. Stage 8 acceptance: Label the enclosure prototype and revision; do not claim water resistance without a documented test.
+- [ ] 052. Stage 8 acceptance: Use ESD controls, ventilation, eye protection, and a safe soldering surface.
+- [ ] 053. Stage 8 acceptance: Inspect solder joints for bridges, cold joints, lifted pads, and insufficient wetting.
+- [ ] 054. Stage 8 acceptance: Clean flux residue using a process compatible with the boards and battery; document the solvent.
+- [ ] 055. Stage 8 acceptance: Use a continuity checklist before every powered test.
+- [ ] 056. Stage 8 acceptance: Flash with PlatformIO environment esp32dev and the repository platform version 6.8.1.
+- [ ] 057. Stage 8 acceptance: Use 921600 upload speed only when the cable and board are reliable; lower it for failed uploads.
+- [ ] 058. Stage 8 acceptance: Use 115200 serial monitor speed and record the complete boot banner.
+- [ ] 059. Stage 8 acceptance: Confirm the serial banner reports firmware version, PIN, PPG, MPU, and OLED presence.
+- [ ] 060. Stage 8 acceptance: Confirm LittleFS mounts; record any LittleFS fail message and stop release testing if storage is unavailable.
+- [ ] 061. Stage 8 acceptance: Confirm Preferences loads or creates the six-digit PIN and preserves it across reset.
+- [ ] 062. Stage 8 acceptance: Confirm BLE advertises as Veyro with the service UUID from protocol.h.
+- [ ] 063. Stage 8 acceptance: Confirm the app discovers the same service and characteristic UUIDs from veyro_protocol.dart.
+- [ ] 064. Stage 8 acceptance: Confirm BLE pairing sends the displayed six-digit PIN and that wrong PINs remain rejected.
+- [ ] 065. Stage 8 acceptance: Remember BLE link encryption is not established by the application PIN flow; production security is still required.
+- [ ] 066. Stage 8 acceptance: Treat BLE notifications and local files as prototype data paths; threat modeling and hardening are incomplete.
+- [ ] 067. Stage 8 acceptance: Confirm the app requests platform-specific Bluetooth permissions before scanning.
+- [ ] 068. Stage 8 acceptance: Confirm the app sends UTC time before relying on timestamps; otherwise firmware uses its fallback epoch behavior.
+- [ ] 069. Stage 8 acceptance: Confirm live JSON fields are hr, spo2, bps, bpd, hrv, steps, fall, bat, and ts.
+- [ ] 070. Stage 8 acceptance: Confirm history rows use unix,hr,spo2,sys,dia,hrv,steps,fall,battery.
+- [ ] 071. Stage 8 acceptance: Confirm history completion is the JSON message with v 1 and done 1.
+- [ ] 072. Stage 8 acceptance: Confirm failed or interrupted sync does not delete existing local app records.
+- [ ] 073. Stage 8 acceptance: Confirm LocalStore deduplicates rows by Unix timestamp and stores day files locally.
+- [ ] 074. Stage 8 acceptance: Confirm the watch stores UTC day files under LittleFS /d and prunes beyond 60 retention days.
+- [ ] 075. Stage 8 acceptance: Label rough SpO2 output as experimental; the firmware uses a rough ratio placeholder, not a clinical algorithm.
+- [ ] 076. Stage 8 acceptance: Label blood pressure as unavailable; current firmware explicitly sends zero systolic and diastolic values.
+- [ ] 077. Stage 8 acceptance: Label fall detection as threshold-based and prone to false positives; it is not validated emergency detection.
+- [ ] 078. Stage 8 acceptance: Label HR and HRV as wellness signals until reference comparison and repeatability testing exist.
+- [ ] 079. Stage 8 acceptance: Create a fixture for I2C scan, serial capture, BLE discovery, pairing, sync, buttons, LEDs, motor, and ADC.
+- [ ] 080. Stage 8 acceptance: Create a known-good firmware image and record its hash; exact artifact hash is UNKNOWN until built.
+- [ ] 081. Stage 8 acceptance: Use a sacrificial board for first flash and first battery test.
+- [ ] 082. Stage 8 acceptance: Record board serial, component lots, battery identity, enclosure revision, firmware, app, operator, date, and defects.
+- [ ] 083. Stage 8 acceptance: Define a safety stop for heat, smoke, swelling, exposed conductors, unstable current, or unexpected motor behavior.
+- [ ] 084. Stage 8 acceptance: Define a technical stop for missing sensor, conflicting address, failed storage, failed BLE, corrupt row, or unsafe voltage.
+- [ ] 085. Stage 8 acceptance: Do not release a wearable build until mechanical, electrical, firmware, app, safety, and data gates all pass.
+- [ ] 086. Stage 8 acceptance: Keep every unknown in the test record with an owner, measurement method, and due date.
+Stage 8 disposition: PASS / FAIL / BLOCKED. Evidence location: UNKNOWN until recorded.
+
+## Stage 9: security review
+This stage changes the acceptance context. Repeat the check only after the stage condition is met; record a new result rather than copying an old result.
+- [ ] 001. Stage 9 acceptance: Identify the exact board as ESP32-WROOM-32 DevKit before assembly; record vendor and board revision.
+- [ ] 002. Stage 9 acceptance: Count flash as 4 MB only when the board label or build report confirms it; PSRAM is not present in the stated target.
+- [ ] 003. Stage 9 acceptance: Identify the MAX30102 module by marking and datasheet; module identity is not interchangeable with the bare IC.
+- [ ] 004. Stage 9 acceptance: Identify the MPU6050 breakout, regulator, and address by marking; UNKNOWN until inspected.
+- [ ] 005. Stage 9 acceptance: Identify the SSD1306 display controller, resolution, supply range, and I2C address; MUST CONFIRM FROM DATASHEET.
+- [ ] 006. Stage 9 acceptance: Identify the battery chemistry, nominal voltage, capacity, connector, protection, and source; never infer these from package size.
+- [ ] 007. Stage 9 acceptance: Identify the charger board model and whether it includes protection; a board sold as TP4056 is not proof of protection.
+- [ ] 008. Stage 9 acceptance: Identify motor voltage, stall current, LED polarity, button type, resistor values, and wire gauge before wiring.
+- [ ] 009. Stage 9 acceptance: Record approximate physical fit measurements for every part; enclosure dimensions remain UNKNOWN until measured.
+- [ ] 010. Stage 9 acceptance: Measure board, sensor, battery, motor, display, and connector thickness with calipers; record maximum and minimum.
+- [ ] 011. Stage 9 acceptance: Measure the wrist-side sensor opening and optical contact geometry; do not assume a module window fits a wrist.
+- [ ] 012. Stage 9 acceptance: Mark all fit assumptions as APPROXIMATE until a physical mockup proves clearance and service access.
+- [ ] 013. Stage 9 acceptance: Confirm the ESP32 logic rail is 3.3 V at the module pins; MUST CONFIRM FROM DATASHEET for every breakout.
+- [ ] 014. Stage 9 acceptance: Confirm each I2C breakout tolerates 3.3 V and does not pull SDA or SCL to 5 V; stop if unknown.
+- [ ] 015. Stage 9 acceptance: Use one common ground reference and verify continuity before applying power.
+- [ ] 016. Stage 9 acceptance: Use GPIO21 for I2C SDA because pins.h is authoritative; do not create a second pin map.
+- [ ] 017. Stage 9 acceptance: Use GPIO22 for I2C SCL because pins.h is authoritative; do not substitute pins without source changes.
+- [ ] 018. Stage 9 acceptance: Run an I2C scan with modules disconnected and connected one at a time; record every address.
+- [ ] 019. Stage 9 acceptance: Check for I2C address conflicts among MAX30102, MPU6050, and SSD1306; conflict status is MUST MEASURE.
+- [ ] 020. Stage 9 acceptance: Confirm pull-up voltage and effective resistance on the shared I2C bus; excessive parallel pull-ups can break the bus.
+- [ ] 021. Stage 9 acceptance: Keep I2C wires short for the 400 kHz firmware setting; exact maximum length is UNKNOWN and MUST MEASURE.
+- [ ] 022. Stage 9 acceptance: Wire GPIO25 only to a validated motor driver input; never drive a motor directly from an ESP32 GPIO.
+- [ ] 023. Stage 9 acceptance: Wire GPIO4 to the red LED through a current-limiting resistor; verify polarity and current.
+- [ ] 024. Stage 9 acceptance: Wire GPIO16 to the green LED through a current-limiting resistor; verify polarity and current.
+- [ ] 025. Stage 9 acceptance: Wire the mode button to GPIO17 and ground; firmware uses INPUT_PULLUP and active-low logic.
+- [ ] 026. Stage 9 acceptance: Wire the SOS button to GPIO32 and ground; firmware uses INPUT_PULLUP and a two-second hold.
+- [ ] 027. Stage 9 acceptance: Wire the battery divider to GPIO34 exactly as BAT+ through R1 to GPIO34 through R2 to ground.
+- [ ] 028. Stage 9 acceptance: Use two 100k resistors only after measuring their actual values; divider tolerance affects battery display.
+- [ ] 029. Stage 9 acceptance: Remember GPIO34 is input-only and has no internal pull-up; never use it as a control output.
+- [ ] 030. Stage 9 acceptance: Confirm the ADC divider cannot exceed the ADC safe input range at the battery maximum; MUST CONFIRM FROM DATASHEET.
+- [ ] 031. Stage 9 acceptance: Compare the GPIO34 ADC reading against a multimeter at multiple known battery voltages.
+- [ ] 032. Stage 9 acceptance: Check ADC attenuation and calibration assumptions; current code documents 12-bit conversion but accuracy is UNKNOWN.
+- [ ] 033. Stage 9 acceptance: Calculate divider load and battery drain; record the measured quiescent current.
+- [ ] 034. Stage 9 acceptance: Use a current-limited bench supply for first power-up when possible; set a conservative current limit.
+- [ ] 035. Stage 9 acceptance: Inspect for shorts between BAT+, 3V3, 5V, and ground before installing a LiPo.
+- [ ] 036. Stage 9 acceptance: Never connect a bare LiPo to an unverified TP4056 board.
+- [ ] 037. Stage 9 acceptance: Never wear the prototype while charging and never leave charging unattended.
+- [ ] 038. Stage 9 acceptance: Confirm charger input voltage, charge current, termination behavior, and thermal limits from its datasheet.
+- [ ] 039. Stage 9 acceptance: Confirm whether the TP4056 board routes protected output or raw battery pads; UNKNOWN until traced or measured.
+- [ ] 040. Stage 9 acceptance: Provide a separate protection solution when the charger board lacks overcharge, overdischarge, and short-circuit protection.
+- [ ] 041. Stage 9 acceptance: Confirm battery protection cutoff thresholds and continuous current rating from the battery datasheet.
+- [ ] 042. Stage 9 acceptance: Inspect the LiPo for swelling, puncture, torn insulation, heat, or odor; stop immediately on any defect.
+- [ ] 043. Stage 9 acceptance: Keep the battery away from sharp headers, solder points, motor edges, and enclosure screws.
+- [ ] 044. Stage 9 acceptance: Add strain relief at battery, USB, sensor, and button wires; a solder joint is not a cable anchor.
+- [ ] 045. Stage 9 acceptance: Use insulation and a physical separator so conductive hardware cannot contact the cell.
+- [ ] 046. Stage 9 acceptance: Confirm enclosure clearance around the battery and charging connector; do not compress the cell.
+- [ ] 047. Stage 9 acceptance: Keep the optical sensor window flush and stable against the intended test surface; wrist wearability is UNKNOWN.
+- [ ] 048. Stage 9 acceptance: Provide motor clearance so vibration cannot touch the battery or crack solder joints.
+- [ ] 049. Stage 9 acceptance: Provide display, button, LED, and USB access without forcing the enclosure open.
+- [ ] 050. Stage 9 acceptance: Round or shield enclosure edges that can contact skin; material biocompatibility is UNKNOWN.
+- [ ] 051. Stage 9 acceptance: Label the enclosure prototype and revision; do not claim water resistance without a documented test.
+- [ ] 052. Stage 9 acceptance: Use ESD controls, ventilation, eye protection, and a safe soldering surface.
+- [ ] 053. Stage 9 acceptance: Inspect solder joints for bridges, cold joints, lifted pads, and insufficient wetting.
+- [ ] 054. Stage 9 acceptance: Clean flux residue using a process compatible with the boards and battery; document the solvent.
+- [ ] 055. Stage 9 acceptance: Use a continuity checklist before every powered test.
+- [ ] 056. Stage 9 acceptance: Flash with PlatformIO environment esp32dev and the repository platform version 6.8.1.
+- [ ] 057. Stage 9 acceptance: Use 921600 upload speed only when the cable and board are reliable; lower it for failed uploads.
+- [ ] 058. Stage 9 acceptance: Use 115200 serial monitor speed and record the complete boot banner.
+- [ ] 059. Stage 9 acceptance: Confirm the serial banner reports firmware version, PIN, PPG, MPU, and OLED presence.
+- [ ] 060. Stage 9 acceptance: Confirm LittleFS mounts; record any LittleFS fail message and stop release testing if storage is unavailable.
+- [ ] 061. Stage 9 acceptance: Confirm Preferences loads or creates the six-digit PIN and preserves it across reset.
+- [ ] 062. Stage 9 acceptance: Confirm BLE advertises as Veyro with the service UUID from protocol.h.
+- [ ] 063. Stage 9 acceptance: Confirm the app discovers the same service and characteristic UUIDs from veyro_protocol.dart.
+- [ ] 064. Stage 9 acceptance: Confirm BLE pairing sends the displayed six-digit PIN and that wrong PINs remain rejected.
+- [ ] 065. Stage 9 acceptance: Remember BLE link encryption is not established by the application PIN flow; production security is still required.
+- [ ] 066. Stage 9 acceptance: Treat BLE notifications and local files as prototype data paths; threat modeling and hardening are incomplete.
+- [ ] 067. Stage 9 acceptance: Confirm the app requests platform-specific Bluetooth permissions before scanning.
+- [ ] 068. Stage 9 acceptance: Confirm the app sends UTC time before relying on timestamps; otherwise firmware uses its fallback epoch behavior.
+- [ ] 069. Stage 9 acceptance: Confirm live JSON fields are hr, spo2, bps, bpd, hrv, steps, fall, bat, and ts.
+- [ ] 070. Stage 9 acceptance: Confirm history rows use unix,hr,spo2,sys,dia,hrv,steps,fall,battery.
+- [ ] 071. Stage 9 acceptance: Confirm history completion is the JSON message with v 1 and done 1.
+- [ ] 072. Stage 9 acceptance: Confirm failed or interrupted sync does not delete existing local app records.
+- [ ] 073. Stage 9 acceptance: Confirm LocalStore deduplicates rows by Unix timestamp and stores day files locally.
+- [ ] 074. Stage 9 acceptance: Confirm the watch stores UTC day files under LittleFS /d and prunes beyond 60 retention days.
+- [ ] 075. Stage 9 acceptance: Label rough SpO2 output as experimental; the firmware uses a rough ratio placeholder, not a clinical algorithm.
+- [ ] 076. Stage 9 acceptance: Label blood pressure as unavailable; current firmware explicitly sends zero systolic and diastolic values.
+- [ ] 077. Stage 9 acceptance: Label fall detection as threshold-based and prone to false positives; it is not validated emergency detection.
+- [ ] 078. Stage 9 acceptance: Label HR and HRV as wellness signals until reference comparison and repeatability testing exist.
+- [ ] 079. Stage 9 acceptance: Create a fixture for I2C scan, serial capture, BLE discovery, pairing, sync, buttons, LEDs, motor, and ADC.
+- [ ] 080. Stage 9 acceptance: Create a known-good firmware image and record its hash; exact artifact hash is UNKNOWN until built.
+- [ ] 081. Stage 9 acceptance: Use a sacrificial board for first flash and first battery test.
+- [ ] 082. Stage 9 acceptance: Record board serial, component lots, battery identity, enclosure revision, firmware, app, operator, date, and defects.
+- [ ] 083. Stage 9 acceptance: Define a safety stop for heat, smoke, swelling, exposed conductors, unstable current, or unexpected motor behavior.
+- [ ] 084. Stage 9 acceptance: Define a technical stop for missing sensor, conflicting address, failed storage, failed BLE, corrupt row, or unsafe voltage.
+- [ ] 085. Stage 9 acceptance: Do not release a wearable build until mechanical, electrical, firmware, app, safety, and data gates all pass.
+- [ ] 086. Stage 9 acceptance: Keep every unknown in the test record with an owner, measurement method, and due date.
+Stage 9 disposition: PASS / FAIL / BLOCKED. Evidence location: UNKNOWN until recorded.
+
+## Stage 10: protocol release gate
+This stage changes the acceptance context. Repeat the check only after the stage condition is met; record a new result rather than copying an old result.
+- [ ] 001. Stage 10 acceptance: Identify the exact board as ESP32-WROOM-32 DevKit before assembly; record vendor and board revision.
+- [ ] 002. Stage 10 acceptance: Count flash as 4 MB only when the board label or build report confirms it; PSRAM is not present in the stated target.
+- [ ] 003. Stage 10 acceptance: Identify the MAX30102 module by marking and datasheet; module identity is not interchangeable with the bare IC.
+- [ ] 004. Stage 10 acceptance: Identify the MPU6050 breakout, regulator, and address by marking; UNKNOWN until inspected.
+- [ ] 005. Stage 10 acceptance: Identify the SSD1306 display controller, resolution, supply range, and I2C address; MUST CONFIRM FROM DATASHEET.
+- [ ] 006. Stage 10 acceptance: Identify the battery chemistry, nominal voltage, capacity, connector, protection, and source; never infer these from package size.
+- [ ] 007. Stage 10 acceptance: Identify the charger board model and whether it includes protection; a board sold as TP4056 is not proof of protection.
+- [ ] 008. Stage 10 acceptance: Identify motor voltage, stall current, LED polarity, button type, resistor values, and wire gauge before wiring.
+- [ ] 009. Stage 10 acceptance: Record approximate physical fit measurements for every part; enclosure dimensions remain UNKNOWN until measured.
+- [ ] 010. Stage 10 acceptance: Measure board, sensor, battery, motor, display, and connector thickness with calipers; record maximum and minimum.
+- [ ] 011. Stage 10 acceptance: Measure the wrist-side sensor opening and optical contact geometry; do not assume a module window fits a wrist.
+- [ ] 012. Stage 10 acceptance: Mark all fit assumptions as APPROXIMATE until a physical mockup proves clearance and service access.
+- [ ] 013. Stage 10 acceptance: Confirm the ESP32 logic rail is 3.3 V at the module pins; MUST CONFIRM FROM DATASHEET for every breakout.
+- [ ] 014. Stage 10 acceptance: Confirm each I2C breakout tolerates 3.3 V and does not pull SDA or SCL to 5 V; stop if unknown.
+- [ ] 015. Stage 10 acceptance: Use one common ground reference and verify continuity before applying power.
+- [ ] 016. Stage 10 acceptance: Use GPIO21 for I2C SDA because pins.h is authoritative; do not create a second pin map.
+- [ ] 017. Stage 10 acceptance: Use GPIO22 for I2C SCL because pins.h is authoritative; do not substitute pins without source changes.
+- [ ] 018. Stage 10 acceptance: Run an I2C scan with modules disconnected and connected one at a time; record every address.
+- [ ] 019. Stage 10 acceptance: Check for I2C address conflicts among MAX30102, MPU6050, and SSD1306; conflict status is MUST MEASURE.
+- [ ] 020. Stage 10 acceptance: Confirm pull-up voltage and effective resistance on the shared I2C bus; excessive parallel pull-ups can break the bus.
+- [ ] 021. Stage 10 acceptance: Keep I2C wires short for the 400 kHz firmware setting; exact maximum length is UNKNOWN and MUST MEASURE.
+- [ ] 022. Stage 10 acceptance: Wire GPIO25 only to a validated motor driver input; never drive a motor directly from an ESP32 GPIO.
+- [ ] 023. Stage 10 acceptance: Wire GPIO4 to the red LED through a current-limiting resistor; verify polarity and current.
+- [ ] 024. Stage 10 acceptance: Wire GPIO16 to the green LED through a current-limiting resistor; verify polarity and current.
+- [ ] 025. Stage 10 acceptance: Wire the mode button to GPIO17 and ground; firmware uses INPUT_PULLUP and active-low logic.
+- [ ] 026. Stage 10 acceptance: Wire the SOS button to GPIO32 and ground; firmware uses INPUT_PULLUP and a two-second hold.
+- [ ] 027. Stage 10 acceptance: Wire the battery divider to GPIO34 exactly as BAT+ through R1 to GPIO34 through R2 to ground.
+- [ ] 028. Stage 10 acceptance: Use two 100k resistors only after measuring their actual values; divider tolerance affects battery display.
+- [ ] 029. Stage 10 acceptance: Remember GPIO34 is input-only and has no internal pull-up; never use it as a control output.
+- [ ] 030. Stage 10 acceptance: Confirm the ADC divider cannot exceed the ADC safe input range at the battery maximum; MUST CONFIRM FROM DATASHEET.
+- [ ] 031. Stage 10 acceptance: Compare the GPIO34 ADC reading against a multimeter at multiple known battery voltages.
+- [ ] 032. Stage 10 acceptance: Check ADC attenuation and calibration assumptions; current code documents 12-bit conversion but accuracy is UNKNOWN.
+- [ ] 033. Stage 10 acceptance: Calculate divider load and battery drain; record the measured quiescent current.
+- [ ] 034. Stage 10 acceptance: Use a current-limited bench supply for first power-up when possible; set a conservative current limit.
+- [ ] 035. Stage 10 acceptance: Inspect for shorts between BAT+, 3V3, 5V, and ground before installing a LiPo.
+- [ ] 036. Stage 10 acceptance: Never connect a bare LiPo to an unverified TP4056 board.
+- [ ] 037. Stage 10 acceptance: Never wear the prototype while charging and never leave charging unattended.
+- [ ] 038. Stage 10 acceptance: Confirm charger input voltage, charge current, termination behavior, and thermal limits from its datasheet.
+- [ ] 039. Stage 10 acceptance: Confirm whether the TP4056 board routes protected output or raw battery pads; UNKNOWN until traced or measured.
+- [ ] 040. Stage 10 acceptance: Provide a separate protection solution when the charger board lacks overcharge, overdischarge, and short-circuit protection.
+- [ ] 041. Stage 10 acceptance: Confirm battery protection cutoff thresholds and continuous current rating from the battery datasheet.
+- [ ] 042. Stage 10 acceptance: Inspect the LiPo for swelling, puncture, torn insulation, heat, or odor; stop immediately on any defect.
+- [ ] 043. Stage 10 acceptance: Keep the battery away from sharp headers, solder points, motor edges, and enclosure screws.
+- [ ] 044. Stage 10 acceptance: Add strain relief at battery, USB, sensor, and button wires; a solder joint is not a cable anchor.
+- [ ] 045. Stage 10 acceptance: Use insulation and a physical separator so conductive hardware cannot contact the cell.
+- [ ] 046. Stage 10 acceptance: Confirm enclosure clearance around the battery and charging connector; do not compress the cell.
+- [ ] 047. Stage 10 acceptance: Keep the optical sensor window flush and stable against the intended test surface; wrist wearability is UNKNOWN.
+- [ ] 048. Stage 10 acceptance: Provide motor clearance so vibration cannot touch the battery or crack solder joints.
+- [ ] 049. Stage 10 acceptance: Provide display, button, LED, and USB access without forcing the enclosure open.
+- [ ] 050. Stage 10 acceptance: Round or shield enclosure edges that can contact skin; material biocompatibility is UNKNOWN.
+- [ ] 051. Stage 10 acceptance: Label the enclosure prototype and revision; do not claim water resistance without a documented test.
+- [ ] 052. Stage 10 acceptance: Use ESD controls, ventilation, eye protection, and a safe soldering surface.
+- [ ] 053. Stage 10 acceptance: Inspect solder joints for bridges, cold joints, lifted pads, and insufficient wetting.
+- [ ] 054. Stage 10 acceptance: Clean flux residue using a process compatible with the boards and battery; document the solvent.
+- [ ] 055. Stage 10 acceptance: Use a continuity checklist before every powered test.
+- [ ] 056. Stage 10 acceptance: Flash with PlatformIO environment esp32dev and the repository platform version 6.8.1.
+- [ ] 057. Stage 10 acceptance: Use 921600 upload speed only when the cable and board are reliable; lower it for failed uploads.
+- [ ] 058. Stage 10 acceptance: Use 115200 serial monitor speed and record the complete boot banner.
+- [ ] 059. Stage 10 acceptance: Confirm the serial banner reports firmware version, PIN, PPG, MPU, and OLED presence.
+- [ ] 060. Stage 10 acceptance: Confirm LittleFS mounts; record any LittleFS fail message and stop release testing if storage is unavailable.
+- [ ] 061. Stage 10 acceptance: Confirm Preferences loads or creates the six-digit PIN and preserves it across reset.
+- [ ] 062. Stage 10 acceptance: Confirm BLE advertises as Veyro with the service UUID from protocol.h.
+- [ ] 063. Stage 10 acceptance: Confirm the app discovers the same service and characteristic UUIDs from veyro_protocol.dart.
+- [ ] 064. Stage 10 acceptance: Confirm BLE pairing sends the displayed six-digit PIN and that wrong PINs remain rejected.
+- [ ] 065. Stage 10 acceptance: Remember BLE link encryption is not established by the application PIN flow; production security is still required.
+- [ ] 066. Stage 10 acceptance: Treat BLE notifications and local files as prototype data paths; threat modeling and hardening are incomplete.
+- [ ] 067. Stage 10 acceptance: Confirm the app requests platform-specific Bluetooth permissions before scanning.
+- [ ] 068. Stage 10 acceptance: Confirm the app sends UTC time before relying on timestamps; otherwise firmware uses its fallback epoch behavior.
+- [ ] 069. Stage 10 acceptance: Confirm live JSON fields are hr, spo2, bps, bpd, hrv, steps, fall, bat, and ts.
+- [ ] 070. Stage 10 acceptance: Confirm history rows use unix,hr,spo2,sys,dia,hrv,steps,fall,battery.
+- [ ] 071. Stage 10 acceptance: Confirm history completion is the JSON message with v 1 and done 1.
+- [ ] 072. Stage 10 acceptance: Confirm failed or interrupted sync does not delete existing local app records.
+- [ ] 073. Stage 10 acceptance: Confirm LocalStore deduplicates rows by Unix timestamp and stores day files locally.
+- [ ] 074. Stage 10 acceptance: Confirm the watch stores UTC day files under LittleFS /d and prunes beyond 60 retention days.
+- [ ] 075. Stage 10 acceptance: Label rough SpO2 output as experimental; the firmware uses a rough ratio placeholder, not a clinical algorithm.
+- [ ] 076. Stage 10 acceptance: Label blood pressure as unavailable; current firmware explicitly sends zero systolic and diastolic values.
+- [ ] 077. Stage 10 acceptance: Label fall detection as threshold-based and prone to false positives; it is not validated emergency detection.
+- [ ] 078. Stage 10 acceptance: Label HR and HRV as wellness signals until reference comparison and repeatability testing exist.
+- [ ] 079. Stage 10 acceptance: Create a fixture for I2C scan, serial capture, BLE discovery, pairing, sync, buttons, LEDs, motor, and ADC.
+- [ ] 080. Stage 10 acceptance: Create a known-good firmware image and record its hash; exact artifact hash is UNKNOWN until built.
+- [ ] 081. Stage 10 acceptance: Use a sacrificial board for first flash and first battery test.
+- [ ] 082. Stage 10 acceptance: Record board serial, component lots, battery identity, enclosure revision, firmware, app, operator, date, and defects.
+- [ ] 083. Stage 10 acceptance: Define a safety stop for heat, smoke, swelling, exposed conductors, unstable current, or unexpected motor behavior.
+- [ ] 084. Stage 10 acceptance: Define a technical stop for missing sensor, conflicting address, failed storage, failed BLE, corrupt row, or unsafe voltage.
+- [ ] 085. Stage 10 acceptance: Do not release a wearable build until mechanical, electrical, firmware, app, safety, and data gates all pass.
+- [ ] 086. Stage 10 acceptance: Keep every unknown in the test record with an owner, measurement method, and due date.
+Stage 10 disposition: PASS / FAIL / BLOCKED. Evidence location: UNKNOWN until recorded.
+
+## Contradictions and unresolved items
+- The root README contains feature and battery-life claims that are not implemented or validated by the current firmware; treat them as UNKNOWN.
+- The current firmware and app agree that blood pressure is zero or unavailable; any documentation claiming a working BP estimator conflicts with executable behavior.
+- BLE application-level PIN pairing is not the same as encrypted BLE transport; link encryption and production signing still need work.
+- Exact module addresses, resistor tolerances, battery protection, physical dimensions, current draw, water resistance, and clinical accuracy remain MUST MEASURE or MUST CONFIRM FROM DATASHEET.
+- Final contradiction disposition: unresolved until an owner records evidence and updates the appropriate guide.

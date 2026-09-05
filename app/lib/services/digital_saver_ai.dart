@@ -2,7 +2,7 @@ import '../models/health_models.dart';
 
 /// Digital Saver AI Assistant
 /// A smart AI that knows your health data and can answer any question
-/// about your health, your Onyx watch, or the Digital Saver app.
+/// about your health, your Veyro watch, or the Digital Saver app.
 /// 
 /// The AI has different intelligence levels:
 /// - App: Standard intelligence (uses cloud for heavy processing)
@@ -155,7 +155,7 @@ class DigitalSaverAI {
     if (_containsAny(q, ['calorie', 'burn', 'weight'])) {
       return _answerCalorieQuestion(q);
     }
-    if (_containsAny(q, ['watch', 'onyx', 'device', 'battery', 'firmware', 'sensor'])) {
+    if (_containsAny(q, ['watch', 'veyro', 'device', 'battery', 'firmware', 'sensor'])) {
       return _answerWatchQuestion(q);
     }
     if (_containsAny(q, ['fall', 'emergency', 'alert', '911', 'sos'])) {
@@ -185,7 +185,7 @@ class DigitalSaverAI {
     final profile = _userProfile;
     
     if (hr == null) {
-      return "I don't have any heart rate data yet. Make sure your Onyx watch is connected and has taken a reading. 💓";
+      return "I don't have any heart rate data yet. Make sure your Veyro watch is connected and has taken a reading. 💓";
     }
     
     final bpm = hr.bpm;
@@ -260,7 +260,7 @@ class DigitalSaverAI {
     final profile = _userProfile;
     
     if (bp == null) {
-      return "No blood pressure data available. The Onyx watch estimates BP using pulse wave analysis. Wear it for a few readings to get accurate estimates.";
+      return "No blood pressure data available. Veyro does not currently provide a validated blood pressure measurement.";
     }
     
     final systolic = bp.systolic;
@@ -304,7 +304,7 @@ class DigitalSaverAI {
     final ox = _latestOxygen;
     
     if (ox == null) {
-      return "No SpO2 data available. The Onyx watch measures blood oxygen using infrared light. Make sure the sensor has good contact with your skin.";
+      return "No SpO2 data available. Veyro uses an experimental optical estimate. Make sure the sensor has good contact with your skin.";
     }
     
     final spo2 = ox.spO2;
@@ -339,7 +339,7 @@ class DigitalSaverAI {
     final profile = _userProfile;
     
     if (sleep == null) {
-      return "No sleep data yet. Wear your Onyx watch overnight to track your sleep patterns.";
+      return "No sleep data yet. Wear your Veyro watch overnight to track your sleep patterns.";
     }
     
     final hours = sleep.totalMinutes / 60;
@@ -379,7 +379,7 @@ class DigitalSaverAI {
     final profile = _userProfile;
     
     if (activity == null) {
-      return "No activity data yet. Start moving with your Onyx watch to track steps!";
+      return "No activity data yet. Start moving with your Veyro watch to track steps!";
     }
     
     final steps = activity.steps;
@@ -421,7 +421,7 @@ class DigitalSaverAI {
     final profile = _userProfile;
     
     if (activity == null || activity.calories == 0) {
-      return "No calorie data available. The Onyx watch calculates calories based on your activity and profile.";
+      return "No calorie data available. Veyro can summarize activity, but calorie estimates need validation.";
     }
     
     final calories = activity.calories.toInt();
@@ -450,7 +450,7 @@ class DigitalSaverAI {
   }
   
   String _answerWatchQuestion(String question) {
-    String info = "⌚ Onyx Watch Status:\n\n";
+    String info = "⌚ Veyro Watch Status:\n\n";
     
     info += "• Connection: ${_watchConnected ? '🟢 Connected' : '🔴 Disconnected'}\n";
     
@@ -491,7 +491,7 @@ class DigitalSaverAI {
   String _answerEmergencyQuestion(String question) {
     String info = "🚨 Emergency Features:\n\n";
     
-    info += "Your Onyx watch has automatic emergency detection:\n\n";
+    info += "Your Veyro watch has automatic emergency detection:\n\n";
     
     info += "• 🪨 **Fall Detection**: Detects sudden falls and alerts contacts\n";
     info += "• ❤️ **Heart Alert**: Watches for dangerously high/low heart rate\n";
@@ -516,7 +516,7 @@ class DigitalSaverAI {
   String _aboutMe() {
     String intro = "👋 I'm **Digital Saver AI**, your personal health assistant!\n\n";
     
-    intro += "I know everything about your health data and your Onyx watch. ";
+    intro += "I can help interpret your health data and your Veyro watch. ";
     intro += "I can help you understand your readings, answer questions, ";
     intro += "and give personalized insights based on your profile.\n\n";
     
@@ -586,7 +586,7 @@ class DigitalSaverAI {
     if (_latestHeartRate == null && _latestBloodPressure == null && 
         _latestOxygen == null && _latestActivity == null && _latestSleep == null) {
       summary = "No health data available yet. ";
-      summary += "Make sure your Onyx watch is connected and has taken readings.\n\n";
+      summary += "Make sure your Veyro watch is connected and has taken readings.\n\n";
       summary += "Or ask me anything specific! 😊";
     } else {
       summary += "\n_Ask me any question about your health!_";

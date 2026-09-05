@@ -1,9 +1,5 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import '../services/cambric_auth_service_v2.dart';
-import '../screens/auth_screen.dart';
-import '../screens/dashboard_screen.dart';
 import '../main.dart' show MainNav;
 
 class EnhancedSplashScreen extends StatefulWidget {
@@ -89,16 +85,7 @@ class _EnhancedSplashScreenState extends State<EnhancedSplashScreen>
   }
 
   void _acceptAndContinue() {
-    final auth = context.read<AuthProvider>();
-    if (auth.isAuthenticated) {
-      Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const MainNav()));
-    } else {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => AuthScreen(onSignedIn: () {
-          Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const MainNav()));
-        })),
-      );
-    }
+    Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const MainNav()));
   }
 
   @override

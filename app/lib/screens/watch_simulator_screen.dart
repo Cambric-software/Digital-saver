@@ -508,7 +508,7 @@ class _WatchSimulatorScreenState extends State<WatchSimulatorScreen>
       ),
       child: Column(
         children: [
-          _buildInfoRow('Device', 'Onyx Watch (Simulated)'),
+          _buildInfoRow('Device', 'Veyro Watch (Simulated)'),
           const Divider(color: Colors.white12, height: 24),
           _buildInfoRow('Status', _isConnected ? 'Connected' : 'Disconnected', 
               valueColor: _isConnected ? const Color(0xFF10B981) : Colors.red),

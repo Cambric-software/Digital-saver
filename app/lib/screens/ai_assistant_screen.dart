@@ -1,8 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import '../services/digital_saver_ai.dart';
-import '../services/cambric_auth_service_v2.dart';
-import '../models/health_models.dart';
 
 class AIAssistantScreen extends StatefulWidget {
   const AIAssistantScreen({super.key});
@@ -25,7 +22,7 @@ class _AIAssistantScreenState extends State<AIAssistantScreen> {
     _initializeAI();
     _messages.add({
       'role': 'assistant',
-      'content': 'Hello! I\'m your Digital Saver AI assistant. I can help you understand your health data, answer questions about your Onyx watch, and provide personalized health insights. How can I help you today?',
+      'content': 'Hello! I\'m your Digital Saver AI assistant. I can help you understand your health data, answer questions about your Veyro watch, and provide personalized health insights. How can I help you today?',
     });
   }
   
@@ -109,7 +106,7 @@ class _AIAssistantScreenState extends State<AIAssistantScreen> {
                 _messages.clear();
                 _messages.add({
                   'role': 'assistant',
-                  'content': 'Hello! I\'m your Digital Saver AI assistant. I can help you understand your health data, answer questions about your Onyx watch, and provide personalized health insights. How can I help you today?',
+                  'content': 'Hello! I\'m your Digital Saver AI assistant. I can help you understand your health data, answer questions about your Veyro watch, and provide personalized health insights. How can I help you today?',
                 });
               });
             },

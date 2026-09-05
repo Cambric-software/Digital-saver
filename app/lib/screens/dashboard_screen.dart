@@ -42,9 +42,6 @@ class _DashboardScreenState extends State<DashboardScreen>
   @override
   Widget build(BuildContext context) {
     final ble = context.watch<BleService>();
-    final sys = ble.bloodPressure.systolic.toDouble();
-    final dia = ble.bloodPressure.diastolic.toDouble();
-    
     final score = ble.isConnected ? ble.healthScore : 82;
 
     return Scaffold(
@@ -379,7 +376,7 @@ class _ScoreCard extends StatelessWidget {
       boxShadow: AppShadows.card,
     ),
     child: Column(children: [
-      const Text('Watch Battery', style: TextStyle(color: AppColors.textSecondary, fontSize: 13, fontWeight: FontWeight.w600, letterSpacing: 0.3)),
+      const Text('Daily Health Score', style: TextStyle(color: AppColors.textSecondary, fontSize: 13, fontWeight: FontWeight.w600, letterSpacing: 0.3)),
       const SizedBox(height: 20),
       AnimatedBuilder(
         animation: animation,
@@ -388,16 +385,16 @@ class _ScoreCard extends StatelessWidget {
           child: Stack(alignment: Alignment.center, children: [
             CustomPaint(
               size: const Size(200, 200),
-              painter: _RingPainter(progress: animation.value * (batteryLevel / 100), color: _batteryColor),
+              painter: _RingPainter(progress: animation.value * (score / 100), color: _c),
             ),
             Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-              Icon(Icons.battery_charging_full, color: _batteryColor, size: 28),
+              Icon(Icons.favorite_rounded, color: _c, size: 28),
               const SizedBox(height: 4),
               Text(
-                isConnected ? '$batteryLevel' : '--',
+                isConnected ? '$score' : '--',
                 style: const TextStyle(fontSize: 48, fontWeight: FontWeight.bold, color: AppColors.textPrimary, height: 1),
               ),
-              Text('%', style: TextStyle(color: _batteryColor, fontSize: 18, fontWeight: FontWeight.w500)),
+              Text('of 100', style: TextStyle(color: _c, fontSize: 15, fontWeight: FontWeight.w600)),
             ]),
           ]),
         ),
@@ -406,30 +403,51 @@ class _ScoreCard extends StatelessWidget {
       Container(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
         decoration: BoxDecoration(
-          color: _batteryColor.withOpacity(0.1), 
+          color: _c.withOpacity(0.1),
           borderRadius: BorderRadius.circular(20),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.watch, color: _batteryColor, size: 16),
+            Icon(Icons.favorite_rounded, color: _c, size: 16),
             const SizedBox(width: 6),
             Text(
-              isConnected 
-                ? (batteryLevel >= 60 ? 'Battery Good' : batteryLevel >= 30 ? 'Battery Medium' : 'Charge Soon')
-                : 'No Watch Connected',
-              style: TextStyle(color: _batteryColor, fontWeight: FontWeight.bold, fontSize: 14),
+              isConnected ? '$_label' : 'No Watch Connected',
+              style: TextStyle(color: _c, fontWeight: FontWeight.bold, fontSize: 14),
             ),
           ],
         ),
       ),
       const SizedBox(height: 10),
       Text(
-        isConnected 
-          ? 'Watch battery level: $batteryLevel%'
-          : 'Connect your smartwatch to see battery',
+        isConnected ? _msg : 'Connect your smartwatch to calculate your score',
         style: const TextStyle(color: AppColors.textSecondary, fontSize: 12), 
-        textAlign: TextAlign.center
+        textAlign: TextAlign.center,
+      ),
+      const SizedBox(height: 6),
+      const Text(
+        'Wellness estimate only. Not a medical diagnosis.',
+        style: TextStyle(color: AppColors.textMuted, fontSize: 10),
+        textAlign: TextAlign.center,
+      ),
+      const SizedBox(height: 14),
+      Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+        decoration: BoxDecoration(
+          color: AppColors.background,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.battery_5_bar, size: 16, color: _batteryColor),
+            const SizedBox(width: 6),
+            Text(
+              isConnected ? 'Watch battery $batteryLevel%' : 'Watch battery unavailable',
+              style: const TextStyle(color: AppColors.textSecondary, fontSize: 12, fontWeight: FontWeight.w600),
+            ),
+          ],
+        ),
       ),
     ]),
   );
@@ -466,10 +484,6 @@ class _VitalsGrid extends StatelessWidget {
   String get _sysVal {
     return ble.bloodPressure.systolic > 0 ? '${ble.bloodPressure.systolic}' : '--';
   }
-  String get _diaUnit {
-    return ble.bloodPressure.diastolic > 0 ? '${ble.bloodPressure.diastolic} mmHg' : 'mmHg';
-  }
-
   @override
   Widget build(BuildContext context) => Column(children: [
     Row(children: [
@@ -624,7 +638,7 @@ class _TodaySummary extends StatelessWidget {
         _Stat(icon: Icons.directions_walk, label: 'Steps', value: ble.isConnected ? '${ble.activity.steps}' : '--', color: AppColors.stepAmber),
         _Stat(icon: Icons.local_fire_department, label: 'Calories', value: ble.isConnected ? '${ble.activity.calories.round()} kcal' : '--', color: AppColors.heartRed),
         _Stat(icon: Icons.thermostat, label: 'Temp', value: ble.isConnected && ble.temperature > 0 ? '${ble.temperature.toStringAsFixed(1)}°C' : '--', color: AppColors.accent),
-        _Stat(icon: Icons.bedtime, label: 'Sleep', value: '7h 20m', color: AppColors.sleepPurple),
+        _Stat(icon: Icons.bedtime, label: 'Sleep', value: '--', color: AppColors.sleepPurple),
       ]),
     ]),
   );

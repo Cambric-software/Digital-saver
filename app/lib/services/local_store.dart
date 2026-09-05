@@ -98,6 +98,10 @@ class LocalStore {
         '${t.year.toString().padLeft(4, '0')}${t.month.toString().padLeft(2, '0')}${t.day.toString().padLeft(2, '0')}.csv';
     final root = await _root();
     final file = File('${root.path}/days/$name');
+    if (await file.exists()) {
+      final existing = await file.readAsLines();
+      if (existing.any((line) => line.startsWith('${sample.unix},'))) return;
+    }
     await file.writeAsString('${sample.toCsv()}\n', mode: FileMode.append);
   }
 
