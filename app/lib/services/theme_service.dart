@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 enum AppThemeMode { light, dark, blue, purple, green, gradient }
 
 class ThemeService extends ChangeNotifier {
-  AppThemeMode _themeMode = AppThemeMode.gradient;
+  AppThemeMode _themeMode = AppThemeMode.light;
   
   AppThemeMode get themeModeType => _themeMode;
   

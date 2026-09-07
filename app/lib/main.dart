@@ -6,19 +6,14 @@ import 'package:url_launcher/url_launcher.dart';
 import 'services/ble_service.dart';
 import 'services/app_lock.dart';
 import 'services/theme_service.dart';
-import 'services/dynamic_theme_service.dart';
 import 'services/auto_update_service.dart';
+import 'theme/app_theme.dart';
 import 'screens/dashboard_screen.dart';
-import 'screens/heart_screen.dart';
-import 'screens/bp_screen.dart';
+import 'screens/vitals_screen.dart';
 import 'screens/activity_screen.dart';
-import 'screens/sleep_screen.dart';
 import 'screens/settings_screen.dart';
 import 'screens/web_landing_page.dart';
-import 'screens/watch_simulator_screen.dart';
-import 'screens/health_trends_screen.dart';
-import 'screens/achievements_screen.dart';
-import 'screens/health_tips_screen.dart';
+import 'screens/insights_screen.dart';
 import 'widgets/enhanced_splash.dart';
 
 void main() async {
@@ -39,7 +34,6 @@ void main() async {
         ChangeNotifierProvider(create: (_) => BleService()),
         ChangeNotifierProvider.value(value: appLock),
         ChangeNotifierProvider(create: (_) => ThemeService()),
-        ChangeNotifierProvider(create: (_) => DynamicThemeService()),
         ChangeNotifierProvider(create: (_) => AutoUpdateService()),
       ],
       child: const DigitalSaverApp(),
@@ -83,18 +77,14 @@ class _DigitalSaverAppState extends State<DigitalSaverApp> with WidgetsBindingOb
   @override
   Widget build(BuildContext context) {
     final themeService = context.watch<ThemeService>();
-    final dynamicTheme = context.watch<DynamicThemeService>();
     final updateService = context.watch<AutoUpdateService>();
-
-    // Use dynamic theme if enabled
-    final useDynamicTheme = dynamicTheme.autoMode;
 
     return MaterialApp(
       title: 'Digital Saver',
       debugShowCheckedModeBanner: false,
-      theme: useDynamicTheme ? dynamicTheme.getThemeData() : themeService.getLightTheme(),
-      darkTheme: useDynamicTheme ? dynamicTheme.getThemeData() : themeService.getDarkTheme(),
-      themeMode: useDynamicTheme ? ThemeMode.system : themeService.themeMode,
+      theme: themeService.getLightTheme(),
+      darkTheme: themeService.getDarkTheme(),
+      themeMode: themeService.themeMode,
       home: kIsWeb
           ? const WebLandingPage()
           : _UpdateWrapper(
@@ -190,13 +180,9 @@ class _MainNavState extends State<MainNav> {
 
   static const _screens = [
     DashboardScreen(),
-    HeartScreen(),
-    BpScreen(),
+    VitalsScreen(),
     ActivityScreen(),
-    HealthTrendsScreen(),
-    AchievementsScreen(),
-    HealthTipsScreen(),
-    WatchSimulatorScreen(),
+    InsightsScreen(),
     SettingsScreen(),
   ];
 
@@ -221,7 +207,7 @@ class _MainNavState extends State<MainNav> {
                   margin: const EdgeInsets.all(16),
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF2563eb),
+                    color: AppColors.primaryDark,
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: const Row(
@@ -245,7 +231,7 @@ class _MainNavState extends State<MainNav> {
                   margin: const EdgeInsets.all(16),
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF22C55E),
+                    color: AppColors.primaryDark,
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: const Row(
@@ -266,17 +252,13 @@ class _MainNavState extends State<MainNav> {
       bottomNavigationBar: NavigationBar(
         selectedIndex: _currentIndex,
         onDestinationSelected: (i) => setState(() => _currentIndex = i),
-        backgroundColor: Colors.white,
-        elevation: 8,
+        backgroundColor: AppColors.surface,
+        elevation: 0,
         destinations: const [
           NavigationDestination(icon: Icon(Icons.dashboard_outlined), selectedIcon: Icon(Icons.dashboard), label: 'Home'),
-          NavigationDestination(icon: Icon(Icons.favorite_outline), label: 'Heart'),
-          NavigationDestination(icon: Icon(Icons.water_drop_outlined), label: 'BP'),
+          NavigationDestination(icon: Icon(Icons.monitor_heart_outlined), selectedIcon: Icon(Icons.monitor_heart), label: 'Vitals'),
           NavigationDestination(icon: Icon(Icons.directions_run_outlined), label: 'Activity'),
-          NavigationDestination(icon: Icon(Icons.trending_up_outlined), label: 'Trends'),
-          NavigationDestination(icon: Icon(Icons.emoji_events_outlined), label: 'Badges'),
-          NavigationDestination(icon: Icon(Icons.lightbulb_outlined), label: 'Tips'),
-          NavigationDestination(icon: Icon(Icons.watch_outlined), label: 'Watch'),
+          NavigationDestination(icon: Icon(Icons.insights_outlined), selectedIcon: Icon(Icons.insights), label: 'Insights'),
           NavigationDestination(icon: Icon(Icons.settings_outlined), label: 'Settings'),
         ],
       ),

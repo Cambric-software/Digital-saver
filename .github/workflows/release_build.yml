@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       release_version:
-        description: 'Release version (e.g., v1.0.0-beta)'
+        description: 'Release version (e.g., v1.0.1-beta)'
         required: false
         type: string
 
@@ -48,6 +48,7 @@ jobs:
             VERSION="${{ inputs.release_version || 'dev' }}"
           fi
           mv app-release.apk "digital_saver_android_${VERSION}.apk"
+          cp "digital_saver_android_${VERSION}.apk" digital_saver_android.apk
           ls -la
 
       - name: Upload Android APK
@@ -101,9 +102,11 @@ jobs:
           }
           $srcDir = "app\build\windows\x64\runner\Release"
           $zipPath = "app\build\windows\x64\runner\Release\digital_saver_windows_$VERSION.zip"
+          $latestZipPath = "app\build\windows\x64\runner\Release\digital_saver_windows.zip"
           
           Write-Host "Creating ZIP archive..."
           Compress-Archive -Path "$srcDir\*" -DestinationPath $zipPath -Force
+          Copy-Item $zipPath $latestZipPath -Force
           
           Write-Host "ZIP contents:"
           Get-ChildItem $zipPath | Select-Object Name, @{N='Size (KB)';E={[math]::Round($_.Length/1KB,1)}}
@@ -164,6 +167,7 @@ jobs:
             VERSION="${{ inputs.release_version || 'dev' }}"
           fi
           tar -czvf "digital_saver_linux_${VERSION}.tar.gz" *
+          cp "digital_saver_linux_${VERSION}.tar.gz" digital_saver_linux.tar.gz
           ls -la
 
       - name: Upload Linux Archive
