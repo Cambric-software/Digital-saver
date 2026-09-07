@@ -213,6 +213,8 @@ jobs:
           Terminal=false
           Categories=Utility;Health;
           DESKTOP
+          cp installer/usr/share/applications/digital-saver.desktop installer/digital-saver.desktop
+          cp installer/usr/share/icons/hicolor/256x256/apps/digital-saver.png installer/digital-saver.png
           cat > installer/AppRun <<'APP_RUN'
           #!/usr/bin/env bash
           set -e
