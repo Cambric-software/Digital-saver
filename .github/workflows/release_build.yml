@@ -55,7 +55,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: android-apk
-          path: app/build/app/outputs/flutter-apk/digital_saver_android_*.apk
+          path: app/build/app/outputs/flutter-apk/digital_saver_android*.apk
           retention-days: 30
 
   build-windows:
@@ -117,7 +117,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: windows-zip
-          path: app/build/windows/x64/runner/Release/digital_saver_windows_*.zip
+          path: app/build/windows/x64/runner/Release/digital_saver_windows*.zip
           retention-days: 30
 
   build-linux:
@@ -174,7 +174,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: linux-archive
-          path: app/build/linux/x64/release/bundle/digital_saver_linux_*.tar.gz
+          path: app/build/linux/x64/release/bundle/digital_saver_linux*.tar.gz
           retention-days: 30
 
   create-release:
