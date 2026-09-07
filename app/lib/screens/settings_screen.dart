@@ -24,6 +24,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   final _age = TextEditingController();
   final _pin = TextEditingController();
   final _watchPin = TextEditingController();
+  int _selectedWatchFace = 0;
 
   @override
   void initState() {
@@ -120,7 +121,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           if (ble.isConnected)
             DropdownButtonFormField<int>(
               decoration: const InputDecoration(labelText: 'Watch home screen'),
-              initialValue: 0,
+              value: _selectedWatchFace,
               items: const [
                 DropdownMenuItem(value: 0, child: Text('Clock')),
                 DropdownMenuItem(value: 1, child: Text('Vitals estimate')),
@@ -132,7 +133,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 DropdownMenuItem(value: 7, child: Text('Device info')),
               ],
               onChanged: (value) {
-                if (value != null) ble.setWatchFace(value);
+                if (value != null) {
+                  setState(() => _selectedWatchFace = value);
+                  ble.setWatchFace(value);
+                }
               },
             ),
           if (!ble.isConnected)
