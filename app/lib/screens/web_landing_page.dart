@@ -13,12 +13,12 @@ class _WebLandingPageState extends State<WebLandingPage> with SingleTickerProvid
   late Animation<double> _fadeAnimation;
   
   // Latest version
-  static const String currentVersion = 'v3.4.0';
+  static const String currentVersion = 'v1.0.0-beta';
   
-  // Download URLs - Exact files from v3.1.8 release
-  static const String androidUrl = 'https://github.com/Cambric-software/Digital-saver/releases/download/v3.4.0/digital_saver_android_v3.4.0.apk';
-  static const String windowsUrl = 'https://github.com/Cambric-software/Digital-saver/releases/download/v3.4.0/digital_saver_windows_v3.4.0.zip';
-  static const String linuxUrl = 'https://github.com/Cambric-software/Digital-saver/releases/download/v3.4.0/digital_saver_linux_v3.4.0.tar.gz';
+  // Download URLs - exact files from the GitHub release for this version
+  static const String androidUrl = 'https://github.com/Cambric-software/Digital-saver/releases/download/v1.0.0-beta/digital_saver_android_v1.0.0-beta.apk';
+  static const String windowsUrl = 'https://github.com/Cambric-software/Digital-saver/releases/download/v1.0.0-beta/digital_saver_windows_v1.0.0-beta.zip';
+  static const String linuxUrl = 'https://github.com/Cambric-software/Digital-saver/releases/download/v1.0.0-beta/digital_saver_linux_v1.0.0-beta.tar.gz';
 
   @override
   void initState() {

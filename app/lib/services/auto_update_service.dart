@@ -9,11 +9,11 @@ import 'dart:convert';
 
 // Current app version - update this with each release
 class AppVersion {
-  static const String current = '3.3.0';
-  static const String buildNumber = '17';
+  static const String current = '1.0.0-beta';
+  static const String buildNumber = '1';
   
   // Minimum version for auto-update (3.1.8+ supports silent auto-update)
-  static const String autoUpdateMinVersion = '3.1.8';
+  static const String autoUpdateMinVersion = '1.0.0-beta';
   
   static bool get supportsAutoUpdate {
     final currentParts = current.split('.').map((e) => int.tryParse(e) ?? 0).toList();
@@ -29,12 +29,13 @@ class AppVersion {
   }
   
   static String get downloadUrl {
+    const String tag = 'v1.0.0-beta';
     if (defaultTargetPlatform == TargetPlatform.android) {
-      return 'https://github.com/Cambric-software/Digital-saver/releases/download/v3.3.0/digital_saver_android_v3.3.0.apk';
+      return 'https://github.com/Cambric-software/Digital-saver/releases/download/$tag/digital_saver_android_${tag}.apk';
     } else if (defaultTargetPlatform == TargetPlatform.windows) {
-      return 'https://github.com/Cambric-software/Digital-saver/releases/download/v3.3.0/digital_saver_windows_v3.3.0.zip';
+      return 'https://github.com/Cambric-software/Digital-saver/releases/download/$tag/digital_saver_windows_${tag}.zip';
     } else if (defaultTargetPlatform == TargetPlatform.linux) {
-      return 'https://github.com/Cambric-software/Digital-saver/releases/download/v3.3.0/digital_saver_linux_v3.3.0.tar.gz';
+      return 'https://github.com/Cambric-software/Digital-saver/releases/download/$tag/digital_saver_linux_${tag}.tar.gz';
     }
     return 'https://cambric-software.github.io/Digital-saver/';
   }
@@ -57,7 +58,7 @@ class UpdateInfo {
 }
 
 class AutoUpdateService extends ChangeNotifier {
-  static const bool networkUpdateChecksEnabled = false;
+  static const bool networkUpdateChecksEnabled = true;
   UpdateInfo? _latestUpdate;
   bool _isChecking = false;
   bool _updateAvailable = false;
