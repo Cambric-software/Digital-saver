@@ -31,11 +31,11 @@ class AppVersion {
   static String get downloadUrl {
     const String tag = 'v1.0.0-beta';
     if (defaultTargetPlatform == TargetPlatform.android) {
-      return 'https://github.com/Cambric-software/Digital-saver/releases/download/$tag/digital_saver_android_${tag}.apk';
+      return 'https://github.com/Cambric-software/Digital-saver/releases/download/$tag/digital_saver_android_v1.0.0-beta.apk';
     } else if (defaultTargetPlatform == TargetPlatform.windows) {
-      return 'https://github.com/Cambric-software/Digital-saver/releases/download/$tag/digital_saver_windows_${tag}.zip';
+      return 'https://github.com/Cambric-software/Digital-saver/releases/download/$tag/digital_saver_windows_v1.0.0-beta.zip';
     } else if (defaultTargetPlatform == TargetPlatform.linux) {
-      return 'https://github.com/Cambric-software/Digital-saver/releases/download/$tag/digital_saver_linux_${tag}.tar.gz';
+      return 'https://github.com/Cambric-software/Digital-saver/releases/download/$tag/digital_saver_linux_v1.0.0-beta.tar.gz';
     }
     return 'https://cambric-software.github.io/Digital-saver/';
   }

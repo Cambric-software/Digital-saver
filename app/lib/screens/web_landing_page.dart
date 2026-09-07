@@ -15,7 +15,7 @@ class _WebLandingPageState extends State<WebLandingPage> with SingleTickerProvid
   // Latest version
   static const String currentVersion = 'v1.0.0-beta';
   
-  // Download URLs - exact files from the GitHub release for this version
+  // Download URLs - exact files from the current GitHub release
   static const String androidUrl = 'https://github.com/Cambric-software/Digital-saver/releases/download/v1.0.0-beta/digital_saver_android_v1.0.0-beta.apk';
   static const String windowsUrl = 'https://github.com/Cambric-software/Digital-saver/releases/download/v1.0.0-beta/digital_saver_windows_v1.0.0-beta.zip';
   static const String linuxUrl = 'https://github.com/Cambric-software/Digital-saver/releases/download/v1.0.0-beta/digital_saver_linux_v1.0.0-beta.tar.gz';
