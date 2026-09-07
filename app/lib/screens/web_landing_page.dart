@@ -17,8 +17,8 @@ class _WebLandingPageState extends State<WebLandingPage> with SingleTickerProvid
   
   // Download URLs - exact files from the current GitHub release
   static const String androidUrl = 'https://github.com/Cambric-software/Digital-saver/releases/download/v1.0.1-beta/digital_saver_android_v1.0.1-beta.apk';
-  static const String windowsUrl = 'https://github.com/Cambric-software/Digital-saver/releases/download/v1.0.1-beta/digital_saver_windows_v1.0.1-beta.zip';
-  static const String linuxUrl = 'https://github.com/Cambric-software/Digital-saver/releases/download/v1.0.1-beta/digital_saver_linux_v1.0.1-beta.tar.gz';
+  static const String windowsUrl = 'https://github.com/Cambric-software/Digital-saver/releases/download/v1.0.1-beta/digital_saver_windows_setup.exe';
+  static const String linuxUrl = 'https://github.com/Cambric-software/Digital-saver/releases/download/v1.0.1-beta/digital_saver_linux_installer.run';
 
   @override
   void initState() {
@@ -221,16 +221,16 @@ class _WebLandingPageState extends State<WebLandingPage> with SingleTickerProvid
             _DownloadButton(
               icon: Icons.window,
               label: 'Windows',
-              subtitle: 'EXE / ZIP $currentVersion',
+              subtitle: 'Installer + desktop shortcut $currentVersion',
               color: const Color(0xFF0078D4),
-              onTap: () => _downloadFile(windowsUrl, 'digital_saver_windows.zip'),
+              onTap: () => _downloadFile(windowsUrl, 'digital_saver_windows_setup.exe'),
             ),
             _DownloadButton(
               icon: Icons.computer,
               label: 'Linux',
-              subtitle: 'AppImage / ZIP $currentVersion',
+              subtitle: 'One-click installer $currentVersion',
               color: const Color(0xFFE95420),
-              onTap: () => _downloadFile(linuxUrl, 'digital_saver_linux.tar.gz'),
+              onTap: () => _downloadFile(linuxUrl, 'digital_saver_linux_installer.run'),
             ),
             _DownloadButton(
               icon: Icons.apple,

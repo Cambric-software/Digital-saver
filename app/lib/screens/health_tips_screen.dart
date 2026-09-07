@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import '../theme/app_theme.dart';
 
 // Daily health tips screen
 class HealthTipsScreen extends StatefulWidget {
@@ -121,11 +122,11 @@ class _HealthTipsScreenState extends State<HealthTipsScreen>
     final tip = _tips[_currentTipIndex];
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0F172A),
+      backgroundColor: AppColors.background,
       body: CustomScrollView(
         slivers: [
           SliverAppBar(
-            backgroundColor: const Color(0xFF0F172A),
+            backgroundColor: AppColors.background,
             expandedHeight: 160,
             floating: false,
             pinned: true,
@@ -137,7 +138,7 @@ class _HealthTipsScreenState extends State<HealthTipsScreen>
                     end: Alignment.bottomCenter,
                     colors: [
                       tip.color.withOpacity(0.3),
-                      const Color(0xFF0F172A),
+                      AppColors.background,
                     ],
                   ),
                 ),
@@ -151,7 +152,7 @@ class _HealthTipsScreenState extends State<HealthTipsScreen>
                       const Text(
                         'Daily Health Tips',
                         style: TextStyle(
-                          color: Colors.white,
+                          color: AppColors.textPrimary,
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
                         ),
@@ -159,7 +160,7 @@ class _HealthTipsScreenState extends State<HealthTipsScreen>
                       Text(
                         'Swipe to see more tips',
                         style: TextStyle(
-                          color: Colors.white.withOpacity(0.5),
+                          color: AppColors.textMuted,
                           fontSize: 12,
                         ),
                       ),

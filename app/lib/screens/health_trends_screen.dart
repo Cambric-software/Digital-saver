@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import '../theme/app_theme.dart';
 
 // Health trends and history screen
 class HealthTrendsScreen extends StatefulWidget {
@@ -31,11 +32,11 @@ class _HealthTrendsScreenState extends State<HealthTrendsScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0F172A),
+      backgroundColor: AppColors.background,
       body: CustomScrollView(
         slivers: [
           SliverAppBar(
-            backgroundColor: const Color(0xFF0F172A),
+            backgroundColor: AppColors.background,
             expandedHeight: 120,
             floating: false,
             pinned: true,
@@ -54,7 +55,7 @@ class _HealthTrendsScreenState extends State<HealthTrendsScreen>
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
                     colors: [
-                      const Color(0xFF1E3A5F).withOpacity(0.5),
+                      AppColors.primaryDark.withOpacity(0.08),
                       Colors.transparent,
                     ],
                   ),
@@ -95,7 +96,7 @@ class _HealthTrendsScreenState extends State<HealthTrendsScreen>
     return Container(
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.1),
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
@@ -109,7 +110,7 @@ class _HealthTrendsScreenState extends State<HealthTrendsScreen>
                 padding: const EdgeInsets.symmetric(vertical: 10),
                 decoration: BoxDecoration(
                   color: isSelected 
-                      ? const Color(0xFF2563EB) 
+                      ? AppColors.primary
                       : Colors.transparent,
                   borderRadius: BorderRadius.circular(8),
                 ),
@@ -117,7 +118,7 @@ class _HealthTrendsScreenState extends State<HealthTrendsScreen>
                   period,
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    color: isSelected ? Colors.white : Colors.white54,
+                    color: isSelected ? Colors.white : AppColors.textMuted,
                     fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                     fontSize: 13,
                   ),
@@ -165,10 +166,10 @@ class _HealthTrendsScreenState extends State<HealthTrendsScreen>
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: Colors.white.withOpacity(0.1),
+          color: AppColors.border,
           width: 1,
         ),
       ),
@@ -241,7 +242,7 @@ class _HealthTrendsScreenState extends State<HealthTrendsScreen>
         const Text(
           'Heart Rate Pattern',
           style: TextStyle(
-            color: Colors.white,
+            color: AppColors.textPrimary,
             fontSize: 18,
             fontWeight: FontWeight.bold,
           ),
@@ -251,10 +252,10 @@ class _HealthTrendsScreenState extends State<HealthTrendsScreen>
           height: 200,
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.05),
+            color: AppColors.surface,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: Colors.white.withOpacity(0.1),
+              color: AppColors.border,
               width: 1,
             ),
           ),
@@ -268,7 +269,7 @@ class _HealthTrendsScreenState extends State<HealthTrendsScreen>
         const Text(
           'Activity Overview',
           style: TextStyle(
-            color: Colors.white,
+            color: AppColors.textPrimary,
             fontSize: 18,
             fontWeight: FontWeight.bold,
           ),
@@ -278,10 +279,10 @@ class _HealthTrendsScreenState extends State<HealthTrendsScreen>
           height: 200,
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.05),
+            color: AppColors.surface,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: Colors.white.withOpacity(0.1),
+              color: AppColors.border,
               width: 1,
             ),
           ),

@@ -33,9 +33,9 @@ class AppVersion {
     if (defaultTargetPlatform == TargetPlatform.android) {
       return '$release/digital_saver_android_v1.0.1-beta.apk';
     } else if (defaultTargetPlatform == TargetPlatform.windows) {
-      return '$release/digital_saver_windows_v1.0.1-beta.zip';
+      return '$release/digital_saver_windows_setup.exe';
     } else if (defaultTargetPlatform == TargetPlatform.linux) {
-      return '$release/digital_saver_linux_v1.0.1-beta.tar.gz';
+      return '$release/digital_saver_linux_installer.run';
     }
     return 'https://cambric-software.github.io/Digital-saver/';
   }

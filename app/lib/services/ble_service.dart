@@ -155,10 +155,16 @@ class BleService extends ChangeNotifier {
     _setState(BleState.connecting);
     try {
       await device.connect(timeout: const Duration(seconds: 20));
-      _setState(BleState.connected);
       await _wire(device, pin: pin);
+      _setState(BleState.connected);
     } catch (e) {
       _errorMessage = 'Connection failed';
+      await _liveSub?.cancel();
+      await _histSub?.cancel();
+      await _device?.disconnect();
+      _device = null;
+      _cmd = null;
+      _info = null;
       _setState(BleState.error);
     }
   }

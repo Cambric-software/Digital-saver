@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import '../theme/app_theme.dart';
 
 // Achievement badges screen
 class AchievementsScreen extends StatefulWidget {
@@ -104,11 +105,11 @@ class _AchievementsScreenState extends State<AchievementsScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0F172A),
+      backgroundColor: AppColors.background,
       body: CustomScrollView(
         slivers: [
           SliverAppBar(
-            backgroundColor: const Color(0xFF0F172A),
+            backgroundColor: AppColors.background,
             expandedHeight: 200,
             floating: false,
             pinned: true,
@@ -119,8 +120,8 @@ class _AchievementsScreenState extends State<AchievementsScreen>
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
                     colors: [
-                      const Color(0xFF1E3A5F).withOpacity(0.8),
-                      const Color(0xFF0F172A),
+                      AppColors.primaryDark.withOpacity(0.08),
+                      AppColors.background,
                     ],
                   ),
                 ),
@@ -137,7 +138,7 @@ class _AchievementsScreenState extends State<AchievementsScreen>
                       const Text(
                         'Achievements',
                         style: TextStyle(
-                          color: Colors.white,
+                          color: AppColors.textPrimary,
                           fontSize: 28,
                           fontWeight: FontWeight.bold,
                         ),
@@ -146,7 +147,7 @@ class _AchievementsScreenState extends State<AchievementsScreen>
                       Text(
                         '${_achievements.where((a) => !a.isLocked).length}/${_achievements.length} Unlocked',
                         style: TextStyle(
-                          color: Colors.white.withOpacity(0.6),
+                          color: AppColors.textSecondary,
                           fontSize: 14,
                         ),
                       ),

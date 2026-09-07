@@ -11,9 +11,12 @@ import 'theme/app_theme.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/vitals_screen.dart';
 import 'screens/activity_screen.dart';
+import 'screens/sleep_screen.dart';
 import 'screens/settings_screen.dart';
 import 'screens/web_landing_page.dart';
 import 'screens/insights_screen.dart';
+import 'screens/ai_assistant_screen.dart';
+import 'screens/memory_screen.dart';
 import 'widgets/enhanced_splash.dart';
 
 void main() async {
@@ -182,8 +185,22 @@ class _MainNavState extends State<MainNav> {
     DashboardScreen(),
     VitalsScreen(),
     ActivityScreen(),
+    SleepScreen(),
     InsightsScreen(),
+    AIAssistantScreen(),
+    MemoryScreen(),
     SettingsScreen(),
+  ];
+
+  static const _destinations = [
+    NavigationDestination(icon: Icon(Icons.dashboard_outlined), selectedIcon: Icon(Icons.dashboard), label: 'Home'),
+    NavigationDestination(icon: Icon(Icons.monitor_heart_outlined), selectedIcon: Icon(Icons.monitor_heart), label: 'Vitals'),
+    NavigationDestination(icon: Icon(Icons.directions_run_outlined), label: 'Activity'),
+    NavigationDestination(icon: Icon(Icons.bedtime_outlined), selectedIcon: Icon(Icons.bedtime), label: 'Sleep'),
+    NavigationDestination(icon: Icon(Icons.insights_outlined), selectedIcon: Icon(Icons.insights), label: 'Insights'),
+    NavigationDestination(icon: Icon(Icons.auto_awesome_outlined), selectedIcon: Icon(Icons.auto_awesome), label: 'Assistant'),
+    NavigationDestination(icon: Icon(Icons.watch_outlined), selectedIcon: Icon(Icons.watch), label: 'Watch'),
+    NavigationDestination(icon: Icon(Icons.settings_outlined), label: 'Settings'),
   ];
 
   @override
@@ -194,11 +211,39 @@ class _MainNavState extends State<MainNav> {
   @override
   Widget build(BuildContext context) {
     final ble = context.watch<BleService>();
+    final wide = MediaQuery.sizeOf(context).width >= 900;
 
     return Scaffold(
-      body: Stack(
+      body: Row(
         children: [
-          IndexedStack(index: _currentIndex, children: _screens),
+          if (wide)
+            NavigationRail(
+              selectedIndex: _currentIndex,
+              onDestinationSelected: (i) => setState(() => _currentIndex = i),
+              labelType: NavigationRailLabelType.all,
+              minWidth: 78,
+              backgroundColor: AppColors.surface,
+              leading: Padding(
+                padding: const EdgeInsets.only(top: 18, bottom: 22),
+                child: Container(
+                  width: 42,
+                  height: 42,
+                  decoration: BoxDecoration(gradient: AppColors.gradientPrimary, borderRadius: BorderRadius.circular(13)),
+                  child: const Icon(Icons.favorite, color: Colors.white, size: 21),
+                ),
+              ),
+              destinations: _destinations
+                  .map((destination) => NavigationRailDestination(
+                        icon: destination.icon,
+                        selectedIcon: destination.selectedIcon,
+                        label: Text(destination.label),
+                      ))
+                  .toList(),
+            ),
+          Expanded(
+            child: Stack(
+              children: [
+                IndexedStack(index: _currentIndex, children: _screens),
           if (ble.state == BleState.scanning)
             Positioned(
               top: 0, left: 0, right: 0,
@@ -247,21 +292,21 @@ class _MainNavState extends State<MainNav> {
                 ),
               ),
             ),
+              ],
+            ),
+          ),
         ],
       ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _currentIndex,
-        onDestinationSelected: (i) => setState(() => _currentIndex = i),
-        backgroundColor: AppColors.surface,
-        elevation: 0,
-        destinations: const [
-          NavigationDestination(icon: Icon(Icons.dashboard_outlined), selectedIcon: Icon(Icons.dashboard), label: 'Home'),
-          NavigationDestination(icon: Icon(Icons.monitor_heart_outlined), selectedIcon: Icon(Icons.monitor_heart), label: 'Vitals'),
-          NavigationDestination(icon: Icon(Icons.directions_run_outlined), label: 'Activity'),
-          NavigationDestination(icon: Icon(Icons.insights_outlined), selectedIcon: Icon(Icons.insights), label: 'Insights'),
-          NavigationDestination(icon: Icon(Icons.settings_outlined), label: 'Settings'),
-        ],
-      ),
+      bottomNavigationBar: wide
+          ? null
+          : NavigationBar(
+              selectedIndex: _currentIndex,
+              onDestinationSelected: (i) => setState(() => _currentIndex = i),
+              backgroundColor: AppColors.surface,
+              elevation: 0,
+              destinations: _destinations,
+              labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+            ),
     );
   }
 }
