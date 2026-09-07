@@ -201,7 +201,7 @@ jobs:
           tar -czvf "digital_saver_linux_${VERSION}.tar.gz" *
           cp "digital_saver_linux_${VERSION}.tar.gz" digital_saver_linux.tar.gz
           mkdir -p installer/usr/lib/digital-saver installer/usr/share/applications installer/usr/share/icons/hicolor/256x256/apps
-          cp -r . installer/usr/lib/digital-saver/
+          rsync -a --exclude='installer' ./ installer/usr/lib/digital-saver/
           cp ../../../../../assets/digital-saver-icon-transparent.png installer/usr/share/icons/hicolor/256x256/apps/digital-saver.png
           cat > installer/usr/share/applications/digital-saver.desktop <<'DESKTOP'
           [Desktop Entry]
