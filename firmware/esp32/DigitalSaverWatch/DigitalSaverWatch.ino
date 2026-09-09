@@ -84,6 +84,10 @@ File histFile;
 String dumpFiles[62];
 int dumpFileCount = 0;
 int dumpFileIdx = 0;
+int sampleCount = 0;
+uint32_t lastBatteryRead = 0;
+bool modeWasPressed = false;
+uint32_t lastModeChange = 0;
 
 uint32_t nowUnix() {
   if (unixTime == 0) return 0;
@@ -164,6 +168,7 @@ bool appendSample() {
            (unsigned long)steps, fall ? 1 : 0, batteryPct);
   f.print(line);
   f.close();
+  sampleCount++;
   return true;
 }
 
@@ -190,7 +195,7 @@ void setInfo() {
   doc["fw"] = VEYRO_FW_VERSION;
   doc["name"] = VEYRO_NAME;
   doc["paired"] = paired;
-  doc["samples"] = countSamples();
+  doc["samples"] = sampleCount;
   doc["retain_d"] = RETAIN_DAYS;
   doc["free_kb"] = (int)(LittleFS.totalBytes() - LittleFS.usedBytes()) / 1024;
   doc["bat"] = batteryPct;
@@ -508,7 +513,7 @@ void draw() {
   } else if (face == 5) {
     display.println("STORAGE");
     display.print("Rows today: ");
-    display.println(countSamples());
+    display.println(sampleCount);
     display.print("Retention: ");
     display.print(RETAIN_DAYS);
     display.println(" days");
@@ -594,6 +599,7 @@ void setup() {
   }
 
   if (storageReady && hasPpg && hasMpu && hasOled) {
+    sampleCount = countSamples();
     initBle();
     operational = true;
     pruneOld();
@@ -610,18 +616,20 @@ void loop() {
     vibeUntil = 0;
     digitalWrite(PIN_VIBE, LOW);
   }
-  batteryPct = readBattery();
+  if (ms - lastBatteryRead >= 5000 || lastBatteryRead == 0) {
+    lastBatteryRead = ms;
+    batteryPct = readBattery();
+  }
   readMpu();
   readPpg();
 
-  if (digitalRead(PIN_BTN_MODE) == LOW) {
-    delay(40);
-    if (digitalRead(PIN_BTN_MODE) == LOW) {
-      face = (face + 1) % 8;
-      prefs.putUChar("face", (uint8_t)face);
-      while (digitalRead(PIN_BTN_MODE) == LOW) delay(10);
-    }
+  const bool modePressed = digitalRead(PIN_BTN_MODE) == LOW;
+  if (modePressed && !modeWasPressed && ms - lastModeChange >= 80) {
+    lastModeChange = ms;
+    face = (face + 1) % 8;
+    prefs.putUChar("face", (uint8_t)face);
   }
+  modeWasPressed = modePressed;
   if (digitalRead(PIN_BTN_SOS) == LOW) {
     if (lastSosDown == 0) lastSosDown = ms;
     if (!sosTriggered && ms - lastSosDown > 2000) {
@@ -652,8 +660,9 @@ void loop() {
   if (ms - lastPrune >= 3600000UL) {
     lastPrune = ms;
     pruneOld();
+    sampleCount = countSamples();
   }
-  if (ms - lastDisp >= 200) {
+  if (ms - lastDisp >= 300) {
     lastDisp = ms;
     draw();
   }

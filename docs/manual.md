@@ -117,6 +117,8 @@ Do not publish the PIN. Stop if a required sensor reports missing.
 
 The firmware does not advertise the operational BLE service when PPG, MPU6050, OLED, or LittleFS initialization fails. It also does not send live health notifications until the current BLE session has passed PIN pairing. A session must pair again after reconnecting.
 
+The current firmware keeps the prototype inexpensive and efficient: battery readings are sampled every five seconds, history row counts are cached instead of rescanning flash every live update, the OLED redraws at a restrained rate, and the mode button does not block BLE or sensor work. The app clears stale watch state when the watch disconnects.
+
 ### Build and run the app
 
 Open a second terminal in `app`:

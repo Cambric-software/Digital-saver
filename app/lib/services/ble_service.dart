@@ -57,6 +57,7 @@ class BleService extends ChangeNotifier {
   StreamSubscription? _scanSub;
   StreamSubscription? _liveSub;
   StreamSubscription? _histSub;
+  StreamSubscription<BluetoothConnectionState>? _connectionSub;
   BluetoothCharacteristic? _cmd;
   BluetoothCharacteristic? _info;
 
@@ -155,6 +156,11 @@ class BleService extends ChangeNotifier {
     _setState(BleState.connecting);
     try {
       await device.connect(timeout: const Duration(seconds: 20));
+      _connectionSub = device.connectionState.listen((state) {
+        if (state == BluetoothConnectionState.disconnected) {
+          _handleRemoteDisconnect();
+        }
+      });
       await _wire(device, pin: pin);
       _setState(BleState.connected);
     } catch (e) {
@@ -308,13 +314,36 @@ class BleService extends ChangeNotifier {
   }
 
   Future<void> disconnect() async {
+    await _connectionSub?.cancel();
+    _connectionSub = null;
     await _liveSub?.cancel();
     await _histSub?.cancel();
     await _device?.disconnect();
     _device = null;
     _cmd = null;
     _info = null;
+    _syncingMemory = false;
+    _memoryRows = 0;
+    _watchInfo = WatchInfo();
+    _batteryLevel = 0;
     _setState(BleState.disconnected);
+  }
+
+  Future<void> _handleRemoteDisconnect() async {
+    await _connectionSub?.cancel();
+    _connectionSub = null;
+    await _liveSub?.cancel();
+    await _histSub?.cancel();
+    _liveSub = null;
+    _histSub = null;
+    _device = null;
+    _cmd = null;
+    _info = null;
+    _syncingMemory = false;
+    _memoryRows = 0;
+    _watchInfo = WatchInfo();
+    _batteryLevel = 0;
+    if (_state != BleState.disconnected) _setState(BleState.disconnected);
   }
 
   void startDemo() {
@@ -348,6 +377,7 @@ class BleService extends ChangeNotifier {
     _scanSub?.cancel();
     _liveSub?.cancel();
     _histSub?.cancel();
+    _connectionSub?.cancel();
     super.dispose();
   }
 }
