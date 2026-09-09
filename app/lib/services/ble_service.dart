@@ -171,23 +171,36 @@ class BleService extends ChangeNotifier {
 
   Future<void> _wire(BluetoothDevice device, {String? pin}) async {
     final services = await device.discoverServices();
+    var foundService = false;
+    var foundLive = false;
+    var foundHistory = false;
+    var foundInfo = false;
+    var foundCommand = false;
     for (final s in services) {
       if (!s.uuid.toString().toLowerCase().contains('4fafc201')) continue;
+      foundService = true;
       for (final c in s.characteristics) {
         final id = c.uuid.toString().toLowerCase();
         if (id.contains('26a8')) {
           await c.setNotifyValue(true);
           _liveSub = c.lastValueStream.listen(_onLive);
+          foundLive = true;
         } else if (id.contains('26a1')) {
           await c.setNotifyValue(true);
           _histSub = c.lastValueStream.listen(_onHist);
+          foundHistory = true;
         } else if (id.contains('26a2')) {
           _info = c;
+          foundInfo = true;
           await _readInfo();
         } else if (id.contains('26f0')) {
           _cmd = c;
+          foundCommand = true;
         }
       }
+    }
+    if (!foundService || !foundLive || !foundHistory || !foundInfo || !foundCommand) {
+      throw StateError('Incomplete Veyro BLE service');
     }
     final stored = pin ?? await _lock?.watchPin();
     if (stored != null && stored.length == 6) {

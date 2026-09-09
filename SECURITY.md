@@ -567,6 +567,8 @@ Owner: UNKNOWN. Date: UNKNOWN. Evidence path: UNKNOWN.
 ## 12. Cloud boundaries
 
 The current product has no cloud client. Health history, profiles, contacts, and watch logs remain on the device or in the local app store. The former Supabase setup files were retired on 2026-09-09. Any future cloud feature requires a new threat model, consent flow, deletion policy, migration plan, and security review before code is added.
+
+Firmware 4.1.0 does not publish live health notifications before the current BLE session is PIN-paired. It requires PPG, MPU6050, OLED, and LittleFS initialization before advertising the operational service, and it refuses to auto-format LittleFS after a mount failure. These controls still require hardware-in-the-loop verification; they are not a security certification.
 Use this section as a small work package; record the result before moving on.
 Owner: UNKNOWN. Date: UNKNOWN. Evidence path: UNKNOWN.
 - [ ] State the exact question for Cloud boundaries.

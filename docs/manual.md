@@ -113,6 +113,8 @@ Veyro 4.1.0 PIN [redact] PPG=1 MPU=1 OLED=1
 
 Do not publish the PIN. Stop if a required sensor reports missing.
 
+The firmware does not advertise the operational BLE service when PPG, MPU6050, OLED, or LittleFS initialization fails. It also does not send live health notifications until the current BLE session has passed PIN pairing. A session must pair again after reconnecting.
+
 ### Build and run the app
 
 Open a second terminal in `app`:
@@ -145,9 +147,9 @@ The app scans for the Veyro BLE service, pairs with the six-digit PIN shown on t
 
 ## 5. What the watch actually provides
 
-Implemented: BLE pairing, live heart-rate estimate, rough experimental SpO2 estimate, accelerometer activity, threshold motion/fall flag, battery estimate, OLED screens, vibration, LEDs, local LittleFS history, 60-day pruning, and app-side local history.
+Implemented: BLE pairing, session-gated live heart-rate estimate, rough experimental SpO2 estimate, accelerometer activity, threshold motion/fall flag, battery estimate, OLED screens, non-blocking vibration, LEDs, local LittleFS history, 60-day pruning, secure phone PIN storage, and app-side local history.
 
-Unavailable or not validated: blood pressure, medical diagnosis, clinical SpO2, validated fall detection, emergency calling, cloud sync, OTA updates, water resistance, and safe wearable fit.
+Unavailable or not validated: blood pressure, medical diagnosis, clinical SpO2, validated fall detection, emergency calling, cloud sync, OTA updates, BLE peer identity beyond the current secure paired session, water resistance, and safe wearable fit.
 
 Read `docs/01_PRODUCT_VISION.md` for product boundaries, `docs/03_OFFLINE_DATA.md` for storage, `docs/04_BLE_PROTOCOL.md` for the command contract, `docs/05_HARDWARE_BOM.md` and `docs/06_ASSEMBLY_SAFETY.md` for hardware safety, and `docs/07_FIRMWARE_GUIDE.md` for firmware troubleshooting.
 

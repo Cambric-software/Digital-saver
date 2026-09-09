@@ -47,6 +47,8 @@ bool bleConnected = false;
 bool hasOled = false;
 bool hasMpu = false;
 bool hasPpg = false;
+bool storageReady = false;
+bool operational = false;
 bool paired = false;
 char pinCode[7] = "000000";
 
@@ -74,6 +76,7 @@ uint32_t lastPrune = 0;
 uint32_t lastDisp = 0;
 uint32_t lastSosDown = 0;
 bool sosTriggered = false;
+uint32_t vibeUntil = 0;
 int face = 0;  // selected watch screen; changed with the mode button
 
 bool histSending = false;
@@ -83,15 +86,14 @@ int dumpFileCount = 0;
 int dumpFileIdx = 0;
 
 uint32_t nowUnix() {
-  if (unixTime == 0) return 1700000000UL + (millis() / 1000);
+  if (unixTime == 0) return 0;
   return unixTime + ((millis() - bootMs) / 1000);
 }
 
 int readBattery() {
   int raw = analogRead(PIN_BAT_ADC);
   if (raw < 80) return 0;  // divider not wired
-  // 2:1 divider, 3.3V ADC, 12-bit. Full ~4.2V => ~2600, empty ~3.3V => ~2048
-  float v = (raw / 4095.0f) * 3.3f * 2.0f;
+  float v = (analogReadMilliVolts(PIN_BAT_ADC) / 1000.0f) * 2.0f;
   int pct = (int)((v - 3.30f) / (4.15f - 3.30f) * 100.0f);
   if (pct < 0) pct = 0;
   if (pct > 100) pct = 100;
@@ -99,9 +101,8 @@ int readBattery() {
 }
 
 void vibe(int ms) {
+  vibeUntil = max(vibeUntil, millis() + (uint32_t)ms);
   digitalWrite(PIN_VIBE, HIGH);
-  delay(ms);
-  digitalWrite(PIN_VIBE, LOW);
 }
 
 void makePin() {
@@ -149,6 +150,7 @@ void pruneOld() {
 }
 
 bool appendSample() {
+  if (!storageReady || nowUnix() == 0) return false;
   if (!LittleFS.exists("/d")) LittleFS.mkdir("/d");
   String path = dayPath(nowUnix());
   File f = LittleFS.open(path, FILE_APPEND);
@@ -204,6 +206,7 @@ class ServerCb : public BLEServerCallbacks {
   }
   void onDisconnect(BLEServer *) override {
     bleConnected = false;
+    paired = false;
     histSending = false;
     digitalWrite(PIN_LED_GREEN, LOW);
     bleServer->startAdvertising();
@@ -233,7 +236,6 @@ void handleCmd(const String &raw) {
     const char *pin = doc["pin"] | "";
     if (strcmp(pin, pinCode) == 0) {
       paired = true;
-      prefs.putBool("paired", true);
       setInfo();
       vibe(80);
     }
@@ -323,6 +325,9 @@ void initBle() {
   // Require an encrypted Secure Connections link using the displayed watch PIN.
   BLESecurity *security = new BLESecurity();
   security->setStaticPIN(strtoul(pinCode, nullptr, 10));
+  security->setAuthenticationMode(ESP_LE_AUTH_REQ_SC_MITM_BOND);
+  security->setCapability(ESP_IO_CAP_OUT);
+  security->setKeySize(16);
   bleServer = BLEDevice::createServer();
   bleServer->setCallbacks(new ServerCb());
   BLEService *svc = bleServer->createService(SERVICE_UUID);
@@ -361,7 +366,7 @@ void sendLive() {
   String out;
   serializeJson(doc, out);
   liveChar->setValue(out.c_str());
-  if (bleConnected) liveChar->notify();
+  if (bleConnected && paired) liveChar->notify();
 }
 
 void readMpu() {
@@ -541,6 +546,7 @@ void setup() {
   pinMode(PIN_BTN_MODE, INPUT_PULLUP);
   pinMode(PIN_BTN_SOS, INPUT_PULLUP);
   analogReadResolution(12);
+  analogSetPinAttenuation(PIN_BAT_ADC, ADC_11db);
 
   Wire.begin(I2C_SDA, I2C_SCL);
   Wire.setClock(400000);
@@ -568,14 +574,15 @@ void setup() {
     ppg.setPulseAmplitudeGreen(0);
   }
 
-  if (!LittleFS.begin(true)) {
+  storageReady = LittleFS.begin(false);
+  if (!storageReady) {
     Serial.println("LittleFS fail");
   } else {
     LittleFS.mkdir("/d");
   }
 
   prefs.begin("veyro", false);
-  paired = prefs.getBool("paired", false);
+  paired = false;
   face = prefs.getUChar("face", 0) % 8;
   String saved = prefs.getString("pin", "");
   if (saved.length() == 6) {
@@ -586,14 +593,23 @@ void setup() {
     prefs.putString("pin", pinCode);
   }
 
-  initBle();
-  pruneOld();
+  if (storageReady && hasPpg && hasMpu && hasOled) {
+    initBle();
+    operational = true;
+    pruneOld();
+  } else {
+    Serial.println("Veyro halted: required hardware or storage missing");
+  }
   bootMs = millis();
   Serial.printf("Veyro %s PIN %s PPG=%d MPU=%d OLED=%d\n", VEYRO_FW_VERSION, pinCode, hasPpg, hasMpu, hasOled);
 }
 
 void loop() {
   uint32_t ms = millis();
+  if (vibeUntil != 0 && (int32_t)(ms - vibeUntil) >= 0) {
+    vibeUntil = 0;
+    digitalWrite(PIN_VIBE, LOW);
+  }
   batteryPct = readBattery();
   readMpu();
   readPpg();
@@ -611,6 +627,7 @@ void loop() {
     if (!sosTriggered && ms - lastSosDown > 2000) {
       fall = true;
       vibe(600);
+      digitalWrite(PIN_LED_RED, HIGH);
       sosTriggered = true;
     }
   } else {
@@ -618,7 +635,7 @@ void loop() {
     sosTriggered = false;
   }
 
-  if (ms - lastLive >= LIVE_EVERY_MS) {
+  if (operational && ms - lastLive >= LIVE_EVERY_MS) {
     lastLive = ms;
     sendLive();
     setInfo();

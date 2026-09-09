@@ -26,6 +26,7 @@ dependencies:
   path_provider: ^2.1.5
   image: ^4.8.0
   flutter_local_notifications: ^18.0.1
+  flutter_secure_storage: ^9.2.4
 
 # Override app_links to use a compatible version
 dependency_overrides:

@@ -8,6 +8,8 @@ the implemented protocol contract, pairing flow, and compatibility checks. The r
 
 Compatibility note for firmware 4.1.0: the app sends `time` only after the firmware accepts `pair`. The firmware does not accept normal commands before pairing. A fall or held-SOS event is retained until a history row is written, even when there is no heart-rate or step sample in that minute.
 
+The phone validates that the Veyro service exposes live, history, info, and command characteristics before treating the connection as usable. The firmware sends live notifications only after pairing for the current BLE session.
+
 ## Product boundary
 Veyro is a wellness prototype, not a medical device. It has no clinical validation. Current firmware has rough SpO2, zero blood pressure fields, threshold fall detection, and no validated diagnosis capability. Never use it to diagnose, triage, or replace professional care.
 

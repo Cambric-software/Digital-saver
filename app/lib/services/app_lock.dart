@@ -3,9 +3,11 @@ import 'dart:convert';
 import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 /// Optional 6-digit app lock. Hash only is stored. No accounts.
 class AppLock extends ChangeNotifier {
+  static const _secureStorage = FlutterSecureStorage();
   static const _hashKey = 'veyro_lock_hash';
   static const _pairKey = 'veyro_watch_pin';
 
@@ -84,12 +86,10 @@ class AppLock extends ChangeNotifier {
   }
 
   Future<void> saveWatchPin(String pin) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_pairKey, pin);
+    await _secureStorage.write(key: _pairKey, value: pin);
   }
 
   Future<String?> watchPin() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(_pairKey);
+    return _secureStorage.read(key: _pairKey);
   }
 }
