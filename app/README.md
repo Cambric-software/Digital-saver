@@ -1,5 +1,7 @@
 # Digital Saver Flutter App Guide
 
+Build order and exact firmware/app file locations are in [../docs/manual.md](../docs/manual.md). The app is local-only; watch data is transferred over BLE and stored on the device.
+
 ## Purpose
 A developer guide to the Flutter application structure, local-first data path, BLE contract, demo path, and platform caveats.
 This document is an operational companion to the ten canonical guides in docs/.
@@ -13,7 +15,7 @@ IMPLEMENTED means visible in the current source, not merely described in a plan.
 PLANNED means a proposal or follow-up, not a current capability.
 
 ## Verified repository facts
-- The firmware identifies itself as Veyro firmware 4.0.0 and uses an ESP32-WROOM-32 DevKit target.
+- The firmware identifies itself as Veyro firmware 4.1.0 and uses an ESP32-WROOM-32 DevKit target.
 - The firmware includes MAX30102, MPU6050, and SSD1306 support on I2C.
 - I2C is configured on GPIO21 SDA and GPIO22 SCL at 400 kHz.
 - GPIO25 drives vibration; GPIO4 and GPIO16 drive red and green LEDs.

@@ -13,7 +13,7 @@ IMPLEMENTED means visible in the current source, not merely described in a plan.
 PLANNED means a proposal or follow-up, not a current capability.
 
 ## Verified repository facts
-- The firmware identifies itself as Veyro firmware 4.0.0 and uses an ESP32-WROOM-32 DevKit target.
+- The firmware identifies itself as Veyro firmware 4.1.0 and uses an ESP32-WROOM-32 DevKit target.
 - The firmware includes MAX30102, MPU6050, and SSD1306 support on I2C.
 - I2C is configured on GPIO21 SDA and GPIO22 SCL at 400 kHz.
 - GPIO25 drives vibration; GPIO4 and GPIO16 drive red and green LEDs.

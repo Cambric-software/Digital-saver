@@ -189,7 +189,6 @@ class BleService extends ChangeNotifier {
         }
       }
     }
-    await _sendCmd({'op': 'time', 'unix': DateTime.now().toUtc().millisecondsSinceEpoch ~/ 1000});
     final stored = pin ?? await _lock?.watchPin();
     if (stored != null && stored.length == 6) {
       await _sendCmd({'op': 'pair', 'pin': stored});
@@ -197,6 +196,7 @@ class BleService extends ChangeNotifier {
       await _readInfo();
       if (_watchInfo.paired) {
         await _lock?.saveWatchPin(stored);
+        await _sendCmd({'op': 'time', 'unix': DateTime.now().toUtc().millisecondsSinceEpoch ~/ 1000});
         await startMemorySync();
       }
     }
@@ -225,6 +225,7 @@ class BleService extends ChangeNotifier {
     await _readInfo();
     if (_watchInfo.paired) {
       await _lock?.saveWatchPin(pin);
+      await _sendCmd({'op': 'time', 'unix': DateTime.now().toUtc().millisecondsSinceEpoch ~/ 1000});
       await startMemorySync();
     } else {
       _errorMessage = 'Wrong PIN. Read the 6 digits on the watch face.';

@@ -5,6 +5,8 @@ An index and reading order for the canonical ten-guide documentation set, with a
 This document is an operational companion to the ten canonical guides in docs/.
 It is written for a prototype and records evidence limits instead of guessing.
 
+Start with [docs/manual.md](docs/manual.md) for the direct build order, exact repository file locations, hardware placement, and current reference sourcing. The numbered guides remain the detailed safety and evidence authority.
+
 ## Evidence labels
 UNKNOWN means the repository does not establish the fact.
 MUST MEASURE means a bench, fit, runtime, or comparison measurement is required.
@@ -13,7 +15,7 @@ IMPLEMENTED means visible in the current source, not merely described in a plan.
 PLANNED means a proposal or follow-up, not a current capability.
 
 ## Verified repository facts
-- The firmware identifies itself as Veyro firmware 4.0.0 and uses an ESP32-WROOM-32 DevKit target.
+- The firmware identifies itself as Veyro firmware 4.1.0 and uses an ESP32-WROOM-32 DevKit target.
 - The firmware includes MAX30102, MPU6050, and SSD1306 support on I2C.
 - I2C is configured on GPIO21 SDA and GPIO22 SCL at 400 kHz.
 - GPIO25 drives vibration; GPIO4 and GPIO16 drive red and green LEDs.
@@ -29,6 +31,8 @@ PLANNED means a proposal or follow-up, not a current capability.
 - The app stores imported day files below its application support directory and profile data in shared preferences.
 - The app requests Bluetooth scan, Bluetooth connect, and location-when-in-use permissions on native platforms.
 - The app has a demo mode that generates synthetic values and must not be mistaken for watch data.
+- The app and firmware are local-only. Supabase is not a runtime dependency and the retired SQL setup has been removed.
+- Firmware 4.1.0 sends the clock after pairing, preserves fall/SOS events when a minute has no other sample, and reports actual stored row counts on the OLED.
 
 ## Safety boundary
 This prototype is wellness hardware and is not a medical device.
@@ -66,7 +70,7 @@ If auto-reset fails, hold the board's `BOOT` button while upload begins. Release
 Start the serial monitor at `115200` with `pio device monitor`. After reset, capture the boot line, but redact the PIN before sharing any log:
 
 ```text
-Veyro 4.0.0 PIN ... PPG=... MPU=... OLED=...
+Veyro 4.1.0 PIN ... PPG=... MPU=... OLED=...
 ```
 
 Never publish the PIN, even in a bug report or screenshot. Confirm the OLED shows the boot/device information and confirm the `PPG`, `MPU`, and `OLED` flags are present as expected. If a sensor is missing, stop and inspect wiring, power, I2C pins, address conflicts, and the sensor module before pairing. Pair with the app only after flashing, reset, serial capture, and the OLED/sensor checks pass.
@@ -82,7 +86,7 @@ After `pio run`, verify the exact binary you intend to flash. From the firmware 
 
 ### Persisted watch screens
 
-Firmware 4.0.0 includes eight persisted OLED screens: clock, vitals estimate, activity, motion, battery, storage, connection, and device. The mode button cycles them, and the selected screen is stored in Preferences across reset. After pairing, the app can select a screen remotely with the BLE command `{"op":"face","face":0}` through `{"op":"face","face":7}`. Pairing is required for this command; do not use it as a substitute for the post-flash hardware checks.
+Firmware 4.1.0 includes eight persisted OLED screens: clock, vitals estimate, activity, motion, battery, storage, connection, and device. The mode button cycles them, and the selected screen is stored in Preferences across reset. After pairing, the app can select a screen remotely with the BLE command `{"op":"face","face":0}` through `{"op":"face","face":7}`. Pairing is required for this command; do not use it as a substitute for the post-flash hardware checks.
 
 ## 1. Guide map
 Use this section as a small work package; record the result before moving on.

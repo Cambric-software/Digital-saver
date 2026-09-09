@@ -6,6 +6,8 @@ This is a beginner-friendly engineering guide for the Veyro ESP32 smartwatch pro
 ## Scope
 the implemented protocol contract, pairing flow, and compatibility checks. The repository is the source of truth for implemented behavior. The executable anchors are firmware/esp32/DigitalSaverWatch/DigitalSaverWatch.ino, pins.h, protocol.h, platformio.ini, app/lib/services/ble_service.dart, app/lib/services/veyro_protocol.dart, and app/lib/services/local_store.dart.
 
+Compatibility note for firmware 4.1.0: the app sends `time` only after the firmware accepts `pair`. The firmware does not accept normal commands before pairing. A fall or held-SOS event is retained until a history row is written, even when there is no heart-rate or step sample in that minute.
+
 ## Product boundary
 Veyro is a wellness prototype, not a medical device. It has no clinical validation. Current firmware has rough SpO2, zero blood pressure fields, threshold fall detection, and no validated diagnosis capability. Never use it to diagnose, triage, or replace professional care.
 

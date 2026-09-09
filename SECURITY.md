@@ -1,7 +1,7 @@
 # Veyro Security and Privacy
 
 ## Purpose
-A threat model, privacy contract, and release-gate reference for the watch, BLE link, Flutter app, local files, and optional web or cloud material.
+A threat model, privacy contract, and release-gate reference for the watch, BLE link, Flutter app, and local files.
 This document is an operational companion to the ten canonical guides in docs/.
 It is written for a prototype and records evidence limits instead of guessing.
 
@@ -13,7 +13,7 @@ IMPLEMENTED means visible in the current source, not merely described in a plan.
 PLANNED means a proposal or follow-up, not a current capability.
 
 ## Verified repository facts
-- The firmware identifies itself as Veyro firmware 4.0.0 and uses an ESP32-WROOM-32 DevKit target.
+- The firmware identifies itself as Veyro firmware 4.1.0 and uses an ESP32-WROOM-32 DevKit target.
 - The firmware includes MAX30102, MPU6050, and SSD1306 support on I2C.
 - I2C is configured on GPIO21 SDA and GPIO22 SCL at 400 kHz.
 - GPIO25 drives vibration; GPIO4 and GPIO16 drive red and green LEDs.
@@ -565,6 +565,8 @@ Owner: UNKNOWN. Date: UNKNOWN. Evidence path: UNKNOWN.
 - [ ] Record the known limitation beside the result, not in a hidden note.
 - [ ] Set a follow-up date for every UNKNOWN or MUST MEASURE item.
 ## 12. Cloud boundaries
+
+The current product has no cloud client. Health history, profiles, contacts, and watch logs remain on the device or in the local app store. The former Supabase setup files were retired on 2026-09-09. Any future cloud feature requires a new threat model, consent flow, deletion policy, migration plan, and security review before code is added.
 Use this section as a small work package; record the result before moving on.
 Owner: UNKNOWN. Date: UNKNOWN. Evidence path: UNKNOWN.
 - [ ] State the exact question for Cloud boundaries.

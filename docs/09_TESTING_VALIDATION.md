@@ -38,11 +38,11 @@ pio device monitor
 
 Use `pio device list` to identify the COM port. If needed, add `--upload-port COM7` to the upload command, replacing `COM7`, or use `upload_port = COM7` under `[env:esp32dev]` for a local fixed-port configuration. If upload times out, check the data cable and port, hold `BOOT` while upload begins if auto-reset fails, release `BOOT` after the tool starts writing, and lower the upload speed when necessary. Wait for verification and reset.
 
-Open the monitor at `115200`. Capture `Veyro 4.0.0 PIN ... PPG=... MPU=... OLED=...`, but never publish the PIN. Confirm the OLED and the PPG, MPU, and OLED flags. Pair only after the flash, reset, serial capture, and OLED/sensor checks succeed. For a boot loop, isolate external hardware and LiPo and inspect power and shorts. For a missing sensor, check 3.3 V compatibility, common ground, SDA GPIO21, SCL GPIO22, module orientation, and I2C addresses. For serial garbage, reopen the correct port at `115200`.
+Open the monitor at `115200`. Capture `Veyro 4.1.0 PIN ... PPG=... MPU=... OLED=...`, but never publish the PIN. Confirm the OLED and the PPG, MPU, and OLED flags. Pair only after the flash, reset, serial capture, and OLED/sensor checks succeed. For a boot loop, isolate external hardware and LiPo and inspect power and shorts. For a missing sensor, check 3.3 V compatibility, common ground, SDA GPIO21, SCL GPIO22, module orientation, and I2C addresses. For serial garbage, reopen the correct port at `115200`.
 
 After `pio run`, verify the binary with `Get-FileHash .pio\build\esp32dev\firmware.bin -Algorithm SHA256` and record the full SHA256 hash with the firmware version, board, date, and artifact path. Confirm the hash again before flashing that exact known-good artifact.
 
-Firmware 4.0.0 includes eight persisted OLED screens: clock, vitals estimate, activity, motion, battery, storage, connection, and device. The mode button cycles them, and the selected screen persists in Preferences. After pairing, remote app selection uses the BLE `face` command with a value from 0 through 7.
+Firmware 4.1.0 includes eight persisted OLED screens: clock, vitals estimate, activity, motion, battery, storage, connection, and device. The mode button cycles them, and the selected screen persists in Preferences. After pairing, remote app selection uses the BLE `face` command with a value from 0 through 7.
 
 ## Stage checklists
 

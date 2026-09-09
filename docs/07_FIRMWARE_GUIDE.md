@@ -41,7 +41,7 @@ pio device monitor
 
 `pio device list` identifies the COM port. When needed, use `--upload-port COM7`, replacing `COM7` with the listed port, or set `upload_port = COM7` under `[env:esp32dev]` for a local fixed-port setup. If upload times out at `921600`, use a reliable shorter cable and retry at a lower upload speed.
 
-If auto-reset fails, hold `BOOT` while upload begins. Release `BOOT` after the tool starts writing. Wait for verification and reset. Open the monitor at `115200` and capture the boot line `Veyro 4.0.0 PIN ... PPG=... MPU=... OLED=...`. Redact the PIN and never publish it. Confirm the OLED and the PPG, MPU, and OLED status flags. Pair only after flashing and these checks pass.
+If auto-reset fails, hold `BOOT` while upload begins. Release `BOOT` after the tool starts writing. Wait for verification and reset. Open the monitor at `115200` and capture the boot line `Veyro 4.1.0 PIN ... PPG=... MPU=... OLED=...`. Redact the PIN and never publish it. Confirm the OLED and the PPG, MPU, and OLED status flags. Pair only after flashing and these checks pass.
 
 ### Recovery and hash check
 
@@ -51,7 +51,7 @@ After `pio run`, verify the exact binary with `Get-FileHash .pio\build\esp32dev\
 
 ### Eight persisted OLED screens
 
-Firmware 4.0.0 includes eight persisted screens: clock, vitals estimate, activity, motion, battery, storage, connection, and device. The mode button cycles screens and Preferences restores the selected screen after reset. Once paired, the app can select a screen with the BLE `face` command and a value from 0 through 7. Pairing is deliberately after flashing and hardware checks, not before them.
+Firmware 4.1.0 includes eight persisted screens: clock, vitals estimate, activity, motion, battery, storage, connection, and device. The mode button cycles screens and Preferences restores the selected screen after reset. Once paired, the app can select a screen with the BLE `face` command and a value from 0 through 7. Pairing is deliberately after flashing and hardware checks, not before them.
 
 ## Stage checklists
 

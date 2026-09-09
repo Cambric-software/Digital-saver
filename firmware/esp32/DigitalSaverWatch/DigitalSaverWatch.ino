@@ -1,5 +1,5 @@
 /**
- * Veyro firmware 4.0.0 — Cambric
+ * Veyro firmware 4.1.0 — Cambric
  * Local-only: no Wi-Fi, no cloud. Logs live on LittleFS for 60 days, then
  * the file for that day is deleted. Phone reads the log over BLE.
  *
@@ -27,7 +27,7 @@
 #include <ArduinoJson.h>
 
 #ifndef VEYRO_FW_VERSION
-#define VEYRO_FW_VERSION "4.0.0"
+#define VEYRO_FW_VERSION "4.1.0"
 #endif
 #include "pins.h"
 #include "protocol.h"
@@ -148,12 +148,12 @@ void pruneOld() {
   }
 }
 
-void appendSample() {
+bool appendSample() {
   if (!LittleFS.exists("/d")) LittleFS.mkdir("/d");
   String path = dayPath(nowUnix());
   File f = LittleFS.open(path, FILE_APPEND);
   if (!f) f = LittleFS.open(path, FILE_WRITE);
-  if (!f) return;
+  if (!f) return false;
   // unix,hr,spo2,sys,dia,hrv,steps,fall,bat
   char line[96];
   snprintf(line, sizeof(line), "%lu,%d,%d,%d,%d,%d,%lu,%d,%d\n",
@@ -162,6 +162,7 @@ void appendSample() {
            (unsigned long)steps, fall ? 1 : 0, batteryPct);
   f.print(line);
   f.close();
+  return true;
 }
 
 int countSamples() {
@@ -502,7 +503,7 @@ void draw() {
   } else if (face == 5) {
     display.println("STORAGE");
     display.print("Rows today: ");
-    display.println(dumpFileCount);
+    display.println(countSamples());
     display.print("Retention: ");
     display.print(RETAIN_DAYS);
     display.println(" days");
@@ -624,9 +625,12 @@ void loop() {
   }
   if (ms - lastSample >= SAMPLE_EVERY_MS) {
     lastSample = ms;
-    if (hrBpm > 30 || steps > 0) appendSample();
-    fall = false;
-    digitalWrite(PIN_LED_RED, LOW);
+    if (hrBpm > 30 || steps > 0 || fall) {
+      if (appendSample()) {
+        fall = false;
+        digitalWrite(PIN_LED_RED, LOW);
+      }
+    }
   }
   if (ms - lastPrune >= 3600000UL) {
     lastPrune = ms;
