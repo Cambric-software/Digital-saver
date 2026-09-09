@@ -15,6 +15,8 @@ Use UNKNOWN when an item has not been inspected. Use MUST MEASURE for a physical
 ## Authoritative implementation facts
 The target is an ESP32-WROOM-32 DevKit with 4 MB flash and no PSRAM. The firmware uses I2C at GPIO21 SDA and GPIO22 SCL, GPIO25 for vibration control, GPIO4 red LED, GPIO16 green LED, GPIO17 mode button, GPIO32 SOS button, GPIO34 battery ADC, and OLED address 0x3C. The bus contains MAX30102, MPU6050, and SSD1306 devices; all actual addresses must be scanned.
 
+This BOM describes the bench prototype, not a retail touchscreen watch. The SSD1306 is not touch-capable. A production touchscreen revision must follow [docs/11_PRODUCTION_WATCH_SPEC.md](11_PRODUCTION_WATCH_SPEC.md) and must use a new qualified display, touch controller, custom PCB, power design, and enclosure.
+
 ## Required record
 For every check below record date, operator, build or hardware identity, instrument, observed result, pass or fail, and next action. A blank record is not evidence.
 

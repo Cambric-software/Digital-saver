@@ -6,6 +6,8 @@ This manual is the direct build and operating order for the Veyro prototype. It 
 
 The exact firmware truth is in `firmware/esp32/DigitalSaverWatch`. The app truth is in `app/lib`. The longer explanations and safety gates are in the numbered guides in `docs/`.
 
+Important product boundary: this manual builds the current SSD1306/button prototype. It does not produce a touchscreen or store-grade Apple Watch equivalent. The required production touchscreen, custom PCB, power system, enclosure, and touch operating-system target are specified separately in [docs/11_PRODUCTION_WATCH_SPEC.md](11_PRODUCTION_WATCH_SPEC.md). Do not promise those results from the prototype parts.
+
 ## 1. Parts to obtain
 
 Prices below are USD reference prices checked against the linked vendor pages on 2026-09-09. Prices, stock, tax, shipping, regional availability, and product revisions change. Open the link before ordering and confirm the exact part, voltage, connector, and price at checkout. A similar-looking part is not an approved substitution.
@@ -15,7 +17,7 @@ Prices below are USD reference prices checked against the linked vendor pages on
 | ESP32-WROOM-32 DevKit | ESP32-WROOM-32, 4 MB flash, 3.3 V logic, USB, no PSRAM required | Espressif product family: https://www.espressif.com/en/products/devkits/esp32-devkitc ; budget USD 10-15, exact board price must be confirmed | 1 |
 | MAX30102-compatible optical module | MAX30102 module with red/IR LED and I2C breakout; confirm 3.3 V operation | SparkFun MAX30105 optical sensor breakout, compatible library family: https://www.sparkfun.com/products/1528 ; page reference observed around USD 19.95-24.95, confirm the exact sensor marking before purchase | 1 |
 | MPU6050 breakout | MPU6050 accelerometer/gyroscope breakout, 3.3 V logic, I2C | Adafruit MPU-6050 product page: https://www.adafruit.com/product/3886 ; reference page price must be confirmed at checkout | 1 |
-| SSD1306 OLED | 128x64, I2C, 0x3C-compatible, 3.3 V-safe breakout | Adafruit 128x64 OLED product family: https://www.adafruit.com/product/938 ; reference page price must be confirmed at checkout | 1 |
+| SSD1306 OLED | 128x64, I2C, 0x3C-compatible, 3.3 V-safe breakout; prototype display only, no touch | Adafruit 128x64 OLED product family: https://www.adafruit.com/product/938 ; reference page price must be confirmed at checkout | 1 |
 | Protected 1S LiPo | 3.7 V nominal, protected cell, connector and capacity selected after current/fit measurement | Adafruit LiPo battery family: https://www.adafruit.com/category/574 ; price varies by capacity; confirm protection, dimensions, connector, and current rating | 1 |
 | LiPo charger with power path | Documented 1S charger with protection and load sharing; do not assume a bare TP4056 board has these | Adafruit Micro Lipo Charger family: https://www.adafruit.com/product/1904 ; reference page price must be confirmed at checkout | 1 |
 | 5 V regulator or approved DevKit power path | Regulated output suitable for DevKit VIN/5V and ESP32 transmit peaks | Use the charger/regulator datasheet, not a marketplace title; price and exact part remain MUST CONFIRM | 1 |

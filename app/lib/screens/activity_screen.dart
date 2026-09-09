@@ -273,12 +273,12 @@ class _FallDetector extends StatelessWidget {
             style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: fall ? AppColors.danger : AppColors.success),
           ),
           const SizedBox(height: 4),
-          Text(
-            fall
-                ? 'Sudden impact detected. Emergency contacts have been alerted.'
-                : 'Monitoring for falls using 6-axis accelerometer (MPU6050). All clear.',
-            style: const TextStyle(color: AppColors.textSecondary, fontSize: 12, height: 1.4),
-          ),
+              Text(
+                fall
+                    ? 'Sudden impact detected. The watch recorded a local fall flag. Confirm your condition and contact help yourself.'
+                    : 'Monitoring for falls using 6-axis accelerometer (MPU6050). All clear.',
+                style: const TextStyle(color: AppColors.textSecondary, fontSize: 12, height: 1.4),
+              ),
         ])),
       ]),
     );

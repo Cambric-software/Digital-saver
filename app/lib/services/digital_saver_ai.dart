@@ -493,10 +493,10 @@ class DigitalSaverAI {
     
     info += "Your Veyro watch has automatic emergency detection:\n\n";
     
-    info += "• 🪨 **Fall Detection**: Detects sudden falls and alerts contacts\n";
-    info += "• ❤️ **Heart Alert**: Watches for dangerously high/low heart rate\n";
-    info += "• 🫁 **Low Oxygen**: Alerts if SpO2 drops critically\n";
-    info += "• 📞 **SOS Button**: Long-press emergency button for instant call\n\n";
+      info += "Current prototype behavior:\n\n";
+      info += "• Fall detection is a threshold-based local flag and may be wrong.\n";
+      info += "• Heart rate and SpO2 are wellness estimates, not emergency diagnosis.\n";
+      info += "• The SOS button vibrates and records a local event; it does not call contacts automatically.\n\n";
     
     if (_userProfile?.emergencyContactName != null) {
       info += "📞 Your Emergency Contact: ${_userProfile!.emergencyContactName}\n";

@@ -13,6 +13,8 @@ IMPLEMENTED means visible in the current source, not merely described in a plan.
 PLANNED means a proposal or follow-up, not a current capability.
 
 ## Verified repository facts
+
+The current hardware has no touchscreen. It uses a 128x64 SSD1306 OLED and button navigation. Touchscreen behavior belongs to the separate production hardware revision in `docs/11_PRODUCTION_WATCH_SPEC.md` and is not implemented by this firmware.
 - The firmware identifies itself as Veyro firmware 4.1.0 and uses an ESP32-WROOM-32 DevKit target.
 - The firmware includes MAX30102, MPU6050, and SSD1306 support on I2C.
 - I2C is configured on GPIO21 SDA and GPIO22 SCL at 400 kHz.
@@ -827,7 +829,7 @@ Clinical accuracy, diagnostic accuracy, and emergency response reliability: UNKN
 
 ## Implemented versus proposed
 IMPLEMENTED: boot initializes I2C, OLED, MPU6050, MAX30105-compatible PPG, LittleFS, Preferences, and BLE when hardware responds.
-IMPLEMENTED: the mode button cycles clock, heart-rate, and step display faces.
+IMPLEMENTED: the mode button cycles eight persisted display faces: clock, vitals, activity, motion, battery, storage, connection, and device.
 IMPLEMENTED: holding the SOS button for more than two seconds sets the fall flag and vibrates; it does not send an SMS.
 IMPLEMENTED: live BLE JSON and minute history rows expose the fields documented in protocol.h and the app parser.
 IMPLEMENTED: a rough PPG-derived SpO2 estimate is clamped between 85 and 100; the source explicitly rejects clinical accuracy.
