@@ -8,6 +8,8 @@ The exact firmware truth is in `firmware/esp32/DigitalSaverWatch`. The app truth
 
 Important product boundary: this manual builds the current SSD1306/button prototype. It does not produce a touchscreen or store-grade Apple Watch equivalent. The required production touchscreen, custom PCB, power system, enclosure, and touch operating-system target are specified separately in [docs/11_PRODUCTION_WATCH_SPEC.md](11_PRODUCTION_WATCH_SPEC.md). Do not promise those results from the prototype parts.
 
+For the next hardware revision, use the chosen candidate stack in [docs/11_PRODUCTION_WATCH_SPEC.md](11_PRODUCTION_WATCH_SPEC.md): first bring up the Waveshare ESP32-S3-Touch-LCD-1.28 reference board, then move the verified display/touch/power/sensor interfaces to a custom carrier. The existing `esp32dev` steps below remain for the current prototype only.
+
 ## 1. Parts to obtain
 
 Prices below are USD reference prices checked against the linked vendor pages on 2026-09-09. Prices, stock, tax, shipping, regional availability, and product revisions change. Open the link before ordering and confirm the exact part, voltage, connector, and price at checkout. A similar-looking part is not an approved substitution.

@@ -10,6 +10,37 @@ The current prototype cannot become a touch watch by changing firmware alone. It
 
 A store-grade result requires a new production hardware revision. The existing prototype remains useful as the sensor, BLE, local-storage, and protocol development fixture.
 
+## Chosen economical candidate
+
+Use this candidate stack for the next engineering build so the decisions are concrete:
+
+| Function | Selected candidate | Why this choice | Status |
+|---|---|---|---|
+| Bring-up board | Waveshare ESP32-S3-Touch-LCD-1.28 reference board | Combines an ESP32-S3, round color display, capacitive touch, and a known reference layout in one inexpensive board | Buy and verify exact revision |
+| Production MCU | Espressif ESP32-S3-MINI-1-N8R8 on a custom carrier | BLE, secure boot/flash encryption support, 8 MB flash, 8 MB PSRAM, and enough RAM for a real UI | Datasheet and PCB review required |
+| Production display | 1.28 inch round 240x240 color display using the same controller/interface as the bring-up board | Keeps the first touch UI close to the reference board while fitting a compact round enclosure | Confirm controller, refresh, brightness, and sleep current |
+| Touch | The reference board's capacitive touch controller, then the identical controller on the carrier | Avoids inventing a touch protocol and gives a known interrupt/reset contract | Confirm exact controller and address from schematic |
+| IMU | Bosch BMI270 | Lower-power modern IMU than the prototype MPU6050, with motion interrupts for wake and activity | Confirm library and interrupt wiring |
+| Optical sensor | MAX30102 module for first validation; MAXM86161 for the production optical revision if its supply and optical stack are qualified | Preserves the existing app contract during bring-up while leaving a lower-power production path | Exact sensor and algorithm require validation |
+| Fuel gauge | MAX17048 | Measures cell state without burning continuous divider current and gives low-battery alerts | Confirm cell model and I2C address |
+| Charger/power path | BQ24074-class 1S charger/power-path design | Allows a documented charge path and system load separation instead of a random TP4056 board | Datasheet, thermal, and protection review required |
+| Battery | Protected 1S LiPo, approximately 500-700 mAh after measured enclosure/runtime fit | Balances compactness and practical display/BLE runtime without guessing from a package label | Capacity, protection, connector, and dimensions must be measured |
+| Haptics | 10 mm coin motor driven by DRV2605L or a rated MOSFET stage | Better control and less GPIO stress than direct motor drive | Motor current and enclosure coupling test required |
+| Charging connector | USB-C receptacle on the carrier with ESD protection, or qualified magnetic charging contacts for the sealed revision | USB-C is cheaper for engineering; contacts are cleaner for a sealed product | Choose after enclosure and ingress decision |
+
+The Waveshare board is a bring-up reference, not the final retail watch. The custom carrier is required for compactness, battery safety, test pads, and enclosure fit. Do not solder the reference board into the final case and call that a production design.
+
+### Candidate reference links
+
+- Waveshare ESP32-S3-Touch-LCD-1.28: https://www.waveshare.com/esp32-s3-touch-lcd-1.28.htm
+- ESP32-S3-MINI-1 documentation: https://www.espressif.com/en/products/modules/esp32-s3-mini-1
+- BMI270 product information: https://www.bosch-sensortec.com/products/motion-sensors/imus/bmi270/
+- MAX17048 product information: https://www.analog.com/en/products/max17048.html
+- BQ24074 product information: https://www.ti.com/product/BQ24074
+- DRV2605L product information: https://www.ti.com/product/DRV2605L
+
+Prices must be checked on the linked manufacturer or authorized distributor page on the day of ordering. The reference board and modules are engineering parts; they are not evidence of final enclosure, runtime, safety, or retail quality.
+
 ## Production hardware target
 
 ### Main board
@@ -89,6 +120,20 @@ The production protocol must include the display hardware revision and touch cap
 5. `app/`: Flutter companion app with capability negotiation and truthful sensor labels.
 
 The current `DigitalSaverWatch.ino` should remain the prototype fixture. It should not be expanded indefinitely into the production operating system without first extracting these boundaries.
+
+## First production software milestone
+
+The first production branch should target the chosen reference board before the custom carrier:
+
+1. Add a `production_touch` PlatformIO environment instead of changing the prototype `esp32dev` environment.
+2. Add a display HAL for the reference controller and a touch HAL for its controller.
+3. Render only four useful screens first: clock, vitals, activity, and settings/pairing.
+4. Add touch gestures, wake/sleep, a 30-second timeout, and a hardware-safe low-battery mode.
+5. Keep the BLE health payload and local history contract compatible until capability negotiation is added.
+6. Add `display_hw`, `touch_hw`, `imu_hw`, and `fuel_gauge` fields to device info before the app enables production-only screens.
+7. Port the tested HALs to the custom carrier only after display, touch, power, and sensor measurements pass on the reference board.
+
+This is the shortest credible path to a compact touch watch. It is not credible to add a touch library to the current SSD1306 sketch and call the result production-ready.
 
 ## Acceptance gates before calling it store-grade
 
