@@ -491,12 +491,10 @@ class DigitalSaverAI {
   String _answerEmergencyQuestion(String question) {
     String info = "🚨 Emergency Features:\n\n";
     
-    info += "Your Veyro watch has automatic emergency detection:\n\n";
-    
-      info += "Current prototype behavior:\n\n";
-      info += "• Fall detection is a threshold-based local flag and may be wrong.\n";
-      info += "• Heart rate and SpO2 are wellness estimates, not emergency diagnosis.\n";
-      info += "• The SOS button vibrates and records a local event; it does not call contacts automatically.\n\n";
+    info += "Current prototype behavior:\n\n";
+    info += "• Fall detection is a threshold-based local flag and may be wrong.\n";
+    info += "• Heart rate and SpO2 are wellness estimates, not emergency diagnosis.\n";
+    info += "• The SOS button vibrates and records a local event; it does not call contacts automatically.\n\n";
     
     if (_userProfile?.emergencyContactName != null) {
       info += "📞 Your Emergency Contact: ${_userProfile!.emergencyContactName}\n";
