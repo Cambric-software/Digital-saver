@@ -7,6 +7,7 @@ import 'services/ble_service.dart';
 import 'services/app_lock.dart';
 import 'services/theme_service.dart';
 import 'services/auto_update_service.dart';
+import 'services/heart_rate_tracker.dart';
 import 'theme/app_theme.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/vitals_screen.dart';
@@ -38,6 +39,7 @@ void main() async {
         ChangeNotifierProvider.value(value: appLock),
         ChangeNotifierProvider(create: (_) => ThemeService()),
         ChangeNotifierProvider(create: (_) => AutoUpdateService()),
+        ChangeNotifierProvider(create: (_) => HeartRateTracker()),
       ],
       child: const DigitalSaverApp(),
     ),
@@ -109,6 +111,8 @@ class _UpdateWrapper extends StatefulWidget {
 }
 
 class _UpdateWrapperState extends State<_UpdateWrapper> {
+  bool _manualPromptShown = false;
+
   @override
   void initState() {
     super.initState();
@@ -117,6 +121,51 @@ class _UpdateWrapperState extends State<_UpdateWrapper> {
         _showUpdateDialog();
       }
     });
+  }
+
+  @override
+  void didUpdateWidget(_UpdateWrapper oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // If silent install failed, show manual prompt once.
+    if (!_manualPromptShown && widget.updateService.needsManualInstall) {
+      _manualPromptShown = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _showManualInstallDialog();
+      });
+    }
+  }
+
+  void _showManualInstallDialog() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(children: [
+          Icon(Icons.download_for_offline, color: Theme.of(ctx).primaryColor),
+          const SizedBox(width: 8),
+          const Text('Update Ready'),
+        ]),
+        content: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text('Version ${widget.updateService.latestUpdate?.version ?? ""} is available.'),
+          const SizedBox(height: 10),
+          const Text(
+            'Automatic install is not available on your device. Tap Download to get the latest APK and install it manually.',
+            style: TextStyle(fontSize: 13),
+          ),
+        ]),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Later')),
+          ElevatedButton.icon(
+            onPressed: () {
+              Navigator.pop(ctx);
+              widget.updateService.openDownloadPage();
+            },
+            icon: const Icon(Icons.open_in_browser),
+            label: const Text('Download'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _showUpdateDialog() {

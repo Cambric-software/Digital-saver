@@ -8,6 +8,7 @@ import 'package:permission_handler/permission_handler.dart';
 import '../models/health_models.dart';
 import 'app_lock.dart';
 import 'local_store.dart';
+import 'heart_rate_tracker.dart';
 import 'veyro_protocol.dart';
 
 enum BleState { disconnected, scanning, connecting, connected, error }
@@ -68,8 +69,10 @@ class BleService extends ChangeNotifier {
   bool _syncingMemory = false;
   int _memoryRows = 0;
   AppLock? _lock;
+  HeartRateTracker? _hrTracker;
 
   void attachLock(AppLock lock) => _lock = lock;
+  void attachHrTracker(HeartRateTracker tracker) => _hrTracker = tracker;
 
   BleState get state => _state;
   String get errorMessage => _errorMessage;
@@ -287,6 +290,8 @@ class BleService extends ChangeNotifier {
       _activity = ActivityData(steps: (m['steps'] as num?)?.toInt() ?? 0, hourlySteps: List.filled(24, 0));
       _accel = AccelData(fallDetected: m['fall'] == 1);
       _batteryLevel = (m['bat'] as num?)?.toInt() ?? _batteryLevel;
+      // Feed real HR into tracker so screens get true session min/max.
+      if (_heartRate.bpm > 0) _hrTracker?.record(_heartRate.bpm);
       notifyListeners();
     } catch (_) {}
   }
@@ -326,6 +331,7 @@ class BleService extends ChangeNotifier {
     _memoryRows = 0;
     _watchInfo = WatchInfo();
     _batteryLevel = 0;
+    _hrTracker?.resetSession();
     _setState(BleState.disconnected);
   }
 

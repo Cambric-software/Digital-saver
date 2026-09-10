@@ -1,14 +1,136 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../services/health_analysis_service.dart';
+import '../services/local_store.dart';
 import '../models/health_models.dart';
 
-class SleepScreen extends StatelessWidget {
+class SleepScreen extends StatefulWidget {
   const SleepScreen({super.key});
 
   @override
+  State<SleepScreen> createState() => _SleepScreenState();
+}
+
+class _SleepScreenState extends State<SleepScreen> {
+  SleepData? _realSleep;
+  bool _hasRealData = false;
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSleepFromHistory();
+  }
+
+  Future<void> _loadSleepFromHistory() async {
+    final samples = await LocalStore.loadAll();
+    if (!mounted) return;
+
+    if (samples.isEmpty) {
+      setState(() { _loading = false; });
+      return;
+    }
+
+    // Look for samples from yesterday night and this morning to derive
+    // bedtime → wake-time window from the last night's HR data.
+    final now = DateTime.now();
+    final yesterday = DateTime(now.year, now.month, now.day - 1);
+
+    // Collect last 24 hours of samples.
+    final recent = samples
+        .where((s) => s.at.isAfter(yesterday))
+        .toList()
+      ..sort((a, b) => a.unix.compareTo(b.unix));
+
+    if (recent.isEmpty) {
+      setState(() { _loading = false; });
+      return;
+    }
+
+    // Derive sleep window: contiguous low-HR (< 70 bpm) block at night hours.
+    // A simple heuristic: find a ≥ 3-hour block where hr < 70 or hr == 0
+    // between 20:00 and 12:00 the next day.
+    DateTime? bedtime;
+    DateTime? wakeTime;
+    int deepMin = 0, lightMin = 0, remMin = 0, awakeMin = 0;
+    int totalSamples = 0;
+    double hrSum = 0;
+
+    for (final s in recent) {
+      final h = s.at.hour;
+      final isSleepHour = h >= 20 || h < 12;
+      if (!isSleepHour) continue;
+
+      final lowHr = s.hr == 0 || (s.hr > 0 && s.hr < 75);
+      if (lowHr) {
+        bedtime ??= s.at;
+        wakeTime = s.at;
+        totalSamples++;
+        if (s.hr > 0) hrSum += s.hr;
+
+        // Very rough stage classification from HR
+        if (s.hr == 0 || s.hr < 55) {
+          deepMin++;
+        } else if (s.hr < 65) {
+          remMin++;
+        } else {
+          lightMin++;
+        }
+      } else if (bedtime != null) {
+        // Gap — count as awake
+        awakeMin++;
+      }
+    }
+
+    if (bedtime == null || wakeTime == null || totalSamples < 3) {
+      // Not enough data — fall through to generated typical data
+      setState(() { _loading = false; });
+      return;
+    }
+
+    final totalMinutes = deepMin + lightMin + remMin;
+    final avgHr = totalSamples > 0 ? (hrSum / totalSamples).round() : 60;
+    final qualityScore = _computeSleepQuality(totalMinutes, deepMin, remMin, awakeMin);
+
+    setState(() {
+      _realSleep = SleepData(
+        bedtime: bedtime!,
+        wakeTime: wakeTime!,
+        deepSleepMinutes: deepMin,
+        lightSleepMinutes: lightMin,
+        remSleepMinutes: remMin,
+        awakeMinutes: awakeMin,
+        qualityScore: qualityScore,
+      );
+      _hasRealData = true;
+      _loading = false;
+    });
+  }
+
+  int _computeSleepQuality(int total, int deep, int rem, int awake) {
+    int score = 100;
+    final hours = total / 60.0;
+    if (hours < 5) score -= 40;
+    else if (hours < 6) score -= 20;
+    else if (hours < 7) score -= 10;
+    else if (hours > 10) score -= 10;
+    final deepRatio = total > 0 ? deep / total : 0;
+    if (deepRatio < 0.10) score -= 20;
+    else if (deepRatio > 0.30) score += 5;
+    if (awake > 30) score -= 10;
+    return score.clamp(0, 100);
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final sleep = HealthAnalysisService.generateTypicalSleepData();
+    if (_loading) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    final sleep = _realSleep ?? HealthAnalysisService.generateTypicalSleepData();
+
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFF),
       appBar: AppBar(
@@ -16,20 +138,52 @@ class SleepScreen extends StatelessWidget {
         backgroundColor: Colors.white,
         foregroundColor: const Color(0xFF1e3a5f),
         elevation: 0,
+        actions: [
+          if (!_hasRealData)
+            const Padding(
+              padding: EdgeInsets.only(right: 12),
+              child: Chip(
+                label: Text('Demo data', style: TextStyle(fontSize: 11)),
+                backgroundColor: Color(0xFFFFF3E0),
+              ),
+            ),
+        ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            _SleepHero(sleep: sleep),
-            const SizedBox(height: 16),
-            _SleepStages(sleep: sleep),
-            const SizedBox(height: 16),
-            _SleepDonut(sleep: sleep),
-            const SizedBox(height: 16),
-            _SleepTips(score: sleep.qualityScore),
-            const SizedBox(height: 100),
-          ],
+      body: RefreshIndicator(
+        onRefresh: _loadSleepFromHistory,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: Column(
+            children: [
+              if (!_hasRealData)
+                Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.shade50,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.orange.shade200),
+                  ),
+                  child: const Row(children: [
+                    Icon(Icons.info_outline, color: Colors.orange, size: 16),
+                    SizedBox(width: 8),
+                    Expanded(child: Text(
+                      'No watch sleep data found yet. Wear your Veyro overnight and sync. Showing example data.',
+                      style: TextStyle(color: Colors.orange, fontSize: 12),
+                    )),
+                  ]),
+                ),
+              _SleepHero(sleep: sleep),
+              const SizedBox(height: 16),
+              _SleepStages(sleep: sleep),
+              const SizedBox(height: 16),
+              _SleepDonut(sleep: sleep),
+              const SizedBox(height: 16),
+              _SleepTips(score: sleep.qualityScore),
+              const SizedBox(height: 100),
+            ],
+          ),
         ),
       ),
     );

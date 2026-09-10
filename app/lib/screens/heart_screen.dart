@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../services/ble_service.dart';
+import '../services/heart_rate_tracker.dart';
 import '../services/health_analysis_service.dart';
 import '../theme/app_theme.dart';
 
@@ -11,6 +12,7 @@ class HeartScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ble = context.watch<BleService>();
+    final hrTracker = context.watch<HeartRateTracker>();
     final zone = ble.heartRate.bpm > 0 ? HealthAnalysisService.heartRateZone(ble.heartRate.bpm) : null;
     final zone2 = ble.heartRate.bpm > 0 ? HealthAnalysisService.getHeartRateZone2(ble.heartRate.bpm) : null;
 
@@ -24,7 +26,7 @@ class HeartScreen extends StatelessWidget {
       body: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 16),
         child: Column(children: [
-          _HeroBPM(ble: ble, zone: zone, zone2: zone2),
+          _HeroBPM(ble: ble, zone: zone, zone2: zone2, hrTracker: hrTracker),
           const SizedBox(height: 16),
           _HRVPanel(ble: ble),
           const SizedBox(height: 16),
@@ -43,10 +45,14 @@ class HeartScreen extends StatelessWidget {
 class _HeroBPM extends StatelessWidget {
   final BleService ble;
   final String? zone, zone2;
-  const _HeroBPM({required this.ble, this.zone, this.zone2});
+  final HeartRateTracker hrTracker;
+  const _HeroBPM({required this.ble, this.zone, this.zone2, required this.hrTracker});
 
   @override
   Widget build(BuildContext context) {
+    final currentBpm = ble.isConnected && ble.heartRate.bpm > 0 ? ble.heartRate.bpm : 0;
+    final minVal = hrTracker.bestMin > 0 ? '${hrTracker.bestMin}' : '--';
+    final maxVal = hrTracker.bestMax > 0 ? '${hrTracker.bestMax}' : '--';
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(24),
@@ -61,7 +67,7 @@ class _HeroBPM extends StatelessWidget {
         const Text('Heart Rate', style: TextStyle(color: Colors.white70, fontSize: 14, letterSpacing: 0.5)),
         const SizedBox(height: 8),
         Text(
-          ble.isConnected && ble.heartRate.bpm > 0 ? '${ble.heartRate.bpm}' : '--',
+          currentBpm > 0 ? '$currentBpm' : '--',
           style: const TextStyle(color: Colors.white, fontSize: 72, fontWeight: FontWeight.bold, height: 1),
         ),
         const Text('BPM', style: TextStyle(color: Colors.white70, fontSize: 16)),
@@ -75,11 +81,11 @@ class _HeroBPM extends StatelessWidget {
         ],
         const SizedBox(height: 16),
         Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [
-          _HeroStat('Min', '${ble.heartRate.bpm > 0 ? (ble.heartRate.bpm.toDouble() * 0.92).round() : "--"}'),
+          _HeroStat('Session Min', minVal),
           Container(width: 1, height: 28, color: Colors.white30),
-          _HeroStat('Current', ble.heartRate.bpm > 0 ? '${ble.heartRate.bpm}' : '--'),
+          _HeroStat('Current', currentBpm > 0 ? '$currentBpm' : '--'),
           Container(width: 1, height: 28, color: Colors.white30),
-          _HeroStat('Max', '${ble.heartRate.bpm > 0 ? (ble.heartRate.bpm.toDouble() * 1.08).round() : "--"}'),
+          _HeroStat('Session Max', maxVal),
         ]),
       ]),
     );

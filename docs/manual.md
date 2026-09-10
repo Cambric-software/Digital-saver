@@ -155,7 +155,24 @@ The app scans for the Veyro BLE service, pairs with the six-digit PIN shown on t
 
 Implemented: BLE pairing, session-gated live heart-rate estimate, rough experimental SpO2 estimate, accelerometer activity, threshold motion/fall flag, battery estimate, OLED screens, non-blocking vibration, LEDs, local LittleFS history, 60-day pruning, secure phone PIN storage, and app-side local history.
 
-Unavailable or not validated: blood pressure, medical diagnosis, clinical SpO2, validated fall detection, emergency calling, cloud sync, OTA updates, BLE peer identity beyond the current secure paired session, water resistance, and safe wearable fit.
+**Step count persistence (firmware 4.1.0+):** Steps are written to NVS (Preferences) once per minute when the count changes. On reboot the count is restored. A daily midnight reset is planned for firmware 5.0 (production).
+
+**Blood pressure display:** The firmware always outputs 0/0 for BP because the MAX30102 cannot reliably measure PTT-based blood pressure without a second sensor. The app now shows "N/A / Not available" instead of 0/0 everywhere BP appears.
+
+**Sleep tracking:** The Sleep screen now derives sleep data from real LocalStore watch history using a low-HR night-window heuristic. An orange banner appears when no real history data is available; the screen then shows example data. Pull down to refresh after syncing history from the watch.
+
+**Heart rate min/max:** The Heart screen now shows real session min and max tracked by the HeartRateTracker service, seeded from history on app launch. The previous fake multipliers (×0.92, ×1.08) are gone.
+
+**DigitalSaverAI (Gemini):** The AI assistant is now powered by Gemini 1.5 Flash. To activate:
+1. Get a free key from https://aistudio.google.com/
+2. Run `flutter run --dart-define=GEMINI_API_KEY=your_key_here`
+   or set `GeminiConfig.apiKey` directly in `app/lib/services/gemini_service.dart`.
+3. Without a key the AI falls back to local responses with basic health tips.
+The AI has a full medical knowledge system prompt (HR, BP, SpO2, sleep, activity), Veyro troubleshooting knowledge, and conversation memory within a session.
+
+**Production watch (company-manual.md):** For building a retail-grade touchscreen watch, see `docs/company-manual.md`. That document specifies the ESP32-S3, GC9A01 round touchscreen, LVGL UI, BQ25895 PMIC, QMI8658C sensor, DRV2605 haptic, IP67 enclosure, BLE OTA, and full factory test procedures. The prototype parts in this manual do not produce that result.
+
+Unavailable or not validated: blood pressure measurement, medical diagnosis, clinical SpO2, validated fall detection, emergency calling, cloud sync, water resistance, and safe wearable fit.
 
 Read `docs/01_PRODUCT_VISION.md` for product boundaries, `docs/03_OFFLINE_DATA.md` for storage, `docs/04_BLE_PROTOCOL.md` for the command contract, `docs/05_HARDWARE_BOM.md` and `docs/06_ASSEMBLY_SAFETY.md` for hardware safety, and `docs/07_FIRMWARE_GUIDE.md` for firmware troubleshooting.
 

@@ -482,7 +482,14 @@ class _VitalsGrid extends StatelessWidget {
   const _VitalsGrid({required this.ble});
 
   String get _sysVal {
-    return ble.bloodPressure.systolic > 0 ? '${ble.bloodPressure.systolic}' : '--';
+    // BP is always 0 from the current firmware. Show a clear label instead of 0/0.
+    return ble.bloodPressure.systolic > 0 ? '${ble.bloodPressure.systolic}' : 'N/A';
+  }
+  String get _bpFull {
+    if (ble.bloodPressure.systolic > 0) {
+      return '${ble.bloodPressure.systolic}/${ble.bloodPressure.diastolic}';
+    }
+    return 'N/A';
   }
   @override
   Widget build(BuildContext context) => Column(children: [
@@ -503,8 +510,9 @@ class _VitalsGrid extends StatelessWidget {
     Row(children: [
       Expanded(child: _VitalCard(
         label: 'Blood Pressure', value: ble.isConnected ? _sysVal : '--',
-        unit: 'mmHg', icon: Icons.water_drop, gradient: AppColors.gradientBP,
-        badge: ble.bloodPressure.systolic > 0 ? _bpBadge(ble.bloodPressure.systolic.toString() + '/' + ble.bloodPressure.diastolic.toString()) : null,
+        unit: ble.bloodPressure.systolic > 0 ? 'mmHg' : 'Not available',
+        icon: Icons.water_drop, gradient: AppColors.gradientBP,
+        badge: ble.bloodPressure.systolic > 0 ? _bpBadge(_bpFull) : null,
       )),
       const SizedBox(width: 12),
       Expanded(child: _VitalCard(

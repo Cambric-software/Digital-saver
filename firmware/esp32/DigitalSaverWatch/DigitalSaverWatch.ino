@@ -88,6 +88,8 @@ int sampleCount = 0;
 uint32_t lastBatteryRead = 0;
 bool modeWasPressed = false;
 uint32_t lastModeChange = 0;
+uint32_t lastStepSave = 0;   // throttle NVS writes for steps
+uint32_t savedSteps = 0;     // last value written to NVS
 
 uint32_t nowUnix() {
   if (unixTime == 0) return 0;
@@ -589,6 +591,9 @@ void setup() {
   prefs.begin("veyro", false);
   paired = false;
   face = prefs.getUChar("face", 0) % 8;
+  // Restore persisted step count so reboots do not zero out the daily total.
+  steps = prefs.getULong("steps", 0);
+  savedSteps = steps;   // mark as already-saved so first loop does not rewrite NVS
   String saved = prefs.getString("pin", "");
   if (saved.length() == 6) {
     strncpy(pinCode, saved.c_str(), 6);
@@ -655,6 +660,11 @@ void loop() {
         fall = false;
         digitalWrite(PIN_LED_RED, LOW);
       }
+    }
+    // Persist steps to NVS once per sample interval (max once/minute) if changed.
+    if (steps != savedSteps) {
+      prefs.putULong("steps", steps);
+      savedSteps = steps;
     }
   }
   if (ms - lastPrune >= 3600000UL) {

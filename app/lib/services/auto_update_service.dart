@@ -5,6 +5,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'dart:convert';
 
 // Current app version - update this with each release
@@ -217,33 +218,51 @@ class AutoUpdateService extends ChangeNotifier {
       final apkPath = await _downloadApkSilent(downloadUrl);
       
       if (apkPath == null) {
-        _autoUpdateError = 'Failed to download update';
+        _autoUpdateError = 'download_failed';
         _isAutoUpdating = false;
         notifyListeners();
         return;
       }
       
-      // Install APK
+      // Install APK — this only works on rooted/system Android. On a regular
+      // user install the pm command will be denied. We detect the failure and
+      // surface a user-facing download prompt instead of silently dropping it.
       final installed = await _installApkSilent(apkPath);
       
       if (installed) {
-        // Show success notification
         await _showUpdateNotification(
           title: 'App Updated! 🎉',
           body: 'Your app has been updated to version $version',
         );
-        
-        // Save that we auto-updated
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('last_auto_update_version', version);
       } else {
-        _autoUpdateError = 'Failed to install update';
+        // Silent install failed (expected on user-installed apps).
+        // Signal the UI to show a manual download prompt.
+        _autoUpdateError = 'install_failed';
+        notifyListeners();
       }
     } catch (e) {
-      _autoUpdateError = 'Auto-update error: $e';
+      _autoUpdateError = 'error:$e';
+      notifyListeners();
     } finally {
       _isAutoUpdating = false;
       notifyListeners();
+    }
+  }
+
+  /// Returns true if the update is available but silent install failed/unavailable,
+  /// so the UI should offer a manual download button.
+  bool get needsManualInstall =>
+      _updateAvailable &&
+      (_autoUpdateError == 'install_failed' || _autoUpdateError == 'download_failed');
+
+  /// Call this to open the release download page or direct APK URL manually.
+  Future<void> openDownloadPage() async {
+    final url = _latestUpdate?.downloadUrl ?? AppVersion.downloadUrl;
+    final uri = Uri.parse(url);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
     }
   }
 

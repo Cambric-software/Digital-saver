@@ -31,6 +31,13 @@ PLANNED means a proposal or follow-up, not a current capability.
 - The app stores imported day files below its application support directory and profile data in shared preferences.
 - The app requests Bluetooth scan, Bluetooth connect, and location-when-in-use permissions on native platforms.
 - The app has a demo mode that generates synthetic values and must not be mistaken for watch data.
+- **Step count persists across reboots via Preferences (NVS) — written every minute when changed.**
+- **Silent auto-update install failure is now surfaced to the user with a manual download prompt.**
+- **Sleep screen derives sleep data from real watch history; shows a warning banner when no history is available.**
+- **Heart screen shows real session min/max HR tracked by HeartRateTracker service, not approximations.**
+- **Blood pressure shows "N/A / Not available" when systolic is zero — firmware always outputs 0/0 for BP.**
+- **DigitalSaverAI is now powered by Gemini 1.5 Flash with a full medical knowledge system prompt, Veyro troubleshooting, and conversation memory. Requires a Gemini API key from aistudio.google.com.**
+- **docs/company-manual.md is the production engineering reference for building the market-grade Veyro with ESP32-S3, GC9A01 touchscreen, LVGL, BQ25895 PMIC, QMI8658C sensor, IP67 enclosure, and BLE OTA.**
 
 ## Safety boundary
 This prototype is wellness hardware and is not a medical device.

@@ -120,6 +120,10 @@ class HealthAnalyticsService {
   }
 
   static double _calculateBloodPressureHealthScore(BloodPressureData bp, int age, bool onMeds) {
+    // BP is always 0/0 from the Veyro firmware. Return neutral 50 so the
+    // cardiovascular score is not inflated by a phantom perfect BP score.
+    if (bp.systolic <= 0 || bp.diastolic <= 0) return 50;
+
     double score = 100;
 
     // Age-adjusted optimal BP (2026 AHA Guidelines)
@@ -161,6 +165,9 @@ class HealthAnalyticsService {
   }
 
   static double _calculateArterialStiffnessScore(BloodPressureData bp) {
+    // Return neutral score when BP is not available from firmware.
+    if (bp.systolic <= 0 || bp.diastolic <= 0) return 50;
+
     double score = 100;
 
     // Pulse Pressure analysis (2026 Arterial Stiffness Research)
