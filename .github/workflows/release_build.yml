@@ -203,11 +203,11 @@ jobs:
         run: |
           BUNDLE="app/build/linux/x64/release/bundle"
           VERSION="${{ steps.version.outputs.version }}"
-          cd "$BUNDLE"
-          tar -czvf "digital_saver_linux_${VERSION}.tar.gz" \
+          tar -czvf "$BUNDLE/digital_saver_linux_${VERSION}.tar.gz" \
+            --warning=no-file-changed \
             --exclude="*.tar.gz" --exclude="*.AppImage" --exclude="installer" \
-            .
-          cp "digital_saver_linux_${VERSION}.tar.gz" digital_saver_linux.tar.gz
+            -C "$BUNDLE" .
+          cp "$BUNDLE/digital_saver_linux_${VERSION}.tar.gz" "$BUNDLE/digital_saver_linux.tar.gz" || true
 
       - name: Build AppImage
         run: |
