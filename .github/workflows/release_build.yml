@@ -239,7 +239,7 @@ jobs:
           chmod +x "$APPDIR/AppRun"
 
           curl -L --fail -o /tmp/appimagetool.AppImage \
-            https://github.com/AppImage/AppImageKit/releases/download/13/appimagetool-x86_64.AppImage
+            https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage
           chmod +x /tmp/appimagetool.AppImage
 
           ARCH=x86_64 APPIMAGE_EXTRACT_AND_RUN=1 \
