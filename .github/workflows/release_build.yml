@@ -206,8 +206,9 @@ jobs:
           tar -czvf "$BUNDLE/digital_saver_linux_${VERSION}.tar.gz" \
             --warning=no-file-changed \
             --exclude="*.tar.gz" --exclude="*.AppImage" --exclude="installer" \
-            -C "$BUNDLE" .
-          cp "$BUNDLE/digital_saver_linux_${VERSION}.tar.gz" "$BUNDLE/digital_saver_linux.tar.gz" || true
+            -C "$BUNDLE" . || true
+          ls -lh "$BUNDLE"
+          cp "$BUNDLE/digital_saver_linux_${VERSION}.tar.gz" "$BUNDLE/digital_saver_linux.tar.gz"
 
       - name: Build AppImage
         run: |
