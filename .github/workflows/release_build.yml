@@ -213,60 +213,29 @@ jobs:
           BUNDLE="app/build/linux/x64/release/bundle"
           VERSION="${{ steps.version.outputs.version }}"
 
-          # --- AppDir skeleton ---
           APPDIR="$BUNDLE/installer"
           mkdir -p \
             "$APPDIR/usr/lib/digital-saver" \
             "$APPDIR/usr/share/applications" \
             "$APPDIR/usr/share/icons/hicolor/256x256/apps"
 
-          # copy bundle files (exclude previously created archives and the AppDir itself)
           rsync -a \
             --exclude='*.tar.gz' --exclude='*.AppImage' --exclude='installer' \
             "$BUNDLE/" "$APPDIR/usr/lib/digital-saver/"
 
-          # icon
           cp app/assets/digital-saver-icon-transparent.png \
              "$APPDIR/usr/share/icons/hicolor/256x256/apps/digital-saver.png"
           cp "$APPDIR/usr/share/icons/hicolor/256x256/apps/digital-saver.png" \
              "$APPDIR/digital-saver.png"
 
-          # .desktop file (no leading spaces — heredoc at column 0)
-          cat > "$APPDIR/usr/share/applications/digital-saver.desktop" << 'DESKTOP'
-[Desktop Entry]
-Type=Application
-Name=Digital Saver
-Comment=Private Veyro health monitor
-Exec=digital_saver
-Icon=digital-saver
-Terminal=false
-Categories=Utility;Education;
-DESKTOP
-          cp "$APPDIR/usr/share/applications/digital-saver.desktop" \
-             "$APPDIR/digital-saver.desktop"
+          printf '[Desktop Entry]\nType=Application\nName=Digital Saver\nComment=Private Veyro health monitor\nExec=digital_saver\nIcon=digital-saver\nTerminal=false\nCategories=Utility;Education;\n' \
+            > "$APPDIR/usr/share/applications/digital-saver.desktop"
+          cp "$APPDIR/usr/share/applications/digital-saver.desktop" "$APPDIR/digital-saver.desktop"
 
-          # AppRun script (no leading spaces)
-          cat > "$APPDIR/AppRun" << 'APPRUN'
-#!/usr/bin/env bash
-set -e
-APP_HOME="${XDG_DATA_HOME:-$HOME/.local/share}/digital-saver"
-mkdir -p "$APP_HOME"
-cp -r "${APPDIR}/usr/lib/digital-saver/." "$APP_HOME/"
-mkdir -p "${XDG_DATA_HOME:-$HOME/.local/share}/applications"
-sed "s#Exec=digital_saver#Exec=$APP_HOME/digital_saver#" \
-  "${APPDIR}/usr/share/applications/digital-saver.desktop" \
-  > "${XDG_DATA_HOME:-$HOME/.local/share}/applications/digital-saver.desktop"
-chmod +x "$APP_HOME/digital_saver"
-if [ -d "$HOME/Desktop" ]; then
-  cp "${XDG_DATA_HOME:-$HOME/.local/share}/applications/digital-saver.desktop" \
-     "$HOME/Desktop/Digital Saver.desktop"
-  chmod +x "$HOME/Desktop/Digital Saver.desktop"
-fi
-exec "$APP_HOME/digital_saver" "$@"
-APPRUN
+          printf '#!/usr/bin/env bash\nset -e\nAPP_HOME="${XDG_DATA_HOME:-$HOME/.local/share}/digital-saver"\nmkdir -p "$APP_HOME"\ncp -r "${APPDIR}/usr/lib/digital-saver/." "$APP_HOME/"\nmkdir -p "${XDG_DATA_HOME:-$HOME/.local/share}/applications"\nsed "s#Exec=digital_saver#Exec=$APP_HOME/digital_saver#" "${APPDIR}/usr/share/applications/digital-saver.desktop" > "${XDG_DATA_HOME:-$HOME/.local/share}/applications/digital-saver.desktop"\nchmod +x "$APP_HOME/digital_saver"\nif [ -d "$HOME/Desktop" ]; then cp "${XDG_DATA_HOME:-$HOME/.local/share}/applications/digital-saver.desktop" "$HOME/Desktop/Digital Saver.desktop"; chmod +x "$HOME/Desktop/Digital Saver.desktop"; fi\nexec "$APP_HOME/digital_saver" "$@"\n' \
+            > "$APPDIR/AppRun"
           chmod +x "$APPDIR/AppRun"
 
-          # Download pinned appimagetool and run without FUSE
           curl -L --fail -o /tmp/appimagetool.AppImage \
             https://github.com/AppImage/AppImageKit/releases/download/13/appimagetool-x86_64.AppImage
           chmod +x /tmp/appimagetool.AppImage
@@ -275,11 +244,8 @@ APPRUN
             /tmp/appimagetool.AppImage "$APPDIR" \
             "$BUNDLE/digital_saver_linux_${VERSION}.AppImage"
 
-          cp "$BUNDLE/digital_saver_linux_${VERSION}.AppImage" \
-             "$BUNDLE/digital_saver_linux.AppImage"
-          cp "$BUNDLE/digital_saver_linux_${VERSION}.AppImage" \
-             "$BUNDLE/digital_saver_linux_installer.run"
-
+          cp "$BUNDLE/digital_saver_linux_${VERSION}.AppImage" "$BUNDLE/digital_saver_linux.AppImage"
+          cp "$BUNDLE/digital_saver_linux_${VERSION}.AppImage" "$BUNDLE/digital_saver_linux_installer.run"
           ls -lh "$BUNDLE"
 
       - name: Upload Linux Archive
