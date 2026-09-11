@@ -169,71 +169,118 @@ jobs:
       - name: Install Linux dependencies
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y -qq clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev libstdc++-12-dev libfuse2
+          sudo apt-get install -y -qq \
+            clang cmake ninja-build pkg-config \
+            libgtk-3-dev liblzma-dev libstdc++-12-dev \
+            libfuse2 rsync
 
       - name: Enable Linux desktop support
-        run: |
-          cd app
-          flutter config --enable-linux-desktop
+        run: flutter config --enable-linux-desktop
 
-      - name: Create Linux project
+      - name: Create Linux scaffold and install dependencies
         run: |
           cd app
           flutter create --platforms=linux .
-
-      - name: Install dependencies
-        run: |
-          cd app
           flutter pub get
 
       - name: Build Linux Release
         run: |
           cd app
-          flutter build linux --release --dart-define=GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}
+          flutter build linux --release \
+            --dart-define=GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}
 
-      - name: Create Linux Archive
+      - name: Resolve version
+        id: version
         run: |
-          cd app/build/linux/x64/release/bundle
           VERSION="${GITHUB_REF#refs/tags/}"
           if [ -z "$VERSION" ] || [[ "$VERSION" == refs/heads/* ]]; then
             VERSION="${{ inputs.release_version || 'dev' }}"
           fi
-          tar -czvf "digital_saver_linux_${VERSION}.tar.gz" *
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Create tar.gz archive
+        run: |
+          BUNDLE="app/build/linux/x64/release/bundle"
+          VERSION="${{ steps.version.outputs.version }}"
+          cd "$BUNDLE"
+          tar -czvf "digital_saver_linux_${VERSION}.tar.gz" \
+            --exclude="*.tar.gz" --exclude="*.AppImage" --exclude="installer" \
+            .
           cp "digital_saver_linux_${VERSION}.tar.gz" digital_saver_linux.tar.gz
-          mkdir -p installer/usr/lib/digital-saver installer/usr/share/applications installer/usr/share/icons/hicolor/256x256/apps
-          rsync -a --exclude='installer' ./ installer/usr/lib/digital-saver/
-          cp ../../../../../assets/digital-saver-icon-transparent.png installer/usr/share/icons/hicolor/256x256/apps/digital-saver.png
-          cat > installer/usr/share/applications/digital-saver.desktop <<'DESKTOP'
-          [Desktop Entry]
-          Type=Application
-          Name=Digital Saver
-          Comment=Private Veyro health monitor
-          Exec=digital_saver
-          Icon=digital-saver
-          Terminal=false
-          Categories=Utility;Education;
-          DESKTOP
-          cp installer/usr/share/applications/digital-saver.desktop installer/digital-saver.desktop
-          cp installer/usr/share/icons/hicolor/256x256/apps/digital-saver.png installer/digital-saver.png
-          cat > installer/AppRun <<'APP_RUN'
-          #!/usr/bin/env bash
-          set -e
-          APP_HOME="${XDG_DATA_HOME:-$HOME/.local/share}/digital-saver"
-          mkdir -p "$APP_HOME"
-          cp -r "${APPDIR}/usr/lib/digital-saver/." "$APP_HOME/"
-          mkdir -p "${XDG_DATA_HOME:-$HOME/.local/share}/applications"
-          sed "s#Exec=digital_saver#Exec=$APP_HOME/digital_saver#" "${APPDIR}/usr/share/applications/digital-saver.desktop" > "${XDG_DATA_HOME:-$HOME/.local/share}/applications/digital-saver.desktop"
-          chmod +x "$APP_HOME/digital_saver"
-          if [ -d "$HOME/Desktop" ]; then cp "${XDG_DATA_HOME:-$HOME/.local/share}/applications/digital-saver.desktop" "$HOME/Desktop/Digital Saver.desktop"; chmod +x "$HOME/Desktop/Digital Saver.desktop"; fi
-          exec "$APP_HOME/digital_saver" "$@"
-          APP_RUN
-          chmod +x installer/AppRun
-          curl -L --fail -o appimagetool.AppImage https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage
-          chmod +x appimagetool.AppImage
-          ARCH=x86_64 APPIMAGE_EXTRACT_AND_RUN=1 ./appimagetool.AppImage installer "digital_saver_linux_${VERSION}.AppImage"
-          cp "digital_saver_linux_${VERSION}.AppImage" digital_saver_linux.AppImage
-          cp "digital_saver_linux_${VERSION}.AppImage" digital_saver_linux_installer.run
-          ls -la
+
+      - name: Build AppImage
+        run: |
+          BUNDLE="app/build/linux/x64/release/bundle"
+          VERSION="${{ steps.version.outputs.version }}"
+
+          # --- AppDir skeleton ---
+          APPDIR="$BUNDLE/installer"
+          mkdir -p \
+            "$APPDIR/usr/lib/digital-saver" \
+            "$APPDIR/usr/share/applications" \
+            "$APPDIR/usr/share/icons/hicolor/256x256/apps"
+
+          # copy bundle files (exclude previously created archives and the AppDir itself)
+          rsync -a \
+            --exclude='*.tar.gz' --exclude='*.AppImage' --exclude='installer' \
+            "$BUNDLE/" "$APPDIR/usr/lib/digital-saver/"
+
+          # icon
+          cp app/assets/digital-saver-icon-transparent.png \
+             "$APPDIR/usr/share/icons/hicolor/256x256/apps/digital-saver.png"
+          cp "$APPDIR/usr/share/icons/hicolor/256x256/apps/digital-saver.png" \
+             "$APPDIR/digital-saver.png"
+
+          # .desktop file (no leading spaces — heredoc at column 0)
+          cat > "$APPDIR/usr/share/applications/digital-saver.desktop" << 'DESKTOP'
+[Desktop Entry]
+Type=Application
+Name=Digital Saver
+Comment=Private Veyro health monitor
+Exec=digital_saver
+Icon=digital-saver
+Terminal=false
+Categories=Utility;Education;
+DESKTOP
+          cp "$APPDIR/usr/share/applications/digital-saver.desktop" \
+             "$APPDIR/digital-saver.desktop"
+
+          # AppRun script (no leading spaces)
+          cat > "$APPDIR/AppRun" << 'APPRUN'
+#!/usr/bin/env bash
+set -e
+APP_HOME="${XDG_DATA_HOME:-$HOME/.local/share}/digital-saver"
+mkdir -p "$APP_HOME"
+cp -r "${APPDIR}/usr/lib/digital-saver/." "$APP_HOME/"
+mkdir -p "${XDG_DATA_HOME:-$HOME/.local/share}/applications"
+sed "s#Exec=digital_saver#Exec=$APP_HOME/digital_saver#" \
+  "${APPDIR}/usr/share/applications/digital-saver.desktop" \
+  > "${XDG_DATA_HOME:-$HOME/.local/share}/applications/digital-saver.desktop"
+chmod +x "$APP_HOME/digital_saver"
+if [ -d "$HOME/Desktop" ]; then
+  cp "${XDG_DATA_HOME:-$HOME/.local/share}/applications/digital-saver.desktop" \
+     "$HOME/Desktop/Digital Saver.desktop"
+  chmod +x "$HOME/Desktop/Digital Saver.desktop"
+fi
+exec "$APP_HOME/digital_saver" "$@"
+APPRUN
+          chmod +x "$APPDIR/AppRun"
+
+          # Download pinned appimagetool and run without FUSE
+          curl -L --fail -o /tmp/appimagetool.AppImage \
+            https://github.com/AppImage/AppImageKit/releases/download/13/appimagetool-x86_64.AppImage
+          chmod +x /tmp/appimagetool.AppImage
+
+          ARCH=x86_64 APPIMAGE_EXTRACT_AND_RUN=1 \
+            /tmp/appimagetool.AppImage "$APPDIR" \
+            "$BUNDLE/digital_saver_linux_${VERSION}.AppImage"
+
+          cp "$BUNDLE/digital_saver_linux_${VERSION}.AppImage" \
+             "$BUNDLE/digital_saver_linux.AppImage"
+          cp "$BUNDLE/digital_saver_linux_${VERSION}.AppImage" \
+             "$BUNDLE/digital_saver_linux_installer.run"
+
+          ls -lh "$BUNDLE"
 
       - name: Upload Linux Archive
         uses: actions/upload-artifact@v4
