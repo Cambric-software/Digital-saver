@@ -5,6 +5,9 @@ import '../services/ble_service.dart';
 import '../services/health_analysis_service.dart';
 import '../theme/app_theme.dart';
 
+// Import the GithubService (file you created: github_services.dart)
+import '../services/github_services.dart';
+
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
   @override
@@ -15,6 +18,9 @@ class _DashboardScreenState extends State<DashboardScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _ctrl;
   late Animation<double> _ring;
+
+  // GithubService instance to fetch the latest release tag
+  final GithubService githubService = GithubService();
 
   @override
   void initState() {
@@ -46,25 +52,90 @@ class _DashboardScreenState extends State<DashboardScreen>
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: CustomScrollView(
-        slivers: [
-          _appBar(ble, context),
-          SliverPadding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            sliver: SliverList(delegate: SliverChildListDelegate([
-              const SizedBox(height: 8),
-              if (!ble.isConnected) _ConnectBanner(ble: ble, onScan: () => _showDeviceSelectionSheet(context, ble)),
-              if (ble.isConnected && ble.demoMode) _DemoBanner(),
-              const SizedBox(height: 16),
-              _ScoreCard(animation: _ring, score: score, batteryLevel: ble.batteryLevel, isConnected: ble.isConnected),
-              const SizedBox(height: 16),
-              _VitalsGrid(ble: ble),
-              const SizedBox(height: 16),
-              _AlertsCard(ble: ble),
-              const SizedBox(height: 16),
-              _TodaySummary(ble: ble),
-              const SizedBox(height: 100),
-            ])),
+      body: Stack(
+        children: [
+          CustomScrollView(
+            slivers: [
+              _appBar(ble, context),
+              SliverPadding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                sliver: SliverList(delegate: SliverChildListDelegate([
+                  const SizedBox(height: 8),
+                  if (!ble.isConnected) _ConnectBanner(ble: ble, onScan: () => _showDeviceSelectionSheet(context, ble)),
+                  if (ble.isConnected && ble.demoMode) _DemoBanner(),
+                  const SizedBox(height: 16),
+                  _ScoreCard(animation: _ring, score: score, batteryLevel: ble.batteryLevel, isConnected: ble.isConnected),
+                  const SizedBox(height: 16),
+                  _VitalsGrid(ble: ble),
+                  const SizedBox(height: 16),
+                  _AlertsCard(ble: ble),
+                  const SizedBox(height: 16),
+                  _TodaySummary(ble: ble),
+                  const SizedBox(height: 100),
+                ])),
+              ),
+            ],
+          ),
+
+          // Version label in bottom-right corner
+          Positioned(
+            bottom: 10,
+            right: 10,
+            child: FutureBuilder<String>(
+              future: githubService.fetchLatestVersion(),
+              builder: (context, snapshot) {
+                if (snapshot.hasData) {
+                  return Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.9),
+                      borderRadius: BorderRadius.circular(8),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.06),
+                          blurRadius: 6,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Text(
+                      snapshot.data!, // e.g. "v1.0.2-beta"
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  );
+                } else if (snapshot.hasError) {
+                  return Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.9),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Text(
+                      "Version unavailable",
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.redAccent,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  );
+                } else {
+                  // While loading, show a subtle placeholder to avoid layout shift
+                  return Container(
+                    width: 48,
+                    height: 18,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.6),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  );
+                }
+              },
+            ),
           ),
         ],
       ),
