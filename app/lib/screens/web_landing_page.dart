@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../utils/download_helper.dart';
+import '../services/github_services.dart';
 
 class WebLandingPage extends StatefulWidget {
   const WebLandingPage({super.key});
@@ -11,14 +12,18 @@ class WebLandingPage extends StatefulWidget {
 class _WebLandingPageState extends State<WebLandingPage> with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _fadeAnimation;
-  
-  // Latest version
-  static const String currentVersion = 'v1.0.1-beta';
-  
-  // Download URLs - exact files from the current GitHub release
-  static const String androidUrl = 'https://github.com/Cambric-software/Digital-saver/releases/download/v1.0.1-beta/digital_saver_android_v1.0.1-beta.apk';
-  static const String windowsUrl = 'https://github.com/Cambric-software/Digital-saver/releases/download/v1.0.1-beta/digital_saver_windows_setup.exe';
-  static const String linuxUrl = 'https://github.com/Cambric-software/Digital-saver/releases/download/v1.0.1-beta/digital_saver_linux_installer.run';
+
+  // Fallback static version (used if GitHub call fails)
+  static const String _fallbackVersion = 'v1.0.1-beta';
+
+  // These will be built dynamically from the latest release tag
+  String _currentVersion = _fallbackVersion;
+  String _androidUrl = 'https://github.com/Cambric-software/Digital-saver/releases/download/v1.0.1-beta/digital_saver_android_v1.0.1-beta.apk';
+  String _windowsUrl = 'https://github.com/Cambric-software/Digital-saver/releases/download/v1.0.1-beta/digital_saver_windows_setup.exe';
+  String _linuxUrl = 'https://github.com/Cambric-software/Digital-saver/releases/download/v1.0.1-beta/digital_saver_linux_installer.run';
+
+  final GithubService _githubService = GithubService();
+  bool _versionLoading = true;
 
   @override
   void initState() {
@@ -28,12 +33,45 @@ class _WebLandingPageState extends State<WebLandingPage> with SingleTickerProvid
       CurvedAnimation(parent: _controller, curve: Curves.easeOut),
     );
     _controller.forward();
+
+    // Fetch latest release tag and build URLs
+    _loadLatestRelease();
   }
 
   @override
   void dispose() {
     _controller.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadLatestRelease() async {
+    try {
+      final tag = await _githubService.fetchLatestVersion();
+      if (tag != null && tag.isNotEmpty) {
+        // Use the tag returned by GitHub (e.g. "v1.0.2-beta")
+        setState(() {
+          _currentVersion = tag;
+          // Construct download URLs using the release tag in the path.
+          // Filenames are kept consistent with your previous naming convention.
+          _androidUrl = 'https://github.com/Cambric-software/Digital-saver/releases/download/$tag/digital_saver_android_${tag}.apk';
+          _windowsUrl = 'https://github.com/Cambric-software/Digital-saver/releases/download/$tag/digital_saver_windows_setup.exe';
+          _linuxUrl = 'https://github.com/Cambric-software/Digital-saver/releases/download/$tag/digital_saver_linux_installer.run';
+          _versionLoading = false;
+        });
+        return;
+      }
+    } catch (_) {
+      // ignore and fall back
+    }
+
+    // Fallback to static values if fetch fails
+    setState(() {
+      _currentVersion = _fallbackVersion;
+      _androidUrl = 'https://github.com/Cambric-software/Digital-saver/releases/download/$_fallbackVersion/digital_saver_android_$_fallbackVersion.apk';
+      _windowsUrl = 'https://github.com/Cambric-software/Digital-saver/releases/download/$_fallbackVersion/digital_saver_windows_setup.exe';
+      _linuxUrl = 'https://github.com/Cambric-software/Digital-saver/releases/download/$_fallbackVersion/digital_saver_linux_installer.run';
+      _versionLoading = false;
+    });
   }
 
   void _downloadFile(String url, String filename) {
@@ -62,20 +100,20 @@ class _WebLandingPageState extends State<WebLandingPage> with SingleTickerProvid
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   const SizedBox(height: 20),
-                  
+
                   // Digital Saver Logo and Text
                   _buildLogoSection(),
-                  
+
                   const SizedBox(height: 48),
-                  
+
                   // Download Buttons
                   _buildDownloadButtons(),
-                  
+
                   const SizedBox(height: 48),
-                  
+
                   // Instructions
                   _buildInstructions(),
-                  
+
                   const SizedBox(height: 40),
                 ],
               ),
@@ -120,7 +158,7 @@ class _WebLandingPageState extends State<WebLandingPage> with SingleTickerProvid
           ),
         ),
         const SizedBox(height: 24),
-        
+
         // Digital Saver Text
         const Text(
           'Digital Saver',
@@ -141,9 +179,9 @@ class _WebLandingPageState extends State<WebLandingPage> with SingleTickerProvid
             letterSpacing: 1,
           ),
         ),
-        
+
         const SizedBox(height: 32),
-        
+
         // Made by Cambric
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
@@ -205,7 +243,7 @@ class _WebLandingPageState extends State<WebLandingPage> with SingleTickerProvid
           ),
         ),
         const SizedBox(height: 24),
-        
+
         Wrap(
           spacing: 16,
           runSpacing: 16,
@@ -214,23 +252,23 @@ class _WebLandingPageState extends State<WebLandingPage> with SingleTickerProvid
             _DownloadButton(
               icon: Icons.android,
               label: 'Android',
-              subtitle: 'APK $currentVersion',
+              subtitle: _versionLoading ? 'APK (loading...)' : 'APK $_currentVersion',
               color: const Color(0xFF34A853),
-              onTap: () => _downloadFile(androidUrl, 'digital_saver_android.apk'),
+              onTap: () => _downloadFile(_androidUrl, 'digital_saver_android.apk'),
             ),
             _DownloadButton(
               icon: Icons.window,
               label: 'Windows',
-              subtitle: 'Installer + desktop shortcut $currentVersion',
+              subtitle: _versionLoading ? 'Installer (loading...)' : 'Installer + desktop shortcut $_currentVersion',
               color: const Color(0xFF0078D4),
-              onTap: () => _downloadFile(windowsUrl, 'digital_saver_windows_setup.exe'),
+              onTap: () => _downloadFile(_windowsUrl, 'digital_saver_windows_setup.exe'),
             ),
             _DownloadButton(
               icon: Icons.computer,
               label: 'Linux',
-              subtitle: 'One-click installer $currentVersion',
+              subtitle: _versionLoading ? 'One-click installer (loading...)' : 'One-click installer $_currentVersion',
               color: const Color(0xFFE95420),
-              onTap: () => _downloadFile(linuxUrl, 'digital_saver_linux_installer.run'),
+              onTap: () => _downloadFile(_linuxUrl, 'digital_saver_linux_installer.run'),
             ),
             _DownloadButton(
               icon: Icons.apple,
@@ -272,7 +310,7 @@ class _WebLandingPageState extends State<WebLandingPage> with SingleTickerProvid
             ],
           ),
           const SizedBox(height: 20),
-          
+
           // Windows Instructions
           _buildInstructionItem(
             icon: Icons.window,
@@ -284,9 +322,9 @@ class _WebLandingPageState extends State<WebLandingPage> with SingleTickerProvid
               '4. Run the .exe file inside',
             ],
           ),
-          
+
           const SizedBox(height: 20),
-          
+
           // Linux Instructions
           _buildInstructionItem(
             icon: Icons.computer,
@@ -299,9 +337,9 @@ class _WebLandingPageState extends State<WebLandingPage> with SingleTickerProvid
               '   Or extract ZIP and run the executable',
             ],
           ),
-          
+
           const SizedBox(height: 20),
-          
+
           // Android Instructions
           _buildInstructionItem(
             icon: Icons.android,
@@ -355,7 +393,6 @@ class _WebLandingPageState extends State<WebLandingPage> with SingleTickerProvid
       ],
     );
   }
-
 }
 
 class _DownloadButton extends StatelessWidget {
