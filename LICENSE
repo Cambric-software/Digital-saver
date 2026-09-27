@@ -1,43 +1,56 @@
-MIT License
+CAMBRIC SOURCE-AVAILABLE COMMERCIAL-RESTRICTED LICENSE
+Version 1.0 (2026)
 
-Copyright (c) 2026 Cambric
+Copyright (c) 2026 Cambric Software & Hardware Systems. All rights reserved.
+Primary Author & Proprietor: Asser Karim (Cambric)
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+================================================================================
+1. GRANT OF LICENSE FOR NON-COMMERCIAL PURPOSES
+================================================================================
+Permission is hereby granted, free of charge, to any individual or educational
+entity obtaining a copy of this software, hardware schematics, firmware, and
+associated documentation files (the "Work"), to inspect, review, test, compile,
+and run the Work solely for personal, non-commercial, and educational evaluation,
+subject to the following conditions:
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+(a) Attribution: The above copyright notice, this license notice, and the
+    author attribution must be prominently retained in all copies or substantial
+    portions of the Work.
+(b) Trademark & Branding: No right or license is granted to use the names,
+    logos, or trademarks "Cambric", "Digital Saver", or "Veyro" without prior
+    express written permission from Cambric.
+(c) Patent & Design Rights: No license or grant of patent rights, industrial
+    designs, or commercial replication rights is granted under this license.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+================================================================================
+2. COMMERCIAL USE PROHIBITION
+================================================================================
+Commercial use, redistribution, reproduction, resale, hardware manufacturing
+for sale, or integration into proprietary third-party commercial products is
+STRICTLY PROHIBITED without an express written commercial licensing agreement
+executed with Cambric.
 
----
+Any unauthorized commercial deployment, sale, or sublicensing will constitute
+willful intellectual property infringement subject to legal remedies and
+statutory damages under applicable international and national copyright laws.
 
-DIGITAL SAVER - HEALTH MONITORING SYSTEM
+================================================================================
+3. MEDICAL & SAFETY DISCLAIMER (CRITICAL)
+================================================================================
+THE WORK IS AN EXPERIMENTAL CONSUMER WELLNESS AND PROTOTYPING PLATFORM.
+IT IS NOT A CERTIFIED MEDICAL DEVICE AND HAS NOT BEEN EVALUATED BY THE EGYPTIAN
+DRUG AUTHORITY (EDA), FDA, CE, OR ANY RECOGNIZED MEDICAL REGULATORY BODY.
 
-This project includes a smartwatch health monitoring application developed
-by Cambric under the Egyptian Government Digital Health Initiative.
+THE WORK MUST NOT BE USED FOR:
+- Clinical diagnostic purposes, medical treatment, or triage decisions
+- Sole-means emergency alert or life-critical monitoring
+- Substitution for licensed professional medical consultation
 
-Medical Disclaimer:
-This software is provided for wellness and educational purposes only.
-It is NOT a certified medical device and should NOT be used for:
-- Medical diagnosis
-- Clinical treatment decisions
-- Replacement of professional medical advice
-- Emergency medical response as the sole means
-
-Always consult qualified healthcare professionals for any health concerns.
-The developers of Digital Saver accept no liability for decisions made
-based on the software's readings or recommendations.
-
-For more information, visit:
-https://github.com/asserkdev/Digital-saver/
+================================================================================
+4. NO WARRANTY & LIMITATION OF LIABILITY
+================================================================================
+THE WORK IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+PARTICULAR PURPOSE, ACCURACY OF BIOMETRIC DATA, AND NON-INFRINGEMENT. IN NO
+EVENT SHALL CAMBRIC, ASSER KARIM, OR CONTRIBUTORS BE LIABLE FOR ANY CLAIM,
+DAMAGES, OR OTHER LIABILITY ARISING FROM THE USE OF OR INABILITY TO USE THE WORK.
