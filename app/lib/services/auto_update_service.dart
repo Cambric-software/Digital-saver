@@ -10,11 +10,11 @@ import 'dart:convert';
 
 // Current app version - update this with each release
 class AppVersion {
-  static const String current = '1.0.1-beta';
-  static const String buildNumber = '1';
+  static const String current = '1.0.2';
+  static const String buildNumber = '2';
   
   // Minimum version for auto-update (3.1.8+ supports silent auto-update)
-  static const String autoUpdateMinVersion = '1.0.1-beta';
+  static const String autoUpdateMinVersion = '1.0.2';
   
   static bool get supportsAutoUpdate {
     final currentParts = current.split('.').map((e) => int.tryParse(e) ?? 0).toList();

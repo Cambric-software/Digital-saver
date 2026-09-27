@@ -13,12 +13,16 @@ class GeminiConfig {
     defaultValue: '',
   );
 
-  static const String model = 'gemini-1.5-flash';
+  static const String primaryModel = 'gemini-2.0-flash';
+  static const String fallbackModel = 'gemini-1.5-flash';
+  static const String legacyModel = 'gemini-1.5-flash-latest';
   static const String _baseUrl =
       'https://generativelanguage.googleapis.com/v1beta/models';
 
-  static Uri get endpoint =>
-      Uri.parse('$_baseUrl/$model:generateContent?key=$apiKey');
+  static Uri endpointFor(String modelName) =>
+      Uri.parse('$_baseUrl/$modelName:generateContent?key=$apiKey');
+
+  static Uri get endpoint => endpointFor(primaryModel);
 }
 
 /// A single conversational turn.
@@ -183,13 +187,33 @@ RULES
     });
 
     try {
-      final response = await http
-          .post(
-            GeminiConfig.endpoint,
-            headers: {'Content-Type': 'application/json'},
-            body: body,
-          )
-          .timeout(const Duration(seconds: 30));
+      final candidateModels = [
+        GeminiConfig.primaryModel,
+        GeminiConfig.fallbackModel,
+        GeminiConfig.legacyModel,
+      ];
+      http.Response? response;
+      for (final candidate in candidateModels) {
+        try {
+          final res = await http
+              .post(
+                GeminiConfig.endpointFor(candidate),
+                headers: {'Content-Type': 'application/json'},
+                body: body,
+              )
+              .timeout(const Duration(seconds: 15));
+          if (res.statusCode != 404) {
+            response = res;
+            break;
+          }
+          debugPrint('Gemini model $candidate returned 404, falling back...');
+        } catch (e) {
+          debugPrint('Gemini attempt failed for $candidate: $e');
+        }
+      }
+      if (response == null) {
+        return _noKeyFallback(userMessage);
+      }
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;

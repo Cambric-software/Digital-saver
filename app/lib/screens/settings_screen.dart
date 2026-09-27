@@ -172,7 +172,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           FilledButton.tonal(onPressed: EmergencyService.callEmergency, child: const Text('Call 123')),
           const Divider(height: 32),
-          Text('App ${AppVersion.current} · Cambric · local build'),
+          Text('App ${AppVersion.current} · Cambric Production'),
           TextButton(
             onPressed: () => launchUrl(Uri.parse('https://github.com/Cambric-software/Digital-saver/releases')),
             child: const Text('Optional GitHub update page'),
