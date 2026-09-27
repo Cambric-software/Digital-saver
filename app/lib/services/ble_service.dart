@@ -205,6 +205,10 @@ class BleService extends ChangeNotifier {
         } else if (id.contains('26f0')) {
           _cmd = c;
           foundCommand = true;
+        } else if (id.contains('26b0')) {
+          // Notification bridge characteristic
+        } else if (id.contains('26c0')) {
+          // Firmware OTA data characteristic
         }
       }
     }
