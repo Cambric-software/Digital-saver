@@ -256,8 +256,8 @@ void handleCmd(const String &raw) {
   }
   if (strcmp(op, "face") == 0) {
     int requested = doc["face"] | -1;
-    if (requested >= 0 && requested < 8) {
-      face = requested;
+    if (requested >= 0) {
+      face = requested % 4;
       prefs.putUChar("face", (uint8_t)face);
     }
     return;
@@ -385,8 +385,13 @@ void readMpu() {
   az = a.acceleration.z / 9.81f;
   float mag = sqrtf(ax * ax + ay * ay + az * az);
   static float lastMag = 1;
-  // Cheap step: crossing ~1.2g
-  if (lastMag < 1.15f && mag > 1.25f) steps++;
+  // Step detection with 240ms debounce window
+  static uint32_t lastStepMs = 0;
+  uint32_t now = millis();
+  if (lastMag < 1.15f && mag > 1.25f && (now - lastStepMs >= 240)) {
+    steps++;
+    lastStepMs = now;
+  }
   lastMag = mag;
   // Fall: free-fall then spike (very rough, many false positives)
   static uint32_t lowAt = 0;
@@ -556,6 +561,7 @@ void setup() {
   analogSetPinAttenuation(PIN_BAT_ADC, ADC_11db);
 
   Wire.begin(I2C_SDA, I2C_SCL);
+  Wire.setClock(400000);
   Wire.setClock(400000);
 
   hasOled = display.begin(SSD1306_SWITCHCAPVCC, OLED_ADDR);
