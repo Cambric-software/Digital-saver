@@ -48,6 +48,7 @@
 #include "host/ble_hs.h"
 #include "host/ble_uuid.h"
 #include "host/ble_gap.h"
+#include "display.h"
 #include "host/ble_gatt.h"
 #include "services/gap/ble_svc_gap.h"
 #include "services/gatt/ble_svc_gatt.h"
@@ -138,6 +139,31 @@ static const ble_uuid128_t chr_notif_uuid = BLE_UUID128_INIT(
 static const ble_uuid128_t chr_ota_uuid = BLE_UUID128_INIT(
     0xc0, 0x26, 0x1b, 0x36, 0x07, 0xea, 0xf5, 0xb7,
     0x88, 0x46, 0xe1, 0x36, 0x3e, 0x48, 0xb5, 0xbe);
+
+
+/* ─────────────────────────────────────────────────────────────────────── */
+/*  DISPLAY & POWER MANAGEMENT STATE                                       */
+/* ─────────────────────────────────────────────────────────────────────── */
+static volatile bool    g_display_awake   = true;
+static volatile uint32_t g_last_activity_ms = 0;
+#define DISPLAY_IDLE_TIMEOUT_MS 15000
+
+static void display_wake(void) {
+    if (!g_display_awake) {
+        g_display_awake = true;
+        ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, 614);
+        ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0);
+    }
+    g_last_activity_ms = xTaskGetTickCount() * portTICK_PERIOD_MS;
+}
+
+static void display_sleep(void) {
+    if (g_display_awake) {
+        g_display_awake = false;
+        ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, 0);
+        ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0);
+    }
+}
 
 /* ─────────────────────────────────────────────────────────────────────── */
 /*  GLOBAL HEALTH STATE                                                     */
@@ -619,6 +645,10 @@ static void task_sensors(void *arg) {
         read_qmi6858(&ax, &ay, &az, &gyro);
         float mag = sqrtf(ax * ax + ay * ay + az * az);
 
+                /* Wrist-tilt gesture wake detection */
+        if (!g_display_awake && (az > 0.55f && ay > 0.25f && mag > 0.8f && mag < 1.35f)) {
+            display_wake();
+        }
         /* Fall detection v2: free-fall + spike + gyro */
         if (mag < 0.4f) {
             if (fall_low_start == 0) fall_low_start = now_ms;
@@ -868,12 +898,35 @@ static void task_watchdog(void *arg) {
 /* ─────────────────────────────────────────────────────────────────────── */
 
 static void task_display(void *arg) {
-    /* Full LVGL watch face implementation is in firmware/esp32s3/main/display.c
-     * This task stub runs the LVGL timer and updates widget values. */
+    /* Initialize circular AMOLED SPI display and LVGL watch faces */
+    display_init();
+    display_set_watchface((watchface_id_t)g_watch_face);
+    g_last_activity_ms = xTaskGetTickCount() * portTICK_PERIOD_MS;
+
+    uint32_t last_vitals_ms = 0;
+
     while (1) {
-        g_task_heartbeat[HB_DISPLAY] = xTaskGetTickCount() * portTICK_PERIOD_MS;
+        uint32_t now_ms = xTaskGetTickCount() * portTICK_PERIOD_MS;
+        g_task_heartbeat[HB_DISPLAY] = now_ms;
+
+        /* Run LVGL timer engine */
         lv_timer_handler();
-        vTaskDelay(pdMS_TO_TICKS(5));
+
+        /* Push live vitals every 250ms when display is active */
+        if (g_display_awake && (now_ms - last_vitals_ms >= 250)) {
+            last_vitals_ms = now_ms;
+            display_update_vitals(
+                g_hr_bpm, g_spo2, g_hrv_ms, g_stress,
+                g_steps, g_battery_pct, g_charging, g_skin_temp_c
+            );
+        }
+
+        /* Check for inactivity screen timeout */
+        if (g_display_awake && (now_ms - g_last_activity_ms >= DISPLAY_IDLE_TIMEOUT_MS)) {
+            display_sleep();
+        }
+
+        vTaskDelay(pdMS_TO_TICKS(10));
     }
 }
 
@@ -901,6 +954,74 @@ static void task_ble(void *arg) {
             /* ble_service_notify_live(json) is called here when BLE module is linked */
         }
         vTaskDelay(pdMS_TO_TICKS(10));
+    }
+}
+
+
+/* ─────────────────────────────────────────────────────────────────────── */
+/*  BUTTONS TASK (Crown & SOS Hardware Inputs)                             */
+/* ─────────────────────────────────────────────────────────────────────── */
+
+static void task_buttons(void *arg) {
+    uint32_t crown_press_start = 0;
+    uint32_t sos_press_start = 0;
+    bool crown_down = false;
+    bool sos_down = false;
+    bool sos_triggered = false;
+
+    while (1) {
+        uint32_t now_ms = xTaskGetTickCount() * portTICK_PERIOD_MS;
+
+        /* Crown button (active low, GPIO 0) */
+        if (gpio_get_level(GPIO_CROWN) == 0) {
+            if (!crown_down) {
+                crown_down = true;
+                crown_press_start = now_ms;
+            }
+        } else {
+            if (crown_down) {
+                uint32_t dur = now_ms - crown_press_start;
+                crown_down = false;
+                if (dur >= 50 && dur < 1500) {
+                    /* Short click */
+                    if (!g_display_awake) {
+                        display_wake();
+                    } else {
+                        /* Cycle watchfaces: 5 faces in WATCHFACE_COUNT */
+                        g_watch_face = (g_watch_face + 1) % WATCHFACE_COUNT;
+                        display_set_watchface((watchface_id_t)g_watch_face);
+                        nvs_set_u8(g_nvs, "face", (uint8_t)g_watch_face);
+                        nvs_commit(g_nvs);
+                        drv2605_play(1); /* Click haptic */
+                        display_wake();
+                    }
+                } else if (dur >= 1500) {
+                    /* Long press */
+                    drv2605_play(10); /* Double click haptic */
+                    display_wake();
+                }
+            }
+        }
+
+        /* SOS button (active low, GPIO 13) */
+        if (gpio_get_level(GPIO_SOS) == 0) {
+            if (!sos_down) {
+                sos_down = true;
+                sos_press_start = now_ms;
+                sos_triggered = false;
+            } else if (!sos_triggered && (now_ms - sos_press_start >= 3000)) {
+                /* SOS emergency trigger held for 3 seconds */
+                sos_triggered = true;
+                g_fall = true; /* Flag emergency in BLE telemetry */
+                drv2605_play(47); /* Emergency alert vibration */
+                fs_log_error("SOS button emergency alarm triggered");
+                display_wake();
+            }
+        } else {
+            sos_down = false;
+        }
+
+        vTaskDelay(pdMS_TO_TICKS(50));
     }
 }
 
@@ -1043,6 +1164,56 @@ static void factory_test(void) {
     drv2605_play(47); vTaskDelay(pdMS_TO_TICKS(800));
 }
 
+
+/* ─────────────────────────────────────────────────────────────────────── */
+/*  NIMBLE BLE STACK INITIALISATION & ADVERTISING                          */
+/* ─────────────────────────────────────────────────────────────────────── */
+
+static int ble_gap_event(struct ble_gap_event *event, void *arg) {
+    switch (event->type) {
+    case BLE_GAP_EVENT_CONNECT:
+        g_ble_connected = (event->connect.status == 0);
+        break;
+    case BLE_GAP_EVENT_DISCONNECT:
+        g_ble_connected = false;
+        /* Restart advertising on disconnect */
+        struct ble_gap_adv_params adv_params = {
+            .conn_mode = BLE_GAP_CONN_MODE_UND,
+            .disc_mode = BLE_GAP_DISC_MODE_GEN,
+        };
+        ble_gap_adv_start(BLE_OWN_ADDR_PUBLIC, NULL, BLE_HS_FOREVER, &adv_params, ble_gap_event, NULL);
+        break;
+    default:
+        break;
+    }
+    return 0;
+}
+
+static void ble_app_on_sync(void) {
+    char dev_name[32];
+    snprintf(dev_name, sizeof(dev_name), "Veyro-%.4s", &g_serial[strlen(g_serial) >= 4 ? strlen(g_serial)-4 : 0]);
+    ble_svc_gap_device_name_set(dev_name);
+
+    struct ble_gap_adv_params adv_params = {
+        .conn_mode = BLE_GAP_CONN_MODE_UND,
+        .disc_mode = BLE_GAP_DISC_MODE_GEN,
+    };
+    ble_gap_adv_start(BLE_OWN_ADDR_PUBLIC, NULL, BLE_HS_FOREVER, &adv_params, ble_gap_event, NULL);
+}
+
+static void ble_host_task(void *param) {
+    nimble_port_run();
+    nimble_port_freertos_deinit();
+}
+
+static void init_nimble_ble(void) {
+    nimble_port_init();
+    ble_svc_gap_init();
+    ble_svc_gatt_init();
+    ble_hs_cfg.sync_cb = ble_app_on_sync;
+    nimble_port_freertos_init(ble_host_task);
+}
+
 /* ─────────────────────────────────────────────────────────────────────── */
 /*  APP_MAIN                                                                */
 /* ─────────────────────────────────────────────────────────────────────── */
@@ -1100,8 +1271,12 @@ void app_main(void) {
     g_i2c_b_mutex   = xSemaphoreCreateMutex();
     g_storage_mutex = xSemaphoreCreateMutex();
 
+        /* Initialize NimBLE stack */
+    init_nimble_ble();
+
     /* Start all tasks */
     xTaskCreatePinnedToCore(task_sensors,   "sensors",   8192,  NULL, 5, NULL, 0);
+    xTaskCreatePinnedToCore(task_buttons,   "buttons",   4096,  NULL, 5, NULL, 1);
     xTaskCreatePinnedToCore(task_ble,       "ble",       16384, NULL, 4, NULL, 0);
     xTaskCreatePinnedToCore(task_storage,   "storage",   8192,  NULL, 3, NULL, 0);
     xTaskCreatePinnedToCore(task_display,   "display",   24576, NULL, 5, NULL, 1);
