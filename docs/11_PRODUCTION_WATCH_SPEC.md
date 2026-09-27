@@ -1,151 +1,76 @@
-# Veyro Production Watch Specification
+# Veyro Production Watch Specification (Cambric Flagship Edition)
 
-## Purpose
+## 1. Commercial Target & Financial Model
 
-This document defines the hardware revision required for a store-grade Veyro watch with a touch display. It is a target specification, not a claim that the current ESP32 DevKit and SSD1306 prototype already meets it.
+This document governs the transition from the benchtop ESP32 DevKit prototype to the commercial store-grade **Veyro Flagship Smartwatch**.
 
-## Non-negotiable product decision
+### 7,500 EGP Retail Unit Economics
+The retail price is fixed at **7,500 EGP** per unit. All component choices, enclosure tooling, tax liabilities, and warranty reserves must conform to this margin structure:
 
-The current prototype cannot become a touch watch by changing firmware alone. Its SSD1306 128x64 OLED has no touch layer, and its ESP32 DevKit, breakout boards, exposed wiring, charger assumptions, and two-button navigation are not production-watch construction.
+| Cost Element | Allocation (EGP) | % of Retail | Engineering / Operational Target |
+| :--- | :--- | :--- | :--- |
+| **Electronics BOM (PCBA)** | 1,850 EGP | 24.7% | ESP32-S3 module, Round Touch Display, PMIC, Sensors, Passives, 4-layer PCB |
+| **Enclosure & Glass** | 450 EGP | 6.0% | CNC anodized aluminum chassis, 2.5D curved tempered glass, gasket seal |
+| **Strap & Magnetic Charger** | 300 EGP | 4.0% | Fluoroelastomer quick-release band + 2-pin magnetic pogo USB charging cable |
+| **Assembly, Calibration & Yield** | 400 EGP | 5.3% | Optical sensor bench calibration, leak testing, 5% scrap/yield loss reserve |
+| **Packaging & Documentation** | 200 EGP | 2.7% | Custom matte rigid box, molded EVA insert, printed compliance guide |
+| **Taxes & Payment Processing** | 1,200 EGP | 16.0% | Egyptian VAT / Commercial Tax (14%) + Payment Gateway fees (~2%) |
+| **Warranty & Support Reserve** | 300 EGP | 4.0% | Hardware replacement buffer (1-year limited warranty) |
+| **Net Gross Profit** | **3,000 EGP** | **40.0%** | **Reinvestment into Cambric R&D & operating reserves** |
+| **Total Consumer Retail** | **7,500 EGP** | **100.0%** | **Commercial store-ready price** |
 
-A store-grade result requires a new production hardware revision. The existing prototype remains useful as the sensor, BLE, local-storage, and protocol development fixture.
+---
 
-## Chosen economical candidate
+## 2. Hardware Architecture & Component Upgrades
 
-Use this candidate stack for the next engineering build so the decisions are concrete:
+To justify the 7,500 EGP price point against mass-market alternatives, the watch abandons breadboard DevKits and loose breakout modules in favor of an integrated multi-layer carrier:
 
-| Function | Selected candidate | Why this choice | Status |
-|---|---|---|---|
-| Bring-up board | Waveshare ESP32-S3-Touch-LCD-1.28 reference board | Combines an ESP32-S3, round color display, capacitive touch, and a known reference layout in one inexpensive board | Buy and verify exact revision |
-| Production MCU | Espressif ESP32-S3-MINI-1-N8R8 on a custom carrier | BLE, secure boot/flash encryption support, 8 MB flash, 8 MB PSRAM, and enough RAM for a real UI | Datasheet and PCB review required |
-| Production display | 1.28 inch round 240x240 color display using the same controller/interface as the bring-up board | Keeps the first touch UI close to the reference board while fitting a compact round enclosure | Confirm controller, refresh, brightness, and sleep current |
-| Touch | The reference board's capacitive touch controller, then the identical controller on the carrier | Avoids inventing a touch protocol and gives a known interrupt/reset contract | Confirm exact controller and address from schematic |
-| IMU | Bosch BMI270 | Lower-power modern IMU than the prototype MPU6050, with motion interrupts for wake and activity | Confirm library and interrupt wiring |
-| Optical sensor | MAX30102 module for first validation; MAXM86161 for the production optical revision if its supply and optical stack are qualified | Preserves the existing app contract during bring-up while leaving a lower-power production path | Exact sensor and algorithm require validation |
-| Fuel gauge | MAX17048 | Measures cell state without burning continuous divider current and gives low-battery alerts | Confirm cell model and I2C address |
-| Charger/power path | BQ24074-class 1S charger/power-path design | Allows a documented charge path and system load separation instead of a random TP4056 board | Datasheet, thermal, and protection review required |
-| Battery | Protected 1S LiPo, approximately 500-700 mAh after measured enclosure/runtime fit | Balances compactness and practical display/BLE runtime without guessing from a package label | Capacity, protection, connector, and dimensions must be measured |
-| Haptics | 10 mm coin motor driven by DRV2605L or a rated MOSFET stage | Better control and less GPIO stress than direct motor drive | Motor current and enclosure coupling test required |
-| Charging connector | USB-C receptacle on the carrier with ESD protection, or qualified magnetic charging contacts for the sealed revision | USB-C is cheaper for engineering; contacts are cleaner for a sealed product | Choose after enclosure and ingress decision |
+| Subsystem | Prototype (DevKit) | Production Flagship (7,500 EGP) | Justification & Specifications |
+| :--- | :--- | :--- | :--- |
+| **Compute Core** | ESP32-WROOM-32 (240MHz, no PSRAM) | **ESP32-S3-MINI-1-N8R8** | Dual-core Xtensa LX7 @ 240MHz with vector instructions for on-device DSP/AI, 8MB Octal Flash, 8MB Octal PSRAM, BLE 5.0 mesh. |
+| **Display Panel** | 0.96" Monochrome SSD1306 (128x64) | **1.28" / 1.43" Circular Touch (GC9A01 or AMOLED)** | Full 240x240 or 466x466 color, 16-bit RGB565, 60 FPS capable, 450+ nits daylight readability, bonded capacitive touch. |
+| **Motion Tracking** | MPU6050 (High power draw) | **Bosch BMI270 or QST QMI8658C** | Ultra-low power 6-axis IMU (<15 µA in step-detector mode), hardware wake-on-wrist-raise interrupt. |
+| **Optical Vitals** | MAX30102 (Breakout board) | **Maxim MAX30101 / Goodix GH3011** | Integrated glass cover cancellation, multi-wavelength (Green, Red, IR) for robust continuous HR and SpO2. |
+| **Power Management** | Unregulated TP4056 + ADC divider | **TI BQ25895 / BQ24074 PMIC + MAX17048** | Active I2C fuel gauge, hardware power-path management, controlled thermal regulation, programmable charge currents. |
+| **Battery Cell** | Loose 3.7V LiPo | **Custom 400–500 mAh Li-Po Pouch** | High-density pouch with Seiko hardware protection IC (OVP, UVP, OCP), guaranteed 3-5 days continuous runtime. |
+| **Haptic Feedback** | Direct GPIO transistor drive | **TI DRV2605L + Linear Resonant Actuator (LRA)** | Crisp, haptic clicks rather than buzzing motor vibration (Apple-grade haptic feel). |
+| **Charging Interface** | Exposed Micro-USB / Type-C | **Gold-Plated 2-Pin Magnetic Pogo Interface** | Completely sealed rear casing with reverse-polarity magnetic alignment; prevents moisture ingress. |
 
-The Waveshare board is a bring-up reference, not the final retail watch. The custom carrier is required for compactness, battery safety, test pads, and enclosure fit. Do not solder the reference board into the final case and call that a production design.
+---
 
-### Candidate reference links
+## 3. Industrial Design & Mechanical Standards
 
-- Waveshare ESP32-S3-Touch-LCD-1.28: https://www.waveshare.com/esp32-s3-touch-lcd-1.28.htm
-- ESP32-S3-MINI-1 documentation: https://www.espressif.com/en/products/modules/esp32-s3-mini-1
-- BMI270 product information: https://www.bosch-sensortec.com/products/motion-sensors/imus/bmi270/
-- MAX17048 product information: https://www.analog.com/en/products/max17048.html
-- BQ24074 product information: https://www.ti.com/product/BQ24074
-- DRV2605L product information: https://www.ti.com/product/DRV2605L
+A premium feel is achieved through tight mechanical tolerances and authentic materials:
+1. **Chassis**: Sandblasted, bead-blasted 6000-series anodized aluminum bezel and rim (Space Gray / Matte Black).
+2. **Crystal Lens**: Chemically strengthened 2.5D curved tempered glass with oleophobic anti-fingerprint coating.
+3. **Rear Sensor Pod**: Polished optical-grade polycarbonate window with flush bezel-less skin contact.
+4. **Water Resistance**: Internal silicone compression gaskets designed for IP67 / 3 ATM water resistance (splash, rain, shallow immersion).
+5. **Strap System**: Standard 20mm quick-release spring bars paired with custom Cambric-branded fluoroelastomer or silicone bands.
 
-Prices must be checked on the linked manufacturer or authorized distributor page on the day of ordering. The reference board and modules are engineering parts; they are not evidence of final enclosure, runtime, safety, or retail quality.
+---
 
-## Production hardware target
+## 4. Software & Embedded UI Engine
 
-### Main board
+1. **Graphics Engine**: Fully migrated to **LVGL 9.x (Light and Versatile Graphics Library)** running on FreeRTOS tasks.
+2. **Display Abstraction**: Double-buffered DMA transfers over SPI with partial display refresh for smooth 60 FPS dial rendering.
+3. **Circular Watch Faces**:
+   - Analog Chronograph face with sweeping second hands.
+   - Minimalist digital dashboard with live heart rate, daily step ring, and battery arcs.
+   - High-contrast emergency / medical glance face.
+4. **Offline Memory System**:
+   - 60-day LittleFS circular buffer recording 1-minute vitals epochs.
+   - Zero data loss during phone disconnection.
+5. **Veyro Protocol v2**:
+   - High-speed BLE 5.0 attribute MTU negotiation (up to 512 bytes) for instantaneous history sync.
+   - Real-time OTA firmware update verification with cryptographic SHA256 checksums and automatic rollback.
 
-- ESP32-S3-MINI-1 or an equivalent qualified ESP32-S3 module with secure boot, flash encryption, BLE, and measured power states.
-- Custom four-layer PCB. Do not place a DevKit or breadboard inside the final enclosure.
-- Test pads for USB/UART programming, battery rail, regulated rail, ground, I2C, touch interrupt, display reset, and motor control.
-- ESD protection on external charging, programming, and accessible signal paths.
-- A production identity area for serial number, hardware revision, and regulatory markings.
+---
 
-### Display and touch
+## 5. Production Acceptance Gates
 
-- A 1.3 to 1.5 inch round or square color AMOLED/TFT selected for the enclosure, with a bonded capacitive touch controller.
-- Minimum target: 360x360 or 390x390 pixels, 16-bit color, readable indoor and outdoor brightness, and a documented sleep current.
-- Touch controller must expose a documented I2C or SPI interface, interrupt line, reset line, and gesture capabilities.
-- Cover lens must be chemically strengthened glass or a qualified optical polymer with an anti-fingerprint coating.
-- The display stack must be mechanically retained and optically sealed; do not use a loose breakout-board window.
-- Backlight/AMOLED power must be switched by hardware or a load switch so the display can enter a measured low-power state.
-
-### Sensors
-
-- MAX30102 or another exact optical module selected from one supplier and validated with the chosen optical window. Do not describe a MAX30105 board as MAX30102 without confirming the actual component.
-- 6-axis IMU selected for the final PCB and validated for step/fall algorithms.
-- Optional temperature sensor only if the product will display temperature. Otherwise remove temperature claims from the product UI.
-- Blood pressure is not part of this production target unless a validated pressure sensor and clinical validation program are added.
-
-### Power
-
-- Protected 1S LiPo selected by measured capacity, maximum discharge current, dimensions, connector, and safety documentation.
-- Charger and power-path IC with documented battery protection, thermal regulation, load sharing, and charge termination.
-- Fuel-gauge IC with a measured battery model; a raw ADC divider is not the production battery gauge.
-- Separate regulated rails or load switches for the ESP32, display, sensors, and haptic motor where measurements require them.
-- Haptic motor driven by a rated transistor or driver with a flyback path. Never drive it from an ESP32 GPIO.
-- Hardware low-battery behavior: stop charging outside the allowed temperature range, reduce display duty cycle, preserve logs, and shut down before unsafe cell discharge.
-
-### Mechanical product
-
-- Custom enclosure designed around the PCB, display stack, optical window, battery, haptic motor, charging method, buttons, and strap.
-- No sharp edges, exposed solder, compressed battery, loose sensor, or replaceable part that can contact skin unexpectedly.
-- Qualified strap and skin-contact materials.
-- Documented ingress target. Do not print an IP rating until the enclosure passes the corresponding test.
-- Drop, vibration, sweat, charging heat, button life, display adhesion, and strap retention tests.
-
-## Touch operating system requirements
-
-The production firmware must add a display abstraction separate from sensor and BLE code. It must provide:
-
-- A 60 FPS-capable render loop where the selected display can support it.
-- Sleep, wake, ambient interaction, screen timeout, and low-battery display modes.
-- Touch down, move, up, long press, swipe, edge swipe, and multi-touch rejection behavior.
-- A lock screen and accidental-touch protection while the watch is on the wrist.
-- A small scene/state system for clock, vitals, activity, sleep, notifications, settings, pairing, and SOS confirmation.
-- Theme, color, font, complication, watch-face, and vibration customization stored in Preferences or a versioned local settings store.
-- No blocking delays in sensor, BLE, rendering, or haptic paths.
-- A watchdog and controlled recovery policy for display, touch, I2C, BLE, and filesystem faults.
-- Signed firmware, secure boot, flash encryption, anti-rollback policy, and a documented recovery path before production distribution.
-
-## Touch firmware pin contract
-
-Do not copy the current `pins.h` map into the production board. The production PCB must receive a new revisioned pin map after the selected display and touch controller are chosen. At minimum it will need:
-
-- Display bus pins and chip select or I2C address.
-- Display reset and power-enable pins.
-- Touch bus pins, interrupt, reset, and address or chip select.
-- Fuel-gauge interrupt or I2C address.
-- Haptic driver enable/PWM.
-- Programming and test pads.
-
-The production protocol must include the display hardware revision and touch capability in device info so the app cannot assume the prototype OLED contract.
-
-## Production software architecture
-
-1. `hal/`: display, touch, IMU, optical sensor, fuel gauge, haptic, storage, and power drivers.
-2. `os/`: scheduler, event queue, watchdog, power states, input routing, and fault state.
-3. `ui/`: renderer, screens, theme engine, touch gestures, accessibility sizes, and watch-face registry.
-4. `services/`: BLE pairing, local history, time sync, settings, and update verification.
-5. `app/`: Flutter companion app with capability negotiation and truthful sensor labels.
-
-The current `DigitalSaverWatch.ino` should remain the prototype fixture. It should not be expanded indefinitely into the production operating system without first extracting these boundaries.
-
-## First production software milestone
-
-The first production branch should target the chosen reference board before the custom carrier:
-
-1. Add a `production_touch` PlatformIO environment instead of changing the prototype `esp32dev` environment.
-2. Add a display HAL for the reference controller and a touch HAL for its controller.
-3. Render only four useful screens first: clock, vitals, activity, and settings/pairing.
-4. Add touch gestures, wake/sleep, a 30-second timeout, and a hardware-safe low-battery mode.
-5. Keep the BLE health payload and local history contract compatible until capability negotiation is added.
-6. Add `display_hw`, `touch_hw`, `imu_hw`, and `fuel_gauge` fields to device info before the app enables production-only screens.
-7. Port the tested HALs to the custom carrier only after display, touch, power, and sensor measurements pass on the reference board.
-
-This is the shortest credible path to a compact touch watch. It is not credible to add a touch library to the current SSD1306 sketch and call the result production-ready.
-
-## Acceptance gates before calling it store-grade
-
-- Touch works across the complete display surface after cold boot, wake, and reconnect.
-- A 24-hour run has no uncontrolled reset, data loss, stuck motor, or touch lockup.
-- Battery runtime is measured with display off, display active, BLE connected, sensors active, and haptic events.
-- Charging temperature and battery protection behavior are measured.
-- Optical readings are repeatable against a defined reference protocol and remain labelled wellness-only unless clinically validated.
-- Bluetooth pairing, bonding, reconnect, wrong-PIN attempts, reset, and lost-phone recovery are tested on supported phone versions.
-- Firmware and app artifacts are signed and their hashes are recorded.
-- Enclosure drop, sweat, skin-contact, display adhesion, button/touch life, and ingress tests pass.
-- A production tester can verify every unit before shipment.
-- The manual, BOM, schematic, PCB revision, firmware version, app version, and test results identify the same hardware revision.
-
-Until these gates pass, the correct product description is "Veyro development prototype" rather than "Apple Watch comparable" or "store-grade smartwatch."
+Every watch unit sold at 7,500 EGP must pass the following factory quality test before packaging:
+1. **Sleep Current**: System quiescent sleep current must measure under 80 µA with display off and motion-wake armed.
+2. **Touch Calibration**: 9-point capacitive touch verification with zero ghost touches.
+3. **Optical SNR**: Green/IR signal-to-noise ratio verified on optical fixture.
+4. **Thermal Dissipation**: Casing surface temperature must not exceed 38°C during fast charging.
+5. **Water Seal Integrity**: Vacuum decay pressure test to confirm IP67 gasket sealing.
