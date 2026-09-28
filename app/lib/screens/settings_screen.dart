@@ -300,7 +300,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ListTile(
                   contentPadding: EdgeInsets.zero,
                   title: const Text('Digital Saver Suite', style: TextStyle(fontWeight: FontWeight.bold)),
-                  subtitle: Text(isArabic ? 'الإصدار 1.0.2 • صنع بواسطة كمبريك (مصر)' : 'Version 1.0.2 • Built by Cambric (Egypt)'),
+                  subtitle: Text(isArabic ? 'الإصدار 1.0.3 • صنع بواسطة كمبريك (مصر)' : 'Version 1.0.3 • Built by Cambric (Egypt)'),
                   trailing: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
