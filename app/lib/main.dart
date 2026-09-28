@@ -11,13 +11,10 @@ import 'services/heart_rate_tracker.dart';
 import 'theme/app_theme.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/vitals_screen.dart';
-import 'screens/activity_screen.dart';
-import 'screens/sleep_screen.dart';
-import 'screens/settings_screen.dart';
-import 'screens/web_landing_page.dart';
-import 'screens/insights_screen.dart';
 import 'screens/ai_assistant_screen.dart';
 import 'screens/memory_screen.dart';
+import 'screens/settings_screen.dart';
+import 'screens/web_landing_page.dart';
 import 'widgets/enhanced_splash.dart';
 
 void main() async {
@@ -126,7 +123,6 @@ class _UpdateWrapperState extends State<_UpdateWrapper> {
   @override
   void didUpdateWidget(_UpdateWrapper oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // If silent install failed, show manual prompt once.
     if (!_manualPromptShown && widget.updateService.needsManualInstall) {
       _manualPromptShown = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -145,14 +141,18 @@ class _UpdateWrapperState extends State<_UpdateWrapper> {
           const SizedBox(width: 8),
           const Text('Update Ready'),
         ]),
-        content: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('Version ${widget.updateService.latestUpdate?.version ?? ""} is available.'),
-          const SizedBox(height: 10),
-          const Text(
-            'Automatic install is not available on your device. Tap Download to get the latest APK and install it manually.',
-            style: TextStyle(fontSize: 13),
-          ),
-        ]),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Version ${widget.updateService.latestUpdate?.version ?? ""} is available.'),
+            const SizedBox(height: 10),
+            const Text(
+              'Automatic install is not available on your device. Tap Download to get the latest APK and install it manually.',
+              style: TextStyle(fontSize: 13),
+            ),
+          ],
+        ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Later')),
           ElevatedButton.icon(
@@ -178,19 +178,26 @@ class _UpdateWrapperState extends State<_UpdateWrapper> {
           const SizedBox(width: 8),
           const Text('Update Available!'),
         ]),
-        content: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('Version ${widget.updateService.latestUpdate?.version ?? "3.1.7"} is now available!'),
-          const SizedBox(height: 12),
-          if (widget.updateService.latestUpdate?.releaseNotes != null)
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Theme.of(ctx).colorScheme.surfaceContainerHighest,
-                borderRadius: BorderRadius.circular(12),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Version ${widget.updateService.latestUpdate?.version ?? ""} is now available!'),
+            const SizedBox(height: 12),
+            if (widget.updateService.latestUpdate?.releaseNotes != null)
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Theme.of(ctx).colorScheme.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  widget.updateService.latestUpdate?.releaseNotes ?? '',
+                  style: Theme.of(ctx).textTheme.bodySmall,
+                ),
               ),
-              child: Text(widget.updateService.latestUpdate?.releaseNotes ?? '', style: Theme.of(ctx).textTheme.bodySmall),
-            ),
-        ]),
+          ],
+        ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Later')),
           ElevatedButton.icon(
@@ -219,7 +226,6 @@ class _UpdateWrapperState extends State<_UpdateWrapper> {
   }
 }
 
-
 class MainNav extends StatefulWidget {
   const MainNav({super.key});
 
@@ -230,32 +236,42 @@ class MainNav extends StatefulWidget {
 class _MainNavState extends State<MainNav> {
   int _currentIndex = 0;
 
+  // Streamlined 5 tabs for clean mobile navigation (Insights removed, subtabs used inside screens)
   static const _screens = [
     DashboardScreen(),
     VitalsScreen(),
-    ActivityScreen(),
-    SleepScreen(),
-    InsightsScreen(),
     AIAssistantScreen(),
     MemoryScreen(),
     SettingsScreen(),
   ];
 
   static const _destinations = [
-    NavigationDestination(icon: Icon(Icons.dashboard_outlined), selectedIcon: Icon(Icons.dashboard), label: 'Home'),
-    NavigationDestination(icon: Icon(Icons.monitor_heart_outlined), selectedIcon: Icon(Icons.monitor_heart), label: 'Vitals'),
-    NavigationDestination(icon: Icon(Icons.directions_run_outlined), label: 'Activity'),
-    NavigationDestination(icon: Icon(Icons.bedtime_outlined), selectedIcon: Icon(Icons.bedtime), label: 'Sleep'),
-    NavigationDestination(icon: Icon(Icons.insights_outlined), selectedIcon: Icon(Icons.insights), label: 'Insights'),
-    NavigationDestination(icon: Icon(Icons.auto_awesome_outlined), selectedIcon: Icon(Icons.auto_awesome), label: 'Assistant'),
-    NavigationDestination(icon: Icon(Icons.watch_outlined), selectedIcon: Icon(Icons.watch), label: 'Watch'),
-    NavigationDestination(icon: Icon(Icons.settings_outlined), label: 'Settings'),
+    NavigationDestination(
+      icon: Icon(Icons.dashboard_outlined),
+      selectedIcon: Icon(Icons.dashboard),
+      label: 'Home',
+    ),
+    NavigationDestination(
+      icon: Icon(Icons.monitor_heart_outlined),
+      selectedIcon: Icon(Icons.monitor_heart),
+      label: 'Vitals',
+    ),
+    NavigationDestination(
+      icon: Icon(Icons.auto_awesome_outlined),
+      selectedIcon: Icon(Icons.auto_awesome),
+      label: 'AI Coach',
+    ),
+    NavigationDestination(
+      icon: Icon(Icons.watch_outlined),
+      selectedIcon: Icon(Icons.watch),
+      label: 'Watch',
+    ),
+    NavigationDestination(
+      icon: Icon(Icons.settings_outlined),
+      selectedIcon: Icon(Icons.settings),
+      label: 'Settings',
+    ),
   ];
-
-  @override
-  void initState() {
-    super.initState();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -270,22 +286,25 @@ class _MainNavState extends State<MainNav> {
               selectedIndex: _currentIndex,
               onDestinationSelected: (i) => setState(() => _currentIndex = i),
               labelType: NavigationRailLabelType.all,
-              minWidth: 78,
+              minWidth: 80,
               backgroundColor: AppColors.surface,
               leading: Padding(
-                padding: const EdgeInsets.only(top: 18, bottom: 22),
+                padding: const EdgeInsets.only(top: 20, bottom: 24),
                 child: Container(
-                  width: 42,
-                  height: 42,
-                  decoration: BoxDecoration(gradient: AppColors.gradientPrimary, borderRadius: BorderRadius.circular(13)),
-                  child: const Icon(Icons.favorite, color: Colors.white, size: 21),
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    gradient: AppColors.gradientPrimary,
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: const Icon(Icons.favorite, color: Colors.white, size: 22),
                 ),
               ),
               destinations: _destinations
-                  .map((destination) => NavigationRailDestination(
-                        icon: destination.icon,
-                        selectedIcon: destination.selectedIcon,
-                        label: Text(destination.label),
+                  .map((d) => NavigationRailDestination(
+                        icon: d.icon,
+                        selectedIcon: d.selectedIcon,
+                        label: Text(d.label),
                       ))
                   .toList(),
             ),
@@ -293,54 +312,68 @@ class _MainNavState extends State<MainNav> {
             child: Stack(
               children: [
                 IndexedStack(index: _currentIndex, children: _screens),
-          if (ble.state == BleState.scanning)
-            Positioned(
-              top: 0, left: 0, right: 0,
-              child: SafeArea(
-                child: Container(
-                  margin: const EdgeInsets.all(16),
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                  decoration: BoxDecoration(
-                    color: AppColors.primaryDark,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Row(
-                    children: [
-                      SizedBox(
-                        width: 16, height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                if (ble.state == BleState.scanning)
+                  Positioned(
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    child: SafeArea(
+                      child: Container(
+                        margin: const EdgeInsets.all(16),
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: AppColors.primaryDark,
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 8)],
+                        ),
+                        child: const Row(
+                          children: [
+                            SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                            ),
+                            SizedBox(width: 12),
+                            Text(
+                              'Scanning for Veyro smartwatch...',
+                              style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w500),
+                            ),
+                          ],
+                        ),
                       ),
-                      SizedBox(width: 10),
-                      Text('Scanning for Digital Saver watch...', style: TextStyle(color: Colors.white, fontSize: 13)),
-                    ],
+                    ),
                   ),
-                ),
-              ),
-            ),
-          if (ble.state == BleState.connecting)
-            Positioned(
-              top: 0, left: 0, right: 0,
-              child: SafeArea(
-                child: Container(
-                  margin: const EdgeInsets.all(16),
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                  decoration: BoxDecoration(
-                    color: AppColors.primaryDark,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Row(
-                    children: [
-                      SizedBox(
-                        width: 16, height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                if (ble.state == BleState.connecting)
+                  Positioned(
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    child: SafeArea(
+                      child: Container(
+                        margin: const EdgeInsets.all(16),
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: AppColors.primaryDark,
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 8)],
+                        ),
+                        child: const Row(
+                          children: [
+                            SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                            ),
+                            SizedBox(width: 12),
+                            Text(
+                              'Pairing with Veyro...',
+                              style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w500),
+                            ),
+                          ],
+                        ),
                       ),
-                      SizedBox(width: 10),
-                      Text('Connecting...', style: TextStyle(color: Colors.white, fontSize: 13)),
-                    ],
+                    ),
                   ),
-                ),
-              ),
-            ),
               ],
             ),
           ),
@@ -352,7 +385,8 @@ class _MainNavState extends State<MainNav> {
               selectedIndex: _currentIndex,
               onDestinationSelected: (i) => setState(() => _currentIndex = i),
               backgroundColor: AppColors.surface,
-              elevation: 0,
+              elevation: 4,
+              height: 68,
               destinations: _destinations,
               labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
             ),
