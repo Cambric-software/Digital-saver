@@ -1,3 +1,4 @@
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../services/health_analysis_service.dart';
@@ -15,6 +16,7 @@ class _SleepScreenState extends State<SleepScreen> {
   SleepData? _realSleep;
   bool _hasRealData = false;
   bool _loading = true;
+  bool _demoEnabled = true;
 
   @override
   void initState() {
@@ -23,6 +25,8 @@ class _SleepScreenState extends State<SleepScreen> {
   }
 
   Future<void> _loadSleepFromHistory() async {
+    final prefs = await SharedPreferences.getInstance();
+    _demoEnabled = prefs.getBool('demo_mode') ?? true;
     final samples = await LocalStore.loadAll();
     if (!mounted) return;
 
