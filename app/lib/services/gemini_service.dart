@@ -2,25 +2,31 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
-/// Configuration for the Gemini API key.
-/// Set your key in the environment variable GEMINI_API_KEY
-/// or override [GeminiConfig.apiKey] before first use.
+/// Configuration for the Gemini AI service.
+/// Uses the secure Cambric Cloudflare Worker relay by default so no keys
+/// leak in client binaries, with optional direct API key override.
 class GeminiConfig {
-  /// Replace this with your actual key from https://aistudio.google.com/
-  /// or inject it at runtime:  GeminiConfig.apiKey = const String.fromEnvironment('GEMINI_API_KEY');
+  /// Production Cloudflare Worker relay hosted by Cambric
+  static String proxyUrl = 'https://digital-saver-ai.asser-k-dev.workers.dev';
+
+  /// Optional direct key for testing or developer overrides
   static String apiKey = const String.fromEnvironment(
     'GEMINI_API_KEY',
     defaultValue: '',
   );
 
-  static const String primaryModel = 'gemini-2.0-flash';
-  static const String fallbackModel = 'gemini-1.5-flash';
-  static const String legacyModel = 'gemini-1.5-flash-latest';
+  static const String primaryModel = 'gemini-3.8-flash';
+  static const String fallbackModel = 'gemini-2.5-flash';
+  static const String legacyModel = 'gemini-1.5-flash';
   static const String _baseUrl =
       'https://generativelanguage.googleapis.com/v1beta/models';
 
-  static Uri endpointFor(String modelName) =>
-      Uri.parse('$_baseUrl/$modelName:generateContent?key=$apiKey');
+  static Uri endpointFor(String modelName) {
+    if (apiKey.isNotEmpty) {
+      return Uri.parse('$_baseUrl/$modelName:generateContent?key=$apiKey');
+    }
+    return Uri.parse(proxyUrl);
+  }
 
   static Uri get endpoint => endpointFor(primaryModel);
 }
@@ -32,14 +38,14 @@ class ChatTurn {
   const ChatTurn({required this.role, required this.text});
 }
 
-/// Low-level Gemini REST client.  Used only by [DigitalSaverAI].
+/// Low-level Gemini REST client. Used only by [DigitalSaverAI].
 class GeminiService {
   // Keep a rolling window so Gemini has conversation memory.
   final List<ChatTurn> _history = [];
 
   static const int _maxHistoryTurns = 20;
 
-  /// The large system prompt that gives Gemini its identity, medical knowledge,
+  /// The system prompt that gives Gemini its identity, medical knowledge,
   /// Veyro-specific knowledge, and troubleshooting context.
   static const String systemPrompt = '''
 You are Digital Saver AI — a smart, friendly, and deeply knowledgeable health assistant built into the Digital Saver app by Cambric, created by a young Egyptian developer.
@@ -142,11 +148,14 @@ RULES
 
   /// Send a message and get a response. Returns null on error (caller handles).
   Future<String?> send(String userMessage, {Map<String, dynamic>? userContext}) async {
-    if (GeminiConfig.apiKey.isEmpty) {
+    final hasKey = GeminiConfig.apiKey.isNotEmpty;
+    final hasProxy = GeminiConfig.proxyUrl.isNotEmpty;
+
+    if (!hasKey && !hasProxy) {
       return _noKeyFallback(userMessage);
     }
 
-    // Build the context prefix if health data is supplied.
+    // Build context prefix if health data is supplied.
     String contextPrefix = '';
     if (userContext != null) {
       contextPrefix = _buildContextPrefix(userContext);
@@ -187,30 +196,48 @@ RULES
     });
 
     try {
-      final candidateModels = [
-        GeminiConfig.primaryModel,
-        GeminiConfig.fallbackModel,
-        GeminiConfig.legacyModel,
-      ];
       http.Response? response;
-      for (final candidate in candidateModels) {
+
+      if (!hasKey && hasProxy) {
+        // Send via Cambric Cloudflare Worker relay
         try {
-          final res = await http
+          response = await http
               .post(
-                GeminiConfig.endpointFor(candidate),
+                Uri.parse(GeminiConfig.proxyUrl),
                 headers: {'Content-Type': 'application/json'},
                 body: body,
               )
               .timeout(const Duration(seconds: 15));
-          if (res.statusCode != 404) {
-            response = res;
-            break;
-          }
-          debugPrint('Gemini model $candidate returned 404, falling back...');
         } catch (e) {
-          debugPrint('Gemini attempt failed for $candidate: $e');
+          debugPrint('Relay request failed: $e');
+        }
+      } else {
+        // Direct key fallback / candidate cycle
+        final candidateModels = [
+          GeminiConfig.primaryModel,
+          GeminiConfig.fallbackModel,
+          GeminiConfig.legacyModel,
+        ];
+        for (final candidate in candidateModels) {
+          try {
+            final res = await http
+                .post(
+                  GeminiConfig.endpointFor(candidate),
+                  headers: {'Content-Type': 'application/json'},
+                  body: body,
+                )
+                .timeout(const Duration(seconds: 15));
+            if (res.statusCode != 404) {
+              response = res;
+              break;
+            }
+            debugPrint('Gemini model $candidate returned 404, falling back...');
+          } catch (e) {
+            debugPrint('Gemini attempt failed for $candidate: $e');
+          }
         }
       }
+
       if (response == null) {
         return _noKeyFallback(userMessage);
       }
@@ -225,7 +252,7 @@ RULES
         return 'I received a response but could not read it. Please try again.';
       } else if (response.statusCode == 400) {
         debugPrint('Gemini 400: ${response.body}');
-        return 'There was a problem with the request. Check your API key or message format.';
+        return 'There was a problem with the request format. Please try again.';
       } else if (response.statusCode == 429) {
         return 'Too many requests. Please wait a moment and try again.';
       } else {
@@ -289,15 +316,9 @@ RULES
     return parts.join('\n');
   }
 
-  /// Fallback when no API key is configured — gives a helpful message.
+  /// Fallback when no service is configured.
   String _noKeyFallback(String question) {
-    return '''⚠️ Gemini API key not configured.
-
-To enable AI responses:
-1. Get a free key from https://aistudio.google.com/
-2. Add it to your app with:
-   flutter run --dart-define=GEMINI_API_KEY=your_key_here
-   or set GeminiConfig.apiKey in code.
+    return '''⚠️ Digital Saver AI service unavailable.
 
 Your question was: "$question"
 
@@ -321,6 +342,6 @@ In the meantime I can tell you: ${_localFallback(question)}''';
     if (lower.contains('step') || lower.contains('walk')) {
       return '10,000 steps/day is a common wellness target (~8 km).';
     }
-    return 'Please configure your Gemini API key for full AI responses.';
+    return 'Digital Saver AI is offline. Check your internet connection or proxy status.';
   }
 }
