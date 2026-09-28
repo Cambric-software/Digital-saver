@@ -177,9 +177,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   contentPadding: EdgeInsets.zero,
                   title: Text(isArabic ? 'الوضع الليلي (Dark Mode)' : 'Dark Theme Mode'),
                   subtitle: Text(isArabic ? 'تفعيل الوضع الداكن الموفر للطاقة' : 'Reduce eye strain and conserve battery'),
-                  value: themeService.themeMode == ThemeMode.dark,
+                  value: themeService.themeModeType == AppThemeMode.dark,
                   onChanged: (dark) {
-                    themeService.setThemeMode(dark ? ThemeMode.dark : ThemeMode.light);
+                    themeService.setTheme(dark ? AppThemeMode.dark : AppThemeMode.light);
                   },
                 ),
               ],
