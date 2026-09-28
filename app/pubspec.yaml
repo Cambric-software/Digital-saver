@@ -28,7 +28,6 @@ dependencies:
   flutter_local_notifications: ^18.0.1
   flutter_secure_storage: ^9.2.4
   # Gemini SDK — used by GeminiService for on-device AI.
-  # You can also call the REST API directly (GeminiService does this via http).
   google_generative_ai: ^0.4.6
 
 # Override app_links to use a compatible version
@@ -39,6 +38,26 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^3.0.1
+  flutter_launcher_icons: ^0.13.1
+
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true
+  image_path: "assets/digital-saver-icon-transparent.png"
+  min_sdk_android: 21
+  web:
+    generate: true
+    image_path: "assets/digital-saver-icon-transparent.png"
+  windows:
+    generate: true
+    image_path: "assets/digital-saver-icon-transparent.png"
+    icon_size: 256
+  macos:
+    generate: true
+    image_path: "assets/digital-saver-icon-transparent.png"
+  linux:
+    generate: true
+    image_path: "assets/digital-saver-icon-transparent.png"
 
 flutter:
   uses-material-design: true
