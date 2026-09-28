@@ -257,6 +257,9 @@ RULES
         return 'Too many requests. Please wait a moment and try again.';
       } else {
         debugPrint('Gemini error ${response.statusCode}: ${response.body}');
+        if (response.statusCode == 503) {
+          return 'Google AI servers are currently experiencing high demand. Please try asking again in a few moments.';
+        }
         return 'Sorry, I could not reach the AI service right now (${response.statusCode}).';
       }
     } catch (e) {
