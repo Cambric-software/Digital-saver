@@ -133,14 +133,54 @@ class _SleepScreenState extends State<SleepScreen> {
       );
     }
 
+    // Strict guard: if no real data from watch AND demo mode is disabled in settings, show empty state.
+    if (!_hasRealData && !_demoEnabled) {
+      return Scaffold(
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        appBar: AppBar(
+          title: const Text('Sleep & HRV', style: TextStyle(fontWeight: FontWeight.bold)),
+          backgroundColor: Theme.of(context).colorScheme.surface,
+          elevation: 0,
+        ),
+        body: RefreshIndicator(
+          onRefresh: _loadSleepFromHistory,
+          child: ListView(
+            padding: const EdgeInsets.all(24),
+            children: [
+              const SizedBox(height: 60),
+              Icon(Icons.bedtime_outlined, size: 72, color: Theme.of(context).colorScheme.primary.withOpacity(0.4)),
+              const SizedBox(height: 20),
+              Center(
+                child: Text(
+                  'No Sleep or HRV Records',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                ),
+              ),
+              const SizedBox(height: 10),
+              Center(
+                child: Text(
+                  'Wear your Veyro watch to sleep to capture automatic optical PPG and HRV recovery metrics, or enable Demo Mode in Settings to view simulated data.',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Theme.of(context).textTheme.bodySmall?.color,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 30),
+            ],
+          ),
+        ),
+      );
+    }
+
     final sleep = _realSleep ?? HealthAnalysisService.generateTypicalSleepData();
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFF),
       appBar: AppBar(
-        title: const Text('Sleep', style: TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: Colors.white,
-        foregroundColor: const Color(0xFF1e3a5f),
+        title: const Text('Sleep & HRV', style: TextStyle(fontWeight: FontWeight.bold)),
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        foregroundColor: Theme.of(context).colorScheme.onSurface,
         elevation: 0,
         actions: [
           if (!_hasRealData)
