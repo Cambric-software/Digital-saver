@@ -6,6 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'services/ble_service.dart';
 import 'services/app_lock.dart';
 import 'services/theme_service.dart';
+import 'services/locale_service.dart';
 import 'services/auto_update_service.dart';
 import 'services/heart_rate_tracker.dart';
 import 'theme/app_theme.dart';
@@ -35,6 +36,7 @@ void main() async {
         ChangeNotifierProvider(create: (_) => BleService()),
         ChangeNotifierProvider.value(value: appLock),
         ChangeNotifierProvider(create: (_) => ThemeService()),
+        ChangeNotifierProvider(create: (_) => LocaleService()),
         ChangeNotifierProvider(create: (_) => AutoUpdateService()),
         ChangeNotifierProvider(create: (_) => HeartRateTracker()),
       ],
@@ -79,6 +81,7 @@ class _DigitalSaverAppState extends State<DigitalSaverApp> with WidgetsBindingOb
   @override
   Widget build(BuildContext context) {
     final themeService = context.watch<ThemeService>();
+    final localeService = context.watch<LocaleService>();
     final updateService = context.watch<AutoUpdateService>();
 
     return MaterialApp(
@@ -87,6 +90,11 @@ class _DigitalSaverAppState extends State<DigitalSaverApp> with WidgetsBindingOb
       theme: themeService.getLightTheme(),
       darkTheme: themeService.getDarkTheme(),
       themeMode: themeService.themeMode,
+      locale: localeService.currentLocale,
+      builder: (context, child) => Directionality(
+        textDirection: localeService.textDirection,
+        child: child ?? const SizedBox(),
+      ),
       home: kIsWeb
           ? const WebLandingPage()
           : _UpdateWrapper(
@@ -203,7 +211,7 @@ class _UpdateWrapperState extends State<_UpdateWrapper> {
           ElevatedButton.icon(
             onPressed: () {
               Navigator.pop(ctx);
-              _launchUrl(widget.updateService.latestUpdate?.downloadUrl ?? AppVersion.downloadUrl);
+              _launchUrl(widget.updateService.latestUpdate?.downloadUrl ?? 'https://github.com/Cambric-software/Digital-saver/releases');
             },
             icon: const Icon(Icons.download),
             label: const Text('Download'),
@@ -236,7 +244,6 @@ class MainNav extends StatefulWidget {
 class _MainNavState extends State<MainNav> {
   int _currentIndex = 0;
 
-  // Streamlined 5 tabs for clean mobile navigation (Insights removed, subtabs used inside screens)
   static const _screens = [
     DashboardScreen(),
     VitalsScreen(),
@@ -245,38 +252,39 @@ class _MainNavState extends State<MainNav> {
     SettingsScreen(),
   ];
 
-  static const _destinations = [
-    NavigationDestination(
-      icon: Icon(Icons.dashboard_outlined),
-      selectedIcon: Icon(Icons.dashboard),
-      label: 'Home',
-    ),
-    NavigationDestination(
-      icon: Icon(Icons.monitor_heart_outlined),
-      selectedIcon: Icon(Icons.monitor_heart),
-      label: 'Vitals',
-    ),
-    NavigationDestination(
-      icon: Icon(Icons.auto_awesome_outlined),
-      selectedIcon: Icon(Icons.auto_awesome),
-      label: 'AI Coach',
-    ),
-    NavigationDestination(
-      icon: Icon(Icons.watch_outlined),
-      selectedIcon: Icon(Icons.watch),
-      label: 'Watch',
-    ),
-    NavigationDestination(
-      icon: Icon(Icons.settings_outlined),
-      selectedIcon: Icon(Icons.settings),
-      label: 'Settings',
-    ),
-  ];
-
   @override
   Widget build(BuildContext context) {
     final ble = context.watch<BleService>();
+    final locale = context.watch<LocaleService>();
     final wide = MediaQuery.sizeOf(context).width >= 900;
+
+    final destinations = [
+      NavigationDestination(
+        icon: const Icon(Icons.dashboard_outlined),
+        selectedIcon: const Icon(Icons.dashboard),
+        label: locale.tr('home'),
+      ),
+      NavigationDestination(
+        icon: const Icon(Icons.monitor_heart_outlined),
+        selectedIcon: const Icon(Icons.monitor_heart),
+        label: locale.tr('vitals'),
+      ),
+      NavigationDestination(
+        icon: const Icon(Icons.auto_awesome_outlined),
+        selectedIcon: const Icon(Icons.auto_awesome),
+        label: locale.tr('ai_coach'),
+      ),
+      NavigationDestination(
+        icon: const Icon(Icons.watch_outlined),
+        selectedIcon: const Icon(Icons.watch),
+        label: locale.tr('watch'),
+      ),
+      NavigationDestination(
+        icon: const Icon(Icons.settings_outlined),
+        selectedIcon: const Icon(Icons.settings),
+        label: locale.tr('settings'),
+      ),
+    ];
 
     return Scaffold(
       body: Row(
@@ -300,7 +308,7 @@ class _MainNavState extends State<MainNav> {
                   child: const Icon(Icons.favorite, color: Colors.white, size: 22),
                 ),
               ),
-              destinations: _destinations
+              destinations: destinations
                   .map((d) => NavigationRailDestination(
                         icon: d.icon,
                         selectedIcon: d.selectedIcon,
@@ -326,17 +334,17 @@ class _MainNavState extends State<MainNav> {
                           borderRadius: BorderRadius.circular(12),
                           boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 8)],
                         ),
-                        child: const Row(
+                        child: Row(
                           children: [
-                            SizedBox(
+                            const SizedBox(
                               width: 16,
                               height: 16,
                               child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                             ),
-                            SizedBox(width: 12),
+                            const SizedBox(width: 12),
                             Text(
-                              'Scanning for Veyro smartwatch...',
-                              style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w500),
+                              locale.tr('scan_ble'),
+                              style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w500),
                             ),
                           ],
                         ),
@@ -357,17 +365,17 @@ class _MainNavState extends State<MainNav> {
                           borderRadius: BorderRadius.circular(12),
                           boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 8)],
                         ),
-                        child: const Row(
+                        child: Row(
                           children: [
-                            SizedBox(
+                            const SizedBox(
                               width: 16,
                               height: 16,
                               child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                             ),
-                            SizedBox(width: 12),
+                            const SizedBox(width: 12),
                             Text(
-                              'Pairing with Veyro...',
-                              style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w500),
+                              locale.tr('pairing'),
+                              style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w500),
                             ),
                           ],
                         ),
@@ -387,7 +395,7 @@ class _MainNavState extends State<MainNav> {
               backgroundColor: Theme.of(context).colorScheme.surface,
               elevation: 4,
               height: 68,
-              destinations: _destinations,
+              destinations: destinations,
               labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
             ),
     );
