@@ -35,6 +35,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _demoMode = false;
   int _selectedWatchFace = 0;
   bool _autoSyncHistory = true;
+  double _highHrThreshold = 120.0;
+  double _lowSpo2Threshold = 90.0;
 
   final List<String> _watchFaces = [
     'Face 1: Minimal Sport',
@@ -66,6 +68,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _demoMode = prefs.getBool('demo_mode') ?? false;
       _selectedWatchFace = prefs.getInt('selected_watch_face') ?? 0;
       _autoSyncHistory = prefs.getBool('auto_sync_history') ?? true;
+      _highHrThreshold = prefs.getDouble('high_hr_threshold') ?? 120.0;
+      _lowSpo2Threshold = prefs.getDouble('low_spo2_threshold') ?? 90.0;
       _loading = false;
     });
   }
@@ -89,6 +93,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     await prefs.setBool('demo_mode', _demoMode);
     await prefs.setInt('selected_watch_face', _selectedWatchFace);
     await prefs.setBool('auto_sync_history', _autoSyncHistory);
+    await prefs.setDouble('high_hr_threshold', _highHrThreshold);
+    await prefs.setDouble('low_spo2_threshold', _lowSpo2Threshold);
 
     final nextProfile = UserProfile(
       name: _name.text.trim(),
@@ -256,7 +262,102 @@ class _SettingsScreenState extends State<SettingsScreen> {
             const SizedBox(height: 16),
 
             // 3. User Profile Card
+                        // Health Alerts & Data Export Card
             _buildCard(
+              title: isArabic ? 'تنبيهات الصحة وتصدير البيانات' : 'Health Alerts & Data Export',
+              icon: Icons.health_and_safety_outlined,
+              children: [
+                Text(
+                  isArabic ? 'تنبيه معدل ضربات القلب المرتفع: ${_highHrThreshold.toInt()} نبضة/دقيقة' : 'High Heart Rate Alert: ${_highHrThreshold.toInt()} BPM',
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
+                Slider(
+                  value: _highHrThreshold,
+                  min: 80,
+                  max: 180,
+                  divisions: 20,
+                  label: '${_highHrThreshold.toInt()} BPM',
+                  onChanged: (v) => setState(() => _highHrThreshold = v),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  isArabic ? 'تنبيه انخفاض تشبع الأكسجين: ${_lowSpo2Threshold.toInt()}%' : 'Low Oxygen (SpO2) Alert: ${_lowSpo2Threshold.toInt()}%',
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
+                Slider(
+                  value: _lowSpo2Threshold,
+                  min: 80,
+                  max: 95,
+                  divisions: 15,
+                  label: '${_lowSpo2Threshold.toInt()}%',
+                  onChanged: (v) => setState(() => _lowSpo2Threshold = v),
+                ),
+                const Divider(height: 24),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        icon: const Icon(Icons.file_download_outlined, size: 18),
+                        label: Text(isArabic ? 'تصدير CSV' : 'Export CSV'),
+                        onPressed: () async {
+                          final samples = await LocalStore.loadAll();
+                          final csv = samples.map((s) => s.toCsv()).join('\n');
+                          if (context.mounted) {
+                            showDialog(
+                              context: context,
+                              builder: (ctx) => AlertDialog(
+                                title: Text(isArabic ? 'بيانات CSV المصدرة' : 'Exported CSV Data'),
+                                content: SingleChildScrollView(
+                                  child: SelectableText(csv.isEmpty ? 'No data recorded yet' : 'unix,hr,spo2,bps,bpd,hrv,steps,fall,bat\n$csv'),
+                                ),
+                                actions: [
+                                  TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('OK')),
+                                ],
+                              ),
+                            );
+                          }
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        icon: const Icon(Icons.data_object_outlined, size: 18),
+                        label: Text(isArabic ? 'تصدير JSON' : 'Export JSON'),
+                        onPressed: () async {
+                          final samples = await LocalStore.loadAll();
+                          final jsonStr = jsonEncode(samples.map((s) => {
+                            'unix': s.unix,
+                            'hr': s.hr,
+                            'spo2': s.spo2,
+                            'steps': s.steps,
+                            'hrv': s.hrv,
+                            'fall': s.fall,
+                            'battery': s.bat
+                          }).toList());
+                          if (context.mounted) {
+                            showDialog(
+                              context: context,
+                              builder: (ctx) => AlertDialog(
+                                title: Text(isArabic ? 'بيانات JSON المصدرة' : 'Exported JSON Data'),
+                                content: SingleChildScrollView(
+                                  child: SelectableText(jsonStr),
+                                ),
+                                actions: [
+                                  TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('OK')),
+                                ],
+                              ),
+                            );
+                          }
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+_buildCard(
               title: isArabic ? 'الملف الشخصي والأهداف' : 'Personal Health Profile',
               icon: Icons.person_outline,
               children: [
