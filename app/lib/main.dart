@@ -287,7 +287,7 @@ class _MainNavState extends State<MainNav> {
               onDestinationSelected: (i) => setState(() => _currentIndex = i),
               labelType: NavigationRailLabelType.all,
               minWidth: 80,
-              backgroundColor: AppColors.surface,
+              backgroundColor: Theme.of(context).colorScheme.surface,
               leading: Padding(
                 padding: const EdgeInsets.only(top: 20, bottom: 24),
                 child: Container(
@@ -384,7 +384,7 @@ class _MainNavState extends State<MainNav> {
           : NavigationBar(
               selectedIndex: _currentIndex,
               onDestinationSelected: (i) => setState(() => _currentIndex = i),
-              backgroundColor: AppColors.surface,
+              backgroundColor: Theme.of(context).colorScheme.surface,
               elevation: 4,
               height: 68,
               destinations: _destinations,
