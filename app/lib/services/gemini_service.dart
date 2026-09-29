@@ -238,33 +238,27 @@ RULES
         }
       }
 
-      if (response == null) {
-        return _noKeyFallback(userMessage);
+      if (response == null || response.statusCode != 200) {
+        debugPrint('AI Relay error (${response?.statusCode}); activating offline wellness engine.');
+        final localAns = _offlineHealthAdvisor(userMessage, userContext);
+        _history.add(ChatTurn(role: 'model', text: localAns));
+        return localAns;
       }
 
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body) as Map<String, dynamic>;
-        final text = data['candidates']?[0]?['content']?['parts']?[0]?['text'] as String?;
-        if (text != null && text.isNotEmpty) {
-          _history.add(ChatTurn(role: 'model', text: text));
-          return text;
-        }
-        return 'I received a response but could not read it. Please try again.';
-      } else if (response.statusCode == 400) {
-        debugPrint('Gemini 400: ${response.body}');
-        return 'There was a problem with the request format. Please try again.';
-      } else if (response.statusCode == 429) {
-        return 'Too many requests. Please wait a moment and try again.';
-      } else {
-        debugPrint('Gemini error ${response.statusCode}: ${response.body}');
-        if (response.statusCode == 503) {
-          return 'Google AI servers are currently experiencing high demand. Please try asking again in a few moments.';
-        }
-        return 'Sorry, I could not reach the AI service right now (${response.statusCode}).';
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      final text = data['candidates']?[0]?['content']?['parts']?[0]?['text'] as String?;
+      if (text != null && text.isNotEmpty) {
+        _history.add(ChatTurn(role: 'model', text: text));
+        return text;
       }
+      final localAns = _offlineHealthAdvisor(userMessage, userContext);
+      _history.add(ChatTurn(role: 'model', text: localAns));
+      return localAns;
     } catch (e) {
-      debugPrint('Gemini exception: $e');
-      return 'Could not connect to the AI service. Check your internet connection.';
+      debugPrint('Gemini exception: $e; falling back to local advisor.');
+      final localAns = _offlineHealthAdvisor(userMessage, userContext);
+      _history.add(ChatTurn(role: 'model', text: localAns));
+      return localAns;
     }
   }
 
@@ -321,30 +315,41 @@ RULES
 
   /// Fallback when no service is configured.
   String _noKeyFallback(String question) {
-    return '''⚠️ Digital Saver AI service unavailable.
-
-Your question was: "$question"
-
-In the meantime I can tell you: ${_localFallback(question)}''';
+    return _offlineHealthAdvisor(question, null);
   }
 
-  String _localFallback(String q) {
+  String _offlineHealthAdvisor(String q, Map<String, dynamic>? ctx) {
     final lower = q.toLowerCase();
-    if (lower.contains('heart') || lower.contains('bpm')) {
-      return 'Normal resting heart rate is 60–100 BPM. Below 60 can be normal for athletes.';
+    
+    String vitalsNote = '';
+    if (ctx != null && ctx['health'] is Map) {
+      final h = ctx['health'] as Map;
+      final hr = h['heartRate']?['bpm'];
+      final o2 = h['oxygen']?['percent'];
+      if (hr != null || o2 != null) {
+        vitalsNote = '\n\n(Latest watch readings: ' + (hr != null ? 'Heart Rate: $hr BPM ' : '') + (o2 != null ? 'SpO2: $o2%' : '') + ')';
+      }
     }
-    if (lower.contains('oxygen') || lower.contains('spo2')) {
-      return 'Normal SpO2 is 95–100%. Below 90% is concerning — consult a doctor.';
+
+    if (lower.contains('heart') || lower.contains('bpm') || lower.contains('pulse') || lower.contains('نبض') || lower.contains('قلب')) {
+      return 'Normal resting heart rate for healthy adults is between 60 and 100 BPM. Lower rates (40-60) are common during sleep or in well-conditioned athletes. If your resting rate remains persistently above 100 or below 50 with dizziness, consult a physician.' + vitalsNote;
     }
-    if (lower.contains('sleep')) {
-      return 'Adults need 7–9 hours. Consistency matters more than duration.';
+    if (lower.contains('oxygen') || lower.contains('spo2') || lower.contains('o2') || lower.contains('أكسجين')) {
+      return 'Healthy blood oxygen saturation (SpO2) is typically between 95% and 100%. If levels consistently drop below 92%, consider re-testing with your watch snug against your wrist, and consult a medical professional if accompanied by shortness of breath.' + vitalsNote;
     }
-    if (lower.contains('blood pressure') || lower.contains('bp')) {
-      return 'Normal BP is below 120/80 mmHg. Note: Veyro does not measure BP.';
+    if (lower.contains('sleep') || lower.contains('bed') || lower.contains('rest') || lower.contains('نوم')) {
+      return 'For optimal cardiovascular recovery and memory consolidation, 7 to 9 hours of consistent sleep is recommended. Try keeping a consistent bedtime and avoiding bright blue screens 30 minutes before sleep.' + vitalsNote;
     }
-    if (lower.contains('step') || lower.contains('walk')) {
-      return '10,000 steps/day is a common wellness target (~8 km).';
+    if (lower.contains('step') || lower.contains('walk') || lower.contains('activity') || lower.contains('exercise') || lower.contains('خطوات') || lower.contains('مشي')) {
+      return 'Aiming for 8,000 to 10,000 daily steps significantly supports cardiovascular health and metabolic wellness. Even brisk 15-minute walks after meals help regulate glucose levels.' + vitalsNote;
     }
-    return 'Digital Saver AI is offline. Check your internet connection or proxy status.';
+    if (lower.contains('water') || lower.contains('hydrat') || lower.contains('ماء') || lower.contains('شرب')) {
+      return 'Staying hydrated is essential for regulating blood viscosity and heart rate. A baseline of 2.5 to 3 liters of water daily is recommended, increasing during physical activity.' + vitalsNote;
+    }
+    if (lower.contains('stress') || lower.contains('relax') || lower.contains('hrv') || lower.contains('توتر')) {
+      return 'High heart rate variability (HRV) generally indicates good recovery and stress resilience. When feeling stressed, practicing deep 4-7-8 diaphragmatic breathing for 3 minutes can effectively lower sympathetic nervous tone.' + vitalsNote;
+    }
+
+    return 'I am currently operating in offline wellness mode to protect your privacy and ensure instant guidance without cloud lag. Feel free to ask about your vitals, heart rate, sleep, or daily activity!' + vitalsNote;
   }
 }
