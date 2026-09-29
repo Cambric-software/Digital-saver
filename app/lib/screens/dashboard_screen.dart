@@ -78,62 +78,43 @@ class _DashboardScreenState extends State<DashboardScreen>
           ),
 
           // Version label in bottom-right corner
+          // Version label in bottom-right corner with dynamic theme colors
           Positioned(
             bottom: 10,
             right: 10,
             child: FutureBuilder<String>(
               future: githubService.fetchLatestVersion(),
               builder: (context, snapshot) {
-                if (snapshot.hasData) {
-                  return Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.9),
-                      borderRadius: BorderRadius.circular(8),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.06),
-                          blurRadius: 6,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: Text(
-                      snapshot.data!, // e.g. "v1.0.2-beta"
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey,
-                        fontWeight: FontWeight.w600,
+                final theme = Theme.of(context);
+                final versionText = (snapshot.hasData && snapshot.data != null && snapshot.data!.isNotEmpty)
+                    ? snapshot.data!
+                    : 'v1.0.3';
+                return Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.surface.withOpacity(0.9),
+                    borderRadius: BorderRadius.circular(8),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.08),
+                        blurRadius: 6,
+                        offset: const Offset(0, 2),
                       ),
+                    ],
+                    border: Border.all(
+                      color: theme.colorScheme.outlineVariant.withOpacity(0.3),
+                      width: 0.5,
                     ),
-                  );
-                } else if (snapshot.hasError) {
-                  return Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.9),
-                      borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    versionText,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: theme.colorScheme.onSurface.withOpacity(0.7),
+                      fontWeight: FontWeight.w600,
                     ),
-                    child: const Text(
-                      "Version unavailable",
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.redAccent,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  );
-                } else {
-                  // While loading, show a subtle placeholder to avoid layout shift
-                  return Container(
-                    width: 48,
-                    height: 18,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.6),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  );
-                }
+                  ),
+                );
               },
             ),
           ),
