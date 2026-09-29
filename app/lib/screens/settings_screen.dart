@@ -39,6 +39,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
   double _highHrThreshold = 120.0;
   double _lowSpo2Threshold = 90.0;
 
+
+  // Feature 21 & 22: Complications & Quick-Reply Templates
+  String _complicationTop = 'Steps';
+  String _complicationBottom = 'Heart Rate';
+  final List<String> _availableComplications = [
+    'Steps',
+    'Heart Rate',
+    'Battery Level',
+    'Calories Burned',
+    'Distance (km)',
+    'None'
+  ];
+  List<String> _quickReplies = [
+    'In a meeting, call you later.',
+    'On my way!',
+    'Can't talk right now.',
+    'Got it, thanks!'
+  ];
+
   final List<String> _watchFaces = [
     'Face 1: Minimal Sport',
     'Face 2: Health Rings (Apple-like)',
@@ -71,6 +90,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _autoSyncHistory = prefs.getBool('auto_sync_history') ?? true;
       _highHrThreshold = prefs.getDouble('high_hr_threshold') ?? 120.0;
       _lowSpo2Threshold = prefs.getDouble('low_spo2_threshold') ?? 90.0;
+
+      _complicationTop = prefs.getString('complication_top') ?? 'Steps';
+      _complicationBottom = prefs.getString('complication_bottom') ?? 'Heart Rate';
+      final savedReplies = prefs.getStringList('quick_replies');
+      if (savedReplies != null && savedReplies.isNotEmpty) {
+        _quickReplies = savedReplies;
+      }
+
       _loading = false;
     });
   }
@@ -97,6 +124,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
     await prefs.setDouble('high_hr_threshold', _highHrThreshold);
     await prefs.setDouble('low_spo2_threshold', _lowSpo2Threshold);
 
+    await prefs.setString('complication_top', _complicationTop);
+    await prefs.setString('complication_bottom', _complicationBottom);
+    await prefs.setStringList('quick_replies', _quickReplies);
+
+
     final nextProfile = UserProfile(
       name: _name.text.trim(),
       age: int.tryParse(_age.text) ?? 16,
@@ -120,6 +152,43 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
       );
     }
+  }
+
+
+  void _showAddQuickReplyDialog(bool isArabic) {
+    final controller = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(isArabic ? 'إضافة رد سريع' : 'Add Quick-Reply Template'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          decoration: InputDecoration(
+            hintText: isArabic ? 'اكتب نص الرد...' : 'Enter response text...',
+            border: const OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(isArabic ? 'إلغاء' : 'Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final text = controller.text.trim();
+              if (text.isNotEmpty) {
+                setState(() {
+                  _quickReplies.add(text);
+                });
+                Navigator.pop(ctx);
+              }
+            },
+            child: Text(isArabic ? 'إضافة' : 'Add'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _triggerBleScan() {
@@ -402,6 +471,140 @@ _buildCard(
             ),
             const SizedBox(height: 16),
 
+
+            // Feature 21: Watch Face Complications
+            _buildCard(
+              title: isArabic ? 'تخصيص خانات واجهة الساعة' : 'Watch Face Complications',
+              icon: Icons.dashboard_customize_outlined,
+              children: [
+                Text(
+                  isArabic
+                      ? 'اختر البيانات المصغرة التي تظهر في الخانات العلوية والسفلية للساعة.'
+                      : 'Customize telemetry widgets displayed in modular watch face slots.',
+                  style: const TextStyle(fontSize: 12, color: Colors.grey),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(isArabic ? 'الخانة العلوية' : 'Top Slot', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                          const SizedBox(height: 4),
+                          DropdownButtonFormField<String>(
+                            value: _availableComplications.contains(_complicationTop) ? _complicationTop : 'Steps',
+                            decoration: const InputDecoration(border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8)),
+                            items: _availableComplications.map((c) => DropdownMenuItem(value: c, child: Text(c, style: const TextStyle(fontSize: 13)))).toList(),
+                            onChanged: (v) => setState(() => _complicationTop = v ?? 'Steps'),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(isArabic ? 'الخانة السفلية' : 'Bottom Slot', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                          const SizedBox(height: 4),
+                          DropdownButtonFormField<String>(
+                            value: _availableComplications.contains(_complicationBottom) ? _complicationBottom : 'Heart Rate',
+                            decoration: const InputDecoration(border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8)),
+                            items: _availableComplications.map((c) => DropdownMenuItem(value: c, child: Text(c, style: const TextStyle(fontSize: 13)))).toList(),
+                            onChanged: (v) => setState(() => _complicationBottom = v ?? 'Heart Rate'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+
+            // Feature 22: Quick-Reply Templates
+            _buildCard(
+              title: isArabic ? 'قوالب الردود السريعة للساعة' : 'Watch Quick-Reply Templates',
+              icon: Icons.quickreply_outlined,
+              children: [
+                Text(
+                  isArabic
+                      ? 'رسائل معدة مسبقاً لإرسالها مباشرة من شاشة الساعة عند استقبال الإشعارات.'
+                      : 'Pre-written replies synced to the watch to respond instantly from your wrist.',
+                  style: const TextStyle(fontSize: 12, color: Colors.grey),
+                ),
+                const SizedBox(height: 10),
+                ..._quickReplies.asMap().entries.map((entry) {
+                  final idx = entry.key;
+                  final reply = entry.value;
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 6),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.short_text, size: 16, color: Colors.grey),
+                        const SizedBox(width: 8),
+                        Expanded(child: Text(reply, style: const TextStyle(fontSize: 13))),
+                        IconButton(
+                          icon: const Icon(Icons.delete_outline, size: 18, color: Colors.redAccent),
+                          onPressed: () {
+                            setState(() {
+                              _quickReplies.removeAt(idx);
+                            });
+                          },
+                        ),
+                      ],
+                    ),
+                  );
+                }),
+                const SizedBox(height: 6),
+                OutlinedButton.icon(
+                  onPressed: () => _showAddQuickReplyDialog(isArabic),
+                  icon: const Icon(Icons.add, size: 16),
+                  label: Text(isArabic ? 'إضافة رد جديد' : 'Add New Template'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.primary,
+                    side: const BorderSide(color: AppColors.primary),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+
+            // Feature 30: BLE Signal & Diagnostics
+            _buildCard(
+              title: isArabic ? 'تشخيص إشارة البلوتوث' : 'BLE Link & Diagnostics',
+              icon: Icons.network_check_outlined,
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      ble.isConnected ? Icons.bluetooth_connected : Icons.bluetooth_disabled,
+                      color: ble.isConnected ? Colors.green : Colors.grey,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      ble.isConnected
+                          ? (isArabic ? 'متصل بالساعة: Veyro S3' : 'Link Active: Veyro S3')
+                          : (isArabic ? 'غير متصل حالياً' : 'Watch Disconnected'),
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: ble.isConnected ? Colors.green : Colors.grey,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  isArabic
+                      ? 'بروتوكول Veyro v5.0 • وضع المزامنة التلقائية: ' + (_autoSyncHistory ? 'مفعل' : 'معطل')
+                      : 'Protocol: Veyro v5.0 • Background Auto-Sync: ' + (_autoSyncHistory ? 'Enabled' : 'Disabled'),
+                  style: const TextStyle(fontSize: 12, color: Colors.grey),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
             // 4. Updates & About Cambric
             _buildCard(
               title: isArabic ? 'عن كمبريك والتحديثات' : 'About Cambric & Releases',
