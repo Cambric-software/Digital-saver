@@ -10,6 +10,7 @@ import '../services/ble_service.dart';
 import '../services/emergency_service.dart';
 import '../services/local_store.dart';
 import '../services/theme_service.dart';
+import '../services/locale_service.dart';
 import '../theme/app_theme.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -60,7 +61,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _name.text = p.name;
       _age.text = '${p.age}';
       _weight.text = '${p.weightKg.round()}';
-      _selectedLanguage = prefs.getString('app_language') ?? 'English';
+      final locale = context.read<LocaleService>();
+      _selectedLanguage = locale.currentLanguage;
       _demoMode = prefs.getBool('demo_mode') ?? false;
       _selectedWatchFace = prefs.getInt('selected_watch_face') ?? 0;
       _autoSyncHistory = prefs.getBool('auto_sync_history') ?? true;
@@ -81,6 +83,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _saveSettings() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('app_language', _selectedLanguage);
+    if (mounted) {
+      await context.read<LocaleService>().setLanguage(_selectedLanguage);
+    }
     await prefs.setBool('demo_mode', _demoMode);
     await prefs.setInt('selected_watch_face', _selectedWatchFace);
     await prefs.setBool('auto_sync_history', _autoSyncHistory);
@@ -169,7 +174,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     DropdownMenuItem(value: 'العربية', child: Text('العربية (مصر / الفصحى)')),
                   ],
                   onChanged: (v) {
-                    if (v != null) setState(() => _selectedLanguage = v);
+                    if (v != null) {
+                        setState(() => _selectedLanguage = v);
+                        context.read<LocaleService>().setLanguage(v);
+                      }
                   },
                 ),
                 const SizedBox(height: 12),
