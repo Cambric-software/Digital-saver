@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=Veyro Digital Saver
+Comment=Privacy-first local health monitoring and smartwatch companion by Cambric
+Exec=digital_saver
+Icon=digital-saver
+Terminal=false
+Type=Application
+Categories=Utility;Healthcare;
+StartupWMClass=digital_saver
