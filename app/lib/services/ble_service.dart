@@ -125,7 +125,7 @@ class BleService extends ChangeNotifier {
         for (final r in results) {
           var name = r.device.platformName.isNotEmpty ? r.device.platformName : r.advertisementData.advName;
           if (name.isEmpty) {
-            name = 'BLE Device (' + (r.device.remoteId.str[:5] if len(r.device.remoteId.str) >= 5 else r.device.remoteId.str) + ')';
+            final idStr = r.device.remoteId.str; name = 'BLE Device (' + (idStr.length >= 5 ? idStr.substring(0, 5) : idStr) + ')';
           }
           final isVeyro = name.toLowerCase().contains('veyro') ||
               r.advertisementData.serviceUuids.any(
