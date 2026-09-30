@@ -31,7 +31,12 @@ class _SleepScreenState extends State<SleepScreen> {
     if (!mounted) return;
 
     if (samples.isEmpty) {
-      setState(() { _loading = false; });
+      setState(() {
+        _loading = false;
+        if (_demoEnabled) {
+          _realSleep = HealthAnalysisService.generateTypicalSleepData();
+        }
+      });
       return;
     }
 
@@ -176,7 +181,7 @@ class _SleepScreenState extends State<SleepScreen> {
     final sleep = _realSleep ?? HealthAnalysisService.generateTypicalSleepData();
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFF),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         title: const Text('Sleep & HRV', style: TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: Theme.of(context).colorScheme.surface,
@@ -260,12 +265,12 @@ class _SleepHero extends StatelessWidget {
       ),
       child: Column(
         children: [
-          const Icon(Icons.bedtime, color: Colors.white, size: 36),
+          const Icon(Icons.bedtime, color: Theme.of(context).cardColor, size: 36),
           const SizedBox(height: 16),
           Text(
             sleep.duration,
             style: const TextStyle(
-              color: Colors.white, fontSize: 52, fontWeight: FontWeight.bold, height: 1,
+              color: Theme.of(context).cardColor, fontSize: 52, fontWeight: FontWeight.bold, height: 1,
             ),
           ),
           const Text('total sleep', style: TextStyle(color: Colors.white70, fontSize: 15)),
@@ -318,7 +323,7 @@ class _TimeInfo extends StatelessWidget {
     return Column(
       children: [
         Text(label, style: const TextStyle(color: Colors.white60, fontSize: 12)),
-        Text(time, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+        Text(time, style: const TextStyle(color: Theme.of(context).cardColor, fontWeight: FontWeight.bold, fontSize: 16)),
       ],
     );
   }
@@ -333,7 +338,7 @@ class _SleepStages extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)],
       ),
@@ -405,7 +410,7 @@ class _SleepDonut extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)],
       ),
@@ -420,9 +425,9 @@ class _SleepDonut extends StatelessWidget {
                 sectionsSpace: 3,
                 centerSpaceRadius: 50,
                 sections: [
-                  PieChartSectionData(value: sleep.deepSleepMinutes.toDouble(), color: const Color(0xFF1e3a5f), title: 'Deep', radius: 40, titleStyle: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
-                  PieChartSectionData(value: sleep.remSleepMinutes.toDouble(), color: const Color(0xFF7c3aed), title: 'REM', radius: 40, titleStyle: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
-                  PieChartSectionData(value: sleep.lightSleepMinutes.toDouble(), color: const Color(0xFF2563eb), title: 'Light', radius: 40, titleStyle: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+                  PieChartSectionData(value: sleep.deepSleepMinutes.toDouble(), color: const Color(0xFF1e3a5f), title: 'Deep', radius: 40, titleStyle: const TextStyle(color: Theme.of(context).cardColor, fontSize: 10, fontWeight: FontWeight.bold)),
+                  PieChartSectionData(value: sleep.remSleepMinutes.toDouble(), color: const Color(0xFF7c3aed), title: 'REM', radius: 40, titleStyle: const TextStyle(color: Theme.of(context).cardColor, fontSize: 10, fontWeight: FontWeight.bold)),
+                  PieChartSectionData(value: sleep.lightSleepMinutes.toDouble(), color: const Color(0xFF2563eb), title: 'Light', radius: 40, titleStyle: const TextStyle(color: Theme.of(context).cardColor, fontSize: 10, fontWeight: FontWeight.bold)),
                   PieChartSectionData(value: sleep.awakeMinutes.toDouble(), color: Colors.grey.shade300, title: '', radius: 40),
                 ],
               ),
