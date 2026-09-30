@@ -325,7 +325,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   title: Text(isArabic ? 'وضع العرض التجريبي (Demo Mode)' : 'Demo Simulation Mode'),
                   subtitle: Text(isArabic ? 'إيقاف محاكاة الحساسات وقراءة الحساسات الحقيقية فقط' : 'Toggle between simulated data and real watch BLE sensor feeds'),
                   value: _demoMode,
-                  onChanged: (v) => setState(() => _demoMode = v),
+                  onChanged: (v) {
+                          setState(() => _demoMode = v);
+                          SharedPreferences.getInstance().then((p) => p.setBool('demo_mode', v));
+                        },
                 ),
               ],
             ),
