@@ -123,19 +123,27 @@ class BleService extends ChangeNotifier {
       await FlutterBluePlus.startScan(timeout: const Duration(seconds: 20));
       _scanSub = FlutterBluePlus.scanResults.listen((results) {
         for (final r in results) {
-          final name = r.device.platformName.isNotEmpty ? r.device.platformName : '';
-          if (name.isEmpty) continue;
-          final veyro = name.toLowerCase() == 'veyro' ||
+          var name = r.device.platformName.isNotEmpty ? r.device.platformName : r.advertisementData.advName;
+          if (name.isEmpty) {
+            name = 'BLE Device (' + (r.device.remoteId.str[:5] if len(r.device.remoteId.str) >= 5 else r.device.remoteId.str) + ')';
+          }
+          final isVeyro = name.toLowerCase().contains('veyro') ||
               r.advertisementData.serviceUuids.any(
                 (u) => u.toString().toLowerCase().contains(VeyroProtocol.serviceUuid.substring(0, 8)),
               );
+          final isStandardWatch = r.advertisementData.serviceUuids.any(
+            (u) {
+              final s = u.toString().toLowerCase();
+              return s.contains('180d') || s.contains('1809') || s.contains('180f') || s.contains('180a');
+            },
+          );
           final i = _discoveredDevices.indexWhere((d) => d.device.remoteId.str == r.device.remoteId.str);
           if (i == -1) {
             _discoveredDevices.add(DiscoveredDevice(
               device: r.device,
               name: name,
               rssi: r.rssi,
-              isVeyro: veyro,
+              isVeyro: isVeyro || isStandardWatch,
             ));
             notifyListeners();
           }
@@ -186,7 +194,34 @@ class BleService extends ChangeNotifier {
     var foundInfo = false;
     var foundCommand = false;
     for (final s in services) {
-      if (!s.uuid.toString().toLowerCase().contains('4fafc201')) continue;
+      final suuid = s.uuid.toString().toLowerCase();
+      if (suuid.contains('180d')) {
+        foundService = true;
+        for (final c in s.characteristics) {
+          if (c.uuid.toString().toLowerCase().contains('2a37')) {
+            await c.setNotifyValue(true);
+            _liveSub = c.lastValueStream.listen((bytes) {
+              if (bytes.isNotEmpty) {
+                final flags = bytes[0];
+                final hr = (flags & 0x01) == 0 ? bytes[1] : (bytes[1] | (bytes[2] << 8));
+                _latestData = HealthDataPoint(
+                  heartRate: hr,
+                  bloodPressureSystolic: 0,
+                  bloodPressureDiastolic: 0,
+                  oxygenSaturation: 0,
+                  stepCount: 0,
+                  temperature: 0.0,
+                  batteryLevel: 100,
+                  timestamp: DateTime.now(),
+                );
+                notifyListeners();
+              }
+            });
+            foundLive = true;
+          }
+        }
+      }
+      if (!suuid.contains('4fafc201')) continue;
       foundService = true;
       for (final c in s.characteristics) {
         final id = c.uuid.toString().toLowerCase();
