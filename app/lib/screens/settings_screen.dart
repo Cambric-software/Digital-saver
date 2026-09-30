@@ -54,7 +54,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   List<String> _quickReplies = [
     'In a meeting, call you later.',
     'On my way!',
-    'Can't talk right now.',
+    "Can't talk right now.",
     'Got it, thanks!'
   ];
 
