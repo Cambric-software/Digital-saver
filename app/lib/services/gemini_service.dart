@@ -204,7 +204,10 @@ RULES
           response = await http
               .post(
                 Uri.parse(GeminiConfig.proxyUrl),
-                headers: {'Content-Type': 'application/json'},
+                headers: {
+                  'Content-Type': 'application/json',
+                  'User-Agent': 'DigitalSaverApp/1.0.3 (Dart; Flutter; Android)',
+                },
                 body: body,
               )
               .timeout(const Duration(seconds: 15));
