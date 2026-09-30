@@ -245,7 +245,11 @@ class _AIAssistantScreenState extends State<AIAssistantScreen> with SingleTicker
                               maxWidth: MediaQuery.sizeOf(context).width * 0.82,
                             ),
                             decoration: BoxDecoration(
-                              color: isUser ? AppColors.primary : AppColors.surface,
+                              color: isUser
+                            ? AppColors.primary
+                            : (Theme.of(context).brightness == Brightness.dark
+                                ? const Color(0xFF1E293B)
+                                : AppColors.surface),
                               borderRadius: BorderRadius.circular(16).copyWith(
                                 bottomRight: isUser ? const Radius.circular(2) : const Radius.circular(16),
                                 bottomLeft: isUser ? const Radius.circular(16) : const Radius.circular(2),
@@ -255,7 +259,11 @@ class _AIAssistantScreenState extends State<AIAssistantScreen> with SingleTicker
                             child: Text(
                               msg.text,
                               style: TextStyle(
-                                color: isUser ? Colors.white : Colors.black87,
+                                color: isUser
+                                ? Colors.white
+                                : (Theme.of(context).brightness == Brightness.dark
+                                    ? Colors.white
+                                    : const Color(0xFF0F172A)),
                                 fontSize: 14,
                                 height: 1.35,
                               ),
