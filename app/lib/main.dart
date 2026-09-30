@@ -317,9 +317,12 @@ class _MainNavState extends State<MainNav> {
                   .toList(),
             ),
           Expanded(
-            child: Stack(
-              children: [
-                IndexedStack(index: _currentIndex, children: _screens),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(maxWidth: wide ? 850 : double.infinity),
+                child: Stack(
+                  children: [
+                    IndexedStack(index: _currentIndex, children: _screens),
                 if (ble.state == BleState.scanning)
                   Positioned(
                     top: 0,
@@ -383,6 +386,8 @@ class _MainNavState extends State<MainNav> {
                     ),
                   ),
               ],
+                ),
+              ),
             ),
           ),
         ],
