@@ -204,16 +204,7 @@ class BleService extends ChangeNotifier {
               if (bytes.isNotEmpty) {
                 final flags = bytes[0];
                 final hr = (flags & 0x01) == 0 ? bytes[1] : (bytes[1] | (bytes[2] << 8));
-                _latestData = HealthDataPoint(
-                  heartRate: hr,
-                  bloodPressureSystolic: 0,
-                  bloodPressureDiastolic: 0,
-                  oxygenSaturation: 0,
-                  stepCount: 0,
-                  temperature: 0.0,
-                  batteryLevel: 100,
-                  timestamp: DateTime.now(),
-                );
+                _heartRate = HeartRateData(bpm: hr);
                 notifyListeners();
               }
             });
