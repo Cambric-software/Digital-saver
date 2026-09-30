@@ -265,12 +265,12 @@ class _SleepHero extends StatelessWidget {
       ),
       child: Column(
         children: [
-          const Icon(Icons.bedtime, color: Theme.of(context).cardColor, size: 36),
+          const Icon(Icons.bedtime, color: Colors.white, size: 36),
           const SizedBox(height: 16),
           Text(
             sleep.duration,
             style: const TextStyle(
-              color: Theme.of(context).cardColor, fontSize: 52, fontWeight: FontWeight.bold, height: 1,
+              color: Colors.white, fontSize: 52, fontWeight: FontWeight.bold, height: 1,
             ),
           ),
           const Text('total sleep', style: TextStyle(color: Colors.white70, fontSize: 15)),
