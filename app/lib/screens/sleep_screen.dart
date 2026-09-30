@@ -323,7 +323,7 @@ class _TimeInfo extends StatelessWidget {
     return Column(
       children: [
         Text(label, style: const TextStyle(color: Colors.white60, fontSize: 12)),
-        Text(time, style: const TextStyle(color: Theme.of(context).cardColor, fontWeight: FontWeight.bold, fontSize: 16)),
+        Text(time, style: TextStyle(color: Theme.of(context).textTheme.bodyLarge?.color ?? Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
       ],
     );
   }
@@ -425,9 +425,9 @@ class _SleepDonut extends StatelessWidget {
                 sectionsSpace: 3,
                 centerSpaceRadius: 50,
                 sections: [
-                  PieChartSectionData(value: sleep.deepSleepMinutes.toDouble(), color: const Color(0xFF1e3a5f), title: 'Deep', radius: 40, titleStyle: const TextStyle(color: Theme.of(context).cardColor, fontSize: 10, fontWeight: FontWeight.bold)),
-                  PieChartSectionData(value: sleep.remSleepMinutes.toDouble(), color: const Color(0xFF7c3aed), title: 'REM', radius: 40, titleStyle: const TextStyle(color: Theme.of(context).cardColor, fontSize: 10, fontWeight: FontWeight.bold)),
-                  PieChartSectionData(value: sleep.lightSleepMinutes.toDouble(), color: const Color(0xFF2563eb), title: 'Light', radius: 40, titleStyle: const TextStyle(color: Theme.of(context).cardColor, fontSize: 10, fontWeight: FontWeight.bold)),
+                  PieChartSectionData(value: sleep.deepSleepMinutes.toDouble(), color: const Color(0xFF1e3a5f), title: 'Deep', radius: 40, titleStyle: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+                  PieChartSectionData(value: sleep.remSleepMinutes.toDouble(), color: const Color(0xFF7c3aed), title: 'REM', radius: 40, titleStyle: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+                  PieChartSectionData(value: sleep.lightSleepMinutes.toDouble(), color: const Color(0xFF2563eb), title: 'Light', radius: 40, titleStyle: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
                   PieChartSectionData(value: sleep.awakeMinutes.toDouble(), color: Colors.grey.shade300, title: '', radius: 40),
                 ],
               ),
