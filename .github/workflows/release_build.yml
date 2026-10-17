@@ -156,6 +156,17 @@ jobs:
         working-directory: app
         run: flutter test
 
+      - name: Create Linux scaffold
+        working-directory: app
+        run: |
+          # This repository has no committed linux/ directory, so
+          # `flutter build linux` fails with "No Linux desktop project
+          # configured". The previous release workflow generated the scaffold
+          # on the fly and so must this one; the build output is what is
+          # packaged, not the scaffold.
+          flutter config --enable-linux-desktop
+          flutter create --platforms=linux .
+
       - name: Build Linux
         working-directory: app
         run: flutter build linux --release
