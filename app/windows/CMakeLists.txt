@@ -2,6 +2,17 @@
 cmake_minimum_required(VERSION 3.14)
 project(digital_saver LANGUAGES CXX)
 
+# Recent MSVC ships an STL that turns the experimental coroutine headers into a
+# hard error, which breaks plugins that still use them:
+#
+#   error STL1011: The /await compiler option, <experimental/coroutine>, ...
+#   are deprecated by Microsoft and will be REMOVED SOON.
+#
+# This is raised from inside a plugin's own source, not ours, so it cannot be
+# fixed in this repository and must be silenced. The C++20 <coroutine> header is
+# the eventual replacement.
+add_compile_definitions(_SILENCE_EXPERIMENTAL_COROUTINE_DEPRECATION_WARNINGS)
+
 # The name of the executable created for the application. Change this to change
 # the on-disk name of your application.
 set(BINARY_NAME "digital_saver")

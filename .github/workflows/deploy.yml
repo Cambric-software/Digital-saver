@@ -20,7 +20,11 @@ jobs:
       - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.27.0'
+          # Pinned to the same stable channel every other workflow uses. It was
+          # hardcoded to 3.27.0, which is far older than the rest of the
+          # project and could not build this code, so the Pages deploy failed
+          # while desktop and mobile builds were fine.
+          channel: stable
       - run: cd app && flutter pub get
       - run: cd app && flutter build web
       - uses: actions/upload-pages-artifact@v3
