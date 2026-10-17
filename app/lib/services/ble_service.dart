@@ -303,6 +303,38 @@ class BleService extends ChangeNotifier {
     await _cmd!.write(utf8.encode(jsonEncode(body)), withoutResponse: false);
   }
 
+  /// Send a raw binary command packet to the watch command characteristic.
+  ///
+  /// Veyro uses two command formats over the same characteristic: a UTF-8 JSON
+  /// envelope for the app-level operations above, and fixed binary packets
+  /// beginning with 0xA5 for firmware-level actions such as paging the watch or
+  /// syncing weather. This is the binary path.
+  ///
+  /// Returns true when the packet reached the watch, false otherwise. Callers
+  /// that fire-and-forget can ignore the result; callers that must not lie to
+  /// the user should check it, because a disconnected watch fails silently at
+  /// the BLE layer rather than throwing.
+  Future<bool> sendRawCommand(
+    List<int> bytes, {
+    bool withoutResponse = false,
+  }) async {
+    if (bytes.isEmpty) return false;
+    if (!isConnected) return false;
+    final cmd = _cmd;
+    if (cmd == null) return false;
+    try {
+      await cmd.write(bytes, withoutResponse: withoutResponse);
+      return true;
+    } catch (_) {
+      // A watch that walked out of range, powered off or dropped the
+      // characteristic must not crash the caller. Report failure instead.
+      return false;
+    }
+  }
+
+  /// Whether raw binary commands can currently be sent.
+  bool get canSendRawCommand => isConnected && _cmd != null;
+
   void _onLive(List<int> value) {
     if (value.isEmpty) return;
     try {
