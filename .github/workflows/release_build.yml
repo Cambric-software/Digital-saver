@@ -1,323 +1,263 @@
-name: Build Release (Android + Windows + Linux)
+name: Release
 
 on:
   push:
     tags:
-      - 'v*'
-  workflow_dispatch:
-    inputs:
-      release_version:
-        description: 'Release version (e.g., v1.0.1-beta)'
-        required: false
-        type: string
+      - "v*"
+
+permissions:
+  contents: write
+
+env:
+  # Single source of truth for the version every job stamps into its output.
+  RELEASE_VERSION: ${{ github.ref_name }}
 
 jobs:
-  build-android:
-    name: Build Android APK
-    runs-on: ubuntu-latest
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          flutter-version: '3.27.0'
-          channel: 'stable'
-
-      - name: Install dependencies
-        run: |
-          cd app
-          flutter pub get
-          rm -f pubspec.lock
-          flutter pub get
-          flutter doctor -v
-
-      - name: Build Android APK (Release)
-        run: |
-          cd app
-          flutter build apk --release --dart-define=GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }} --verbose 2>&1 | tee build.log
-          cat build.log
-
-      - name: Rename APK
-        run: |
-          cd app/build/app/outputs/flutter-apk
-          VERSION="${GITHUB_REF#refs/tags/}"
-          if [ -z "$VERSION" ] || [[ "$VERSION" == refs/heads/* ]]; then
-            VERSION="${{ inputs.release_version || 'dev' }}"
-          fi
-          mv app-release.apk "digital_saver_android_${VERSION}.apk"
-          cp "digital_saver_android_${VERSION}.apk" digital_saver_android.apk
-          ls -la
-
-      - name: Upload Android APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: android-apk
-          path: app/build/app/outputs/flutter-apk/digital_saver_android*.apk
-          retention-days: 30
-
   build-windows:
-    name: Build Windows EXE
-    runs-on: windows-2022
-    
+    runs-on: windows-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
+      - uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.27.0'
-          channel: 'stable'
+          channel: stable
 
       - name: Install dependencies
-        run: |
-          cd app
-          flutter pub get
+        working-directory: app
+        run: flutter pub get
 
-      - name: Check Visual Studio
-        run: |
-          Write-Host "Checking Visual Studio installation..."
-          if (Get-Command vswhere -ErrorAction SilentlyContinue) {
-            vswhere -products *
-          } else {
-            Write-Host "vswhere not found, checking common VS paths..."
-            Get-ChildItem "C:\Program Files\Microsoft Visual Studio" -ErrorAction SilentlyContinue
-          }
-          flutter doctor -v
+      # Gate on both before anything is published. The previous workflow built
+      # and released without either check.
+      - name: Analyze
+        working-directory: app
+        run: flutter analyze
 
-      - name: Build Windows EXE (Release)
-        run: |
-          cd app
-          flutter build windows --release --dart-define=GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }} 2>&1
+      - name: Test
+        working-directory: app
+        run: flutter test
 
-      - name: Package Windows Build
+      - name: Build Windows
+        working-directory: app
+        run: flutter build windows --release
+
+      - name: Stage the versioned install layout
         shell: pwsh
         run: |
-          $VERSION = "${{ github.ref_name }}"
-          if ([string]::IsNullOrEmpty($VERSION) -or $VERSION.StartsWith("refs/heads/")) {
-            $VERSION = "${{ inputs.release_version || 'dev' }}"
-          }
-          $srcDir = "app\build\windows\x64\runner\Release"
-          $zipPath = "app\build\windows\x64\runner\Release\digital_saver_windows_$VERSION.zip"
-          $latestZipPath = "app\build\windows\x64\runner\Release\digital_saver_windows.zip"
-          
-          Write-Host "Creating ZIP archive..."
-          Compress-Archive -Path "$srcDir\*" -DestinationPath $zipPath -Force
-          Copy-Item $zipPath $latestZipPath -Force
+          # The installer lays the app out as <root>/versions/<version>/ with a
+          # current.txt pointer, which is what lets the app update itself later
+          # without overwriting files Windows has open.
+          $version = (($env:RELEASE_VERSION -replace '^v', '') -split '-')[0]
+          New-Item -ItemType Directory -Force -Path staging | Out-Null
+          Copy-Item "app/build/windows/x64/runner/Release/*" staging -Recurse -Force
+          [System.IO.File]::WriteAllText("$PWD/staging-current.txt", $version)
 
-          choco install innosetup --no-progress -y
-          $issPath = "app\build\windows\digital_saver.iss"
-          @"
-          [Setup]
-          AppName=Digital Saver
-          AppVersion=$VERSION
-          AppPublisher=Cambric Software
-          DefaultDirName={autopf}\Digital Saver
-          DefaultGroupName=Digital Saver
-          OutputDir=.
-          OutputBaseFilename=digital_saver_windows_setup
-          Compression=lzma
-          SolidCompression=yes
-          Uninstallable=yes
-          [Files]
-          Source: "x64\runner\Release\*"; DestDir: "{app}"; Flags: recursesubdirs ignoreversion
-          [Icons]
-          Name: "{autodesktop}\Digital Saver"; Filename: "{app}\digital_saver.exe"
-          Name: "{group}\Digital Saver"; Filename: "{app}\digital_saver.exe"
-          [Run]
-          Filename: "{app}\digital_saver.exe"; Description: "Launch Digital Saver"; Flags: nowait postinstall skipifsilent
-          "@ | Set-Content $issPath
-          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" $issPath
-          Copy-Item "app\build\windows\digital_saver_windows_setup.exe" "app\build\windows\digital_saver_windows_setup_latest.exe" -Force
-          
-          Write-Host "ZIP contents:"
-          Get-ChildItem $zipPath | Select-Object Name, @{N='Size (KB)';E={[math]::Round($_.Length/1KB,1)}}
-          Write-Host "Source files:"
-          Get-ChildItem $srcDir | Select-Object Name, @{N='Size (KB)';E={[math]::Round($_.Length/1KB,1)}}
+      - name: Package the portable zip
+        shell: pwsh
+        run: |
+          $src = "app/build/windows/x64/runner/Release"
+          Compress-Archive -Path "$src/*" -DestinationPath windows.zip
+          $hash = (Get-FileHash windows.zip -Algorithm SHA256).Hash.ToLower()
+          "$hash  windows.zip" | Out-File -FilePath windows.zip.sha256 -Encoding ASCII
 
-      - name: Upload Windows ZIP
-        uses: actions/upload-artifact@v4
+      - name: Install Inno Setup
+        run: choco install innosetup --yes --no-progress --limit-output
+
+      - name: Build the setup executable
+        shell: pwsh
+        run: |
+          $version = (($env:RELEASE_VERSION -replace '^v', '') -split '-')[0]
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) { throw "ISCC.exe not found at $iscc" }
+          & $iscc "/DAppVersion=$version" "installer\digital_saver.iss"
+          if ($LASTEXITCODE -ne 0) { throw "Inno Setup failed with $LASTEXITCODE" }
+
+      - name: Checksum the installer and add a stable alias
+        shell: pwsh
+        run: |
+          # The download page links releases/latest/download/<name>, which
+          # needs a filename that does not change every release. Publish the
+          # versioned file people keep on disk, plus a stable alias for the
+          # page. Both are the same bytes.
+          $installer = Get-ChildItem release-out -Filter "DigitalSaver-Setup-*.exe" | Select-Object -First 1
+          if (-not $installer) { throw "No installer exe was produced" }
+          if ($installer.Length -lt 100000) { throw "Installer is implausibly small" }
+          $hash = (Get-FileHash $installer.FullName -Algorithm SHA256).Hash.ToLower()
+          "$hash  $($installer.Name)" | Out-File -FilePath "release-out/$($installer.Name).sha256" -Encoding ASCII
+
+          Copy-Item $installer.FullName "release-out/DigitalSaver-Setup.exe" -Force
+          $aliasHash = (Get-FileHash "release-out/DigitalSaver-Setup.exe" -Algorithm SHA256).Hash.ToLower()
+          "$aliasHash  DigitalSaver-Setup.exe" | Out-File -FilePath "release-out/DigitalSaver-Setup.exe.sha256" -Encoding ASCII
+          Get-ChildItem release-out | Select-Object Name, Length
+
+      - uses: actions/upload-artifact@v4
         with:
-          name: windows-zip
-          path: app/build/windows/x64/runner/Release/digital_saver_windows*.zip
-          retention-days: 30
-
-      - name: Upload Windows Installer
-        uses: actions/upload-artifact@v4
-        with:
-          name: windows-installer
-          path: app/build/windows/digital_saver_windows_setup*.exe
-          retention-days: 30
+          name: windows
+          path: |
+            windows.zip
+            windows.zip.sha256
+            release-out/
 
   build-linux:
-    name: Build Linux AppImage
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
+      - uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.27.0'
-          channel: 'stable'
+          channel: stable
 
       - name: Install Linux dependencies
         run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq \
-            clang cmake ninja-build pkg-config \
-            libgtk-3-dev liblzma-dev libstdc++-12-dev \
-            libsecret-1-dev libjsoncpp-dev \
-            libfuse2 rsync
+          sudo apt-get update -y
+          sudo apt-get install -y clang cmake ninja-build pkg-config \
+            libgtk-3-dev liblzma-dev libstdc++-12-dev
 
-      - name: Enable Linux desktop support
-        run: flutter config --enable-linux-desktop
+      - name: Install dependencies
+        working-directory: app
+        run: flutter pub get
 
-      - name: Create Linux scaffold and install dependencies
+      - name: Analyze
+        working-directory: app
+        run: flutter analyze
+
+      - name: Test
+        working-directory: app
+        run: flutter test
+
+      - name: Build Linux
+        working-directory: app
+        run: flutter build linux --release
+
+      - name: Package the portable tarball
         run: |
-          cd app
-          flutter create --platforms=linux .
-          flutter pub get
+          tar -czf linux.tar.gz -C app/build/linux/x64/release/bundle .
+          sha256sum linux.tar.gz > linux.tar.gz.sha256
 
-      - name: Build Linux Release
+      - name: Build the .deb package
         run: |
-          cd app
-          flutter build linux --release \
-            --dart-define=GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}
+          # Versioned layout, mirroring the Windows installer, so a .deb install
+          # can also update itself in place.
+          set -euo pipefail
+          # Strip any pre-release suffix: dpkg versions cannot contain it.
+          VERSION="${RELEASE_VERSION#v}"
+          VERSION="${VERSION%%-*}"
+          PKG="digital-saver"
+          ROOT="debroot"
+          # RELATIVE for building the tree, ABSOLUTE for anything the installed
+          # system will execute or read. Conflating the two put a staging path
+          # into the desktop Exec on the last attempt, so the launcher pointed
+          # somewhere that does not exist once installed.
+          INSTALL_ABS="/usr/lib/digital-saver"
+          INSTALL="$ROOT$INSTALL_ABS"
+          # Every directory must exist before any file is written into it.
+          mkdir -p "$INSTALL/versions/$VERSION" \
+                   "$ROOT/DEBIAN" \
+                   "$ROOT/usr/share/applications" \
+                   "$ROOT/usr/share/icons/hicolor/x-icon/apps"
+          cp -r app/build/linux/x64/release/bundle/. "$INSTALL/versions/$VERSION/"
+          printf '%s' "$VERSION" > "$INSTALL/current.txt"
+          cat > "$ROOT/DEBIAN/control" <<EOF
+          Package: $PKG
+          Version: $VERSION
+          Section: utils
+          Priority: optional
+          Architecture: amd64
+          Maintainer: Cambric Software <support@cambric.dev>
+          Depends: libgtk-3-0, libstdc++6
+          Installed-Size: $(du -sk "$INSTALL" | cut -f1)
+          Description: Smartwatch health monitoring with emergency alerts.
+           Digital Saver reads heart rate, blood pressure, oxygen saturation,
+           sleep and activity from a Veyro watch and explains what they mean.
+          EOF
+          cat > "$ROOT/usr/share/applications/digital-saver.desktop" <<EOF
+          [Desktop Entry]
+          Type=Application
+          Name=Digital Saver
+          Comment=Smartwatch health monitoring
+          Exec=$INSTALL_ABS/versions/$VERSION/digital_saver
+          Icon=digital-saver
+          Categories=Utility;MedicalSoftware;
+          Terminal=false
+          EOF
+          dpkg-deb --build --root-owner-group "$ROOT" "digital-saver_$VERSION.deb"
+          sha256sum "digital-saver_$VERSION.deb" > "digital-saver_$VERSION.deb.sha256"
+          # Stable alias so the download page can link releases/latest/download.
+          cp "digital-saver_$VERSION.deb" digital-saver.deb
+          sha256sum digital-saver.deb > digital-saver.deb.sha256
+          ls -la digital-saver*.deb*
 
-      - name: Resolve version
-        id: version
-        run: |
-          VERSION="${GITHUB_REF#refs/tags/}"
-          if [ -z "$VERSION" ] || [[ "$VERSION" == refs/heads/* ]]; then
-            VERSION="${{ inputs.release_version || 'dev' }}"
-          fi
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-
-      - name: Create tar.gz archive
-        run: |
-          BUNDLE="app/build/linux/x64/release/bundle"
-          VERSION="${{ steps.version.outputs.version }}"
-          tar -czvf "$BUNDLE/digital_saver_linux_${VERSION}.tar.gz" \
-            --warning=no-file-changed \
-            --exclude="*.tar.gz" --exclude="*.AppImage" --exclude="installer" \
-            -C "$BUNDLE" . || true
-          ls -lh "$BUNDLE"
-          cp "$BUNDLE/digital_saver_linux_${VERSION}.tar.gz" "$BUNDLE/digital_saver_linux.tar.gz"
-
-      - name: Build AppImage
-        run: |
-          BUNDLE="app/build/linux/x64/release/bundle"
-          VERSION="${{ steps.version.outputs.version }}"
-
-          APPDIR="$BUNDLE/installer"
-          mkdir -p \
-            "$APPDIR/usr/lib/digital-saver" \
-            "$APPDIR/usr/share/applications" \
-            "$APPDIR/usr/share/icons/hicolor/256x256/apps"
-
-          rsync -a \
-            --exclude='*.tar.gz' --exclude='*.AppImage' --exclude='installer' \
-            "$BUNDLE/" "$APPDIR/usr/lib/digital-saver/"
-
-          cp app/assets/digital-saver-icon-transparent.png \
-             "$APPDIR/usr/share/icons/hicolor/256x256/apps/digital-saver.png"
-          cp "$APPDIR/usr/share/icons/hicolor/256x256/apps/digital-saver.png" \
-             "$APPDIR/digital-saver.png"
-
-          printf '[Desktop Entry]\nType=Application\nName=Digital Saver\nComment=Private Veyro health monitor\nExec=digital_saver\nIcon=digital-saver\nTerminal=false\nCategories=Utility;Education;\n' \
-            > "$APPDIR/usr/share/applications/digital-saver.desktop"
-          cp "$APPDIR/usr/share/applications/digital-saver.desktop" "$APPDIR/digital-saver.desktop"
-
-          printf '#!/usr/bin/env bash\nset -e\nAPP_HOME="${XDG_DATA_HOME:-$HOME/.local/share}/digital-saver"\nmkdir -p "$APP_HOME"\ncp -r "${APPDIR}/usr/lib/digital-saver/." "$APP_HOME/"\nmkdir -p "${XDG_DATA_HOME:-$HOME/.local/share}/applications"\nsed "s#Exec=digital_saver#Exec=$APP_HOME/digital_saver#" "${APPDIR}/usr/share/applications/digital-saver.desktop" > "${XDG_DATA_HOME:-$HOME/.local/share}/applications/digital-saver.desktop"\nchmod +x "$APP_HOME/digital_saver"\nif [ -d "$HOME/Desktop" ]; then cp "${XDG_DATA_HOME:-$HOME/.local/share}/applications/digital-saver.desktop" "$HOME/Desktop/Digital Saver.desktop"; chmod +x "$HOME/Desktop/Digital Saver.desktop"; fi\nexec "$APP_HOME/digital_saver" "$@"\n' \
-            > "$APPDIR/AppRun"
-          chmod +x "$APPDIR/AppRun"
-
-          curl -L --fail -o /tmp/appimagetool.AppImage \
-            https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage
-          chmod +x /tmp/appimagetool.AppImage
-
-          ARCH=x86_64 APPIMAGE_EXTRACT_AND_RUN=1 \
-            /tmp/appimagetool.AppImage "$APPDIR" \
-            "$BUNDLE/digital_saver_linux_${VERSION}.AppImage"
-
-          cp "$BUNDLE/digital_saver_linux_${VERSION}.AppImage" "$BUNDLE/digital_saver_linux.AppImage"
-          cp "$BUNDLE/digital_saver_linux_${VERSION}.AppImage" "$BUNDLE/digital_saver_linux_installer.run"
-          ls -lh "$BUNDLE"
-
-      - name: Upload Linux Archive
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
-          name: linux-archive
-          path: app/build/linux/x64/release/bundle/digital_saver_linux*.tar.gz
-          retention-days: 30
-
-      - name: Upload Linux Installer
-        uses: actions/upload-artifact@v4
-        with:
-          name: linux-installer
+          name: linux
           path: |
-            app/build/linux/x64/release/bundle/digital_saver_linux*.AppImage
-            app/build/linux/x64/release/bundle/digital_saver_linux_installer.run
-          retention-days: 30
+            linux.tar.gz
+            linux.tar.gz.sha256
+            *.deb
+            *.deb.sha256
 
-  create-release:
-    name: Create GitHub Release
-    needs: [build-android, build-windows, build-linux]
+  build-android:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    if: startsWith(github.ref, 'refs/tags/')
-    
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Download Android APK
-        uses: actions/download-artifact@v4
+      - uses: actions/setup-java@v4
         with:
-          name: android-apk
-          path: artifacts
+          distribution: temurin
+          java-version: "17"
 
-      - name: Download Windows ZIP
-        uses: actions/download-artifact@v4
+      - uses: subosito/flutter-action@v2
         with:
-          name: windows-zip
-          path: artifacts
+          channel: stable
 
-      - name: Download Linux Archive
-        uses: actions/download-artifact@v4
-        with:
-          name: linux-archive
-          path: artifacts
+      - name: Install dependencies
+        working-directory: app
+        run: flutter pub get
 
-      - name: Download Windows Installer
-        uses: actions/download-artifact@v4
-        with:
-          name: windows-installer
-          path: artifacts
+      - name: Build APK
+        working-directory: app
+        run: flutter build apk --release
 
-      - name: Download Linux Installer
-        uses: actions/download-artifact@v4
+      - name: Checksum
+        run: |
+          cp app/build/app/outputs/flutter-apk/app-release.apk android.apk
+          sha256sum android.apk > android.apk.sha256
+
+      - uses: actions/upload-artifact@v4
         with:
-          name: linux-installer
-          path: artifacts
+          name: android
+          path: |
+            android.apk
+            android.apk.sha256
+
+  release:
+    needs: [build-windows, build-linux, build-android]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: release-files
 
       - name: List artifacts
-        run: ls -la artifacts/
+        run: find release-files -type f
 
-      - name: Create Release
-        uses: softprops/action-gh-release@v1
+      - name: Assemble the asset list
+        id: assets
+        run: |
+          # Build the file list from whatever actually exists, so a platform
+          # that failed to produce an installer cannot silently leave a dead
+          # download button.
+          {
+            echo "files<<EOF"
+            find release-files -type f \( -name '*.zip' -o -name '*.tar.gz' \
+              -o -name '*.exe' -o -name '*.deb' -o -name '*.apk' \
+              -o -name '*.sha256' \) | sort
+            echo EOF
+          } >> "$GITHUB_OUTPUT"
+          cat "$GITHUB_OUTPUT"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
         with:
-          draft: false
-          prerelease: true
-          files: artifacts/*
-          body: "## Downloads\n\n### Android\n- **APK:** digital_saver_android_*.apk\n- Install on your Android phone (enable 'Install from unknown sources')\n\n### Windows\n- **ZIP:** digital_saver_windows_*.zip\n- Extract and run `digital_saver.exe`\n- Requires Windows 10/11 (64-bit)\n\n### Linux\n- **TAR.GZ:** digital_saver_linux_*.tar.gz\n- Extract and run `digital_saver`\n- Requires GTK3 libraries"
           generate_release_notes: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          fail_on_unmatched_files: true
+          files: ${{ steps.assets.outputs.files }}

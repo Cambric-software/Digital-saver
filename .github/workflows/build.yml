@@ -19,3 +19,57 @@ jobs:
         with:
           name: web-app
           path: app/build/web
+
+  build-installer:
+    name: Windows installer
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+      - name: Install dependencies
+        working-directory: app
+        run: flutter pub get
+      - name: Build Windows
+        working-directory: app
+        run: flutter build windows --release
+
+      - name: Stage the versioned install layout
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path staging | Out-Null
+          Copy-Item "app/build/windows/x64/runner/Release/*" staging -Recurse -Force
+          [System.IO.File]::WriteAllText("$PWD/staging-current.txt", "0.0.0")
+
+      - name: Install Inno Setup
+        run: choco install innosetup --yes --no-progress --limit-output
+
+      - name: Compile the installer script
+        shell: pwsh
+        run: |
+          # Compiling is the point of this job: it proves the .iss is valid and
+          # that the staged layout satisfies it, long before a tag turns it into
+          # something users download. The probe version is numeric, exactly as
+          # the release job normalises it, because Inno rejects a pre-release
+          # suffix in VersionInfoVersion.
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) { throw "ISCC.exe not found at $iscc" }
+          & $iscc "/DAppVersion=0.0.0" "installer\digital_saver.iss"
+          if ($LASTEXITCODE -ne 0) { throw "Inno Setup failed with $LASTEXITCODE" }
+
+      - name: Confirm the installer was produced
+        shell: pwsh
+        run: |
+          $exe = Get-ChildItem release-out -Filter "*.exe" -ErrorAction SilentlyContinue
+          if (-not $exe) { throw "Inno Setup produced no installer" }
+          $exe | Select-Object Name, Length
+          if ($exe[0].Length -lt 100000) {
+            throw "Installer is implausibly small ($($exe[0].Length) bytes)"
+          }
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-installer
+          path: release-out/
+          retention-days: 7

@@ -10,6 +10,52 @@ set(BINARY_NAME "digital_saver")
 # versions of CMake.
 cmake_policy(VERSION 3.14...3.25)
 
+# The flutter_secure_storage_windows plugin includes <atlstr.h>, which comes
+# from the ATL component of Visual Studio. Flutter's Windows build does not add
+# that directory to the include path, so the build failed with
+# "Cannot open include file: 'atlstr.h'" on a machine where ATL was installed.
+#
+# Locate the newest ATL include directory and add it. If ATL is genuinely absent
+# the build still fails, but with the plugin's own error rather than a confusing
+# missing-header message from deep inside generated code.
+if(MSVC)
+  # CMake's $ENV{} cannot name a variable containing parentheses, so
+  # ProgramFiles(x86) has to be written as a literal path. Both roots are
+  # checked because Visual Studio may live in either.
+  file(GLOB _atl_candidates
+    "$ENV{ProgramFiles}/Microsoft Visual Studio/*/*/VC/Tools/MSVC/*/atlmfc/include"
+    "C:/Program Files (x86)/Microsoft Visual Studio/*/*/VC/Tools/MSVC/*/atlmfc/include")
+  if(_atl_candidates)
+    list(SORT _atl_candidates)
+    list(REVERSE _atl_candidates)
+    list(GET _atl_candidates 0 _atl_include)
+    message(STATUS "Using ATL headers from ${_atl_include}")
+    include_directories("${_atl_include}")
+
+    # The headers alone are not enough: the plugin also links atls.lib, which
+    # lives beside them under atlmfc/lib/<arch>/. Without this the build fails
+    # at link time with "cannot open file 'atls.lib'".
+    get_filename_component(_atl_root "${_atl_include}" DIRECTORY)  # .../atlmfc
+    if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+      set(_atl_lib "${_atl_root}/lib/x64")
+    else()
+      set(_atl_lib "${_atl_root}/lib")
+    endif()
+    if(EXISTS "${_atl_lib}")
+      message(STATUS "Using ATL libraries from ${_atl_lib}")
+      link_directories("${_atl_lib}")
+    else()
+      message(WARNING
+        "ATL library directory not found at ${_atl_lib}; linking atls.lib "
+        "will fail.")
+    endif()
+  else()
+    message(WARNING
+      "ATL headers not found. flutter_secure_storage_windows will fail to "
+      "compile. Install the 'C++ ATL for latest v143' Visual Studio component.")
+  endif()
+endif()
+
 # Define build configuration option.
 get_property(IS_MULTICONFIG GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
 if(IS_MULTICONFIG)
