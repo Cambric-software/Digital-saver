@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../theme/app_theme.dart';
+
 enum AppThemeMode { light, dark, blue, purple, green, gradient }
 
 class ThemeService extends ChangeNotifier {
@@ -25,101 +27,9 @@ class ThemeService extends ChangeNotifier {
     notifyListeners();
   }
 
-  ThemeData getLightTheme() {
-    switch (_themeMode) {
-      case AppThemeMode.light:
-        return _buildTheme(Colors.blueGrey, Brightness.light);
-      case AppThemeMode.blue:
-        return _buildTheme(const Color(0xFF2563EB), Brightness.light);
-      case AppThemeMode.purple:
-        return _buildTheme(const Color(0xFF7C3AED), Brightness.light);
-      case AppThemeMode.green:
-        return _buildTheme(const Color(0xFF22C55E), Brightness.light);
-      case AppThemeMode.gradient:
-      case AppThemeMode.dark:
-        return _buildTheme(const Color(0xFF2563EB), Brightness.light);
-    }
-  }
+  ThemeData getLightTheme() => AppTheme.light;
 
-  ThemeData getDarkTheme() {
-    switch (_themeMode) {
-      case AppThemeMode.light:
-        return _buildTheme(Colors.blueGrey, Brightness.dark);
-      case AppThemeMode.blue:
-        return _buildTheme(const Color(0xFF2563EB), Brightness.dark);
-      case AppThemeMode.purple:
-        return _buildTheme(const Color(0xFF7C3AED), Brightness.dark);
-      case AppThemeMode.green:
-        return _buildTheme(const Color(0xFF22C55E), Brightness.dark);
-      case AppThemeMode.gradient:
-      case AppThemeMode.dark:
-        return _buildTheme(const Color(0xFF2563EB), Brightness.dark);
-    }
-  }
-
-  ThemeData _buildTheme(Color seedColor, Brightness brightness) {
-    final isDark = brightness == Brightness.dark;
-    
-    return ThemeData(
-      useMaterial3: true,
-      brightness: brightness,
-      colorScheme: ColorScheme.fromSeed(
-        seedColor: seedColor,
-        brightness: brightness,
-        surface: isDark ? const Color(0xFF1E293B) : Colors.white,
-      ),
-      scaffoldBackgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
-      fontFamily: 'Inter',
-      appBarTheme: AppBarTheme(
-        backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
-        foregroundColor: isDark ? Colors.white : const Color(0xFF1E3A5F),
-        elevation: 0,
-        centerTitle: true,
-      ),
-      cardTheme: CardThemeData(
-        color: isDark ? const Color(0xFF1E293B) : Colors.white,
-        elevation: 2,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      ),
-      elevatedButtonTheme: ElevatedButtonThemeData(
-        style: ElevatedButton.styleFrom(
-          backgroundColor: seedColor,
-          foregroundColor: Colors.white,
-          elevation: 2,
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        ),
-      ),
-      inputDecorationTheme: InputDecorationTheme(
-        filled: true,
-        fillColor: isDark ? const Color(0xFF334155) : const Color(0xFFF1F5F9),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide.none,
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide.none,
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: seedColor, width: 2),
-        ),
-      ),
-      navigationBarTheme: NavigationBarThemeData(
-        backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
-        indicatorColor: seedColor.withOpacity(0.2),
-        labelTextStyle: WidgetStateProperty.all(
-          TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: seedColor),
-        ),
-      ),
-      floatingActionButtonTheme: FloatingActionButtonThemeData(
-        backgroundColor: seedColor,
-        foregroundColor: Colors.white,
-        elevation: 4,
-      ),
-    );
-  }
+  ThemeData getDarkTheme() => AppTheme.dark;
 
   String getThemeName() {
     switch (_themeMode) {

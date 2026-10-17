@@ -9,13 +9,8 @@ import 'services/theme_service.dart';
 import 'services/locale_service.dart';
 import 'services/auto_update_service.dart';
 import 'services/heart_rate_tracker.dart';
-import 'theme/app_theme.dart';
-import 'screens/dashboard_screen.dart';
-import 'screens/vitals_screen.dart';
-import 'screens/ai_assistant_screen.dart';
-import 'screens/memory_screen.dart';
-import 'screens/settings_screen.dart';
 import 'screens/web_landing_page.dart';
+import 'widgets/ds_shell.dart';
 import 'widgets/enhanced_splash.dart';
 
 void main() async {
@@ -234,175 +229,18 @@ class _UpdateWrapperState extends State<_UpdateWrapper> {
   }
 }
 
-class MainNav extends StatefulWidget {
-  const MainNav({super.key});
+/// Retained name for call sites that predate the new shell.
+///
+/// Delegates to [DsShell], which owns navigation, device status and the
+/// update entry point. The previous implementation rebuilt the destination list
+/// on every frame and had no route model, so this is a compatibility shim
+/// rather than a second navigation system.
+class MainNav extends StatelessWidget {
+  const MainNav({super.key, this.initial = DsDestination.dashboard});
+
+  /// Destination shown on launch.
+  final DsDestination initial;
 
   @override
-  State<MainNav> createState() => _MainNavState();
-}
-
-class _MainNavState extends State<MainNav> {
-  int _currentIndex = 0;
-
-  static const _screens = [
-    DashboardScreen(),
-    VitalsScreen(),
-    AIAssistantScreen(),
-    MemoryScreen(),
-    SettingsScreen(),
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    final ble = context.watch<BleService>();
-    final locale = context.watch<LocaleService>();
-    final wide = MediaQuery.sizeOf(context).width >= 900;
-
-    final destinations = [
-      NavigationDestination(
-        icon: const Icon(Icons.dashboard_outlined),
-        selectedIcon: const Icon(Icons.dashboard),
-        label: locale.tr('home'),
-      ),
-      NavigationDestination(
-        icon: const Icon(Icons.monitor_heart_outlined),
-        selectedIcon: const Icon(Icons.monitor_heart),
-        label: locale.tr('vitals'),
-      ),
-      NavigationDestination(
-        icon: const Icon(Icons.auto_awesome_outlined),
-        selectedIcon: const Icon(Icons.auto_awesome),
-        label: locale.tr('ai_coach'),
-      ),
-      NavigationDestination(
-        icon: const Icon(Icons.watch_outlined),
-        selectedIcon: const Icon(Icons.watch),
-        label: locale.tr('watch'),
-      ),
-      NavigationDestination(
-        icon: const Icon(Icons.settings_outlined),
-        selectedIcon: const Icon(Icons.settings),
-        label: locale.tr('settings'),
-      ),
-    ];
-
-    return Scaffold(
-      body: Row(
-        children: [
-          if (wide)
-            NavigationRail(
-              selectedIndex: _currentIndex,
-              onDestinationSelected: (i) => setState(() => _currentIndex = i),
-              labelType: NavigationRailLabelType.all,
-              minWidth: 80,
-              backgroundColor: Theme.of(context).colorScheme.surface,
-              leading: Padding(
-                padding: const EdgeInsets.only(top: 20, bottom: 24),
-                child: Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    gradient: AppColors.gradientPrimary,
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: const Icon(Icons.favorite, color: Colors.white, size: 22),
-                ),
-              ),
-              destinations: destinations
-                  .map((d) => NavigationRailDestination(
-                        icon: d.icon,
-                        selectedIcon: d.selectedIcon,
-                        label: Text(d.label),
-                      ))
-                  .toList(),
-            ),
-          Expanded(
-            child: Center(
-              child: ConstrainedBox(
-                constraints: BoxConstraints(maxWidth: wide ? 850 : double.infinity),
-                child: Stack(
-                  children: [
-                    IndexedStack(index: _currentIndex, children: _screens),
-                if (ble.state == BleState.scanning)
-                  Positioned(
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    child: SafeArea(
-                      child: Container(
-                        margin: const EdgeInsets.all(16),
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                        decoration: BoxDecoration(
-                          color: AppColors.primaryDark,
-                          borderRadius: BorderRadius.circular(12),
-                          boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 8)],
-                        ),
-                        child: Row(
-                          children: [
-                            const SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                            ),
-                            const SizedBox(width: 12),
-                            Text(
-                              locale.tr('scan_ble'),
-                              style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w500),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                if (ble.state == BleState.connecting)
-                  Positioned(
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    child: SafeArea(
-                      child: Container(
-                        margin: const EdgeInsets.all(16),
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                        decoration: BoxDecoration(
-                          color: AppColors.primaryDark,
-                          borderRadius: BorderRadius.circular(12),
-                          boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 8)],
-                        ),
-                        child: Row(
-                          children: [
-                            const SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                            ),
-                            const SizedBox(width: 12),
-                            Text(
-                              locale.tr('pairing'),
-                              style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w500),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-              ],
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-      bottomNavigationBar: wide
-          ? null
-          : NavigationBar(
-              selectedIndex: _currentIndex,
-              onDestinationSelected: (i) => setState(() => _currentIndex = i),
-              backgroundColor: Theme.of(context).colorScheme.surface,
-              elevation: 4,
-              height: 68,
-              destinations: destinations,
-              labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-            ),
-    );
-  }
+  Widget build(BuildContext context) => DsShell(initial: initial);
 }
