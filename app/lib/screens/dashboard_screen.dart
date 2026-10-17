@@ -1,326 +1,124 @@
+/// The Today screen.
+///
+/// Rebuilt from scratch. The previous dashboard was a 30 KB file that mixed
+/// layout, formatting, colour choice, threshold logic and data fetching in one
+/// place, so the same number was interpreted differently in different parts of
+/// the screen and there was no way to test any of it.
+///
+/// What is here now:
+///   * every reading gets an explicit [HealthStatus] from one place, so a value
+///     cannot read as "fine" in one tile and "critical" in another;
+///   * a reading of 0 means no data and is shown as such, never as a number;
+///   * the layout is built from the shared components, so light and dark are
+///     handled once rather than per screen;
+///   * there is no connection state to guess at - the shell already shows it,
+///     and this screen reacts by saying what is missing.
+library;
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'dart:math' as math;
+
+import '../models/health_models.dart';
 import '../services/ble_service.dart';
-import '../services/health_analysis_service.dart';
-import '../theme/app_theme.dart';
+import '../theme/app_colors.dart';
+import '../theme/design_tokens.dart';
+import '../widgets/ds_widgets.dart';
 
-// Import the GithubService (file you created: github_services.dart)
-import '../services/github_services.dart';
-
-class DashboardScreen extends StatefulWidget {
+/// Live overview of the current day.
+class DashboardScreen extends StatelessWidget {
+  /// Create the dashboard.
   const DashboardScreen({super.key});
-  @override
-  State<DashboardScreen> createState() => _DashboardScreenState();
-}
-
-class _DashboardScreenState extends State<DashboardScreen>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _ctrl;
-  late Animation<double> _ring;
-
-  // GithubService instance to fetch the latest release tag
-  final GithubService githubService = GithubService();
-
-  @override
-  void initState() {
-    super.initState();
-    _ctrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 1400));
-    _ring = CurvedAnimation(parent: _ctrl, curve: Curves.easeOutCubic);
-    _ctrl.forward();
-  }
-
-  @override
-  void dispose() {
-    _ctrl.dispose();
-    super.dispose();
-  }
-
-  void _showDeviceSelectionSheet(BuildContext context, BleService ble) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) => _DeviceSelectionSheet(ble: ble),
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
     final ble = context.watch<BleService>();
-    final score = ble.isConnected ? ble.healthScore : 0;
+    final width = MediaQuery.sizeOf(context).width;
+    final columns = width >= Breakpoints.expanded
+        ? 4
+        : width >= Breakpoints.medium
+            ? 2
+            : 1;
 
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: Stack(
-        children: [
-          CustomScrollView(
-            slivers: [
-              _appBar(ble, context),
-              SliverPadding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                sliver: SliverList(delegate: SliverChildListDelegate([
-                  const SizedBox(height: 8),
-                  if (!ble.isConnected) _ConnectBanner(ble: ble, onScan: () => _showDeviceSelectionSheet(context, ble)),
-                  if (ble.isConnected && ble.demoMode) _DemoBanner(),
-                  const SizedBox(height: 16),
-                  _ScoreCard(animation: _ring, score: score, batteryLevel: ble.batteryLevel, isConnected: ble.isConnected),
-                  const SizedBox(height: 16),
-                  _VitalsGrid(ble: ble),
-                  const SizedBox(height: 16),
-                  _AlertsCard(ble: ble),
-                  const SizedBox(height: 16),
-                  _TodaySummary(ble: ble),
-                  const SizedBox(height: 100),
-                ])),
-              ),
-            ],
+    return DsPage(
+      title: 'Today',
+      actions: <Widget>[
+        IconButton(
+          tooltip: ble.demoMode ? 'Showing sample data' : 'Live readings',
+          onPressed: () {},
+          icon: Icon(
+            ble.demoMode ? Icons.science_outlined : Icons.sensors_rounded,
+            color: ble.demoMode ? AppColors.warning : null,
           ),
-
-          // Version label in bottom-right corner
-          // Version label in bottom-right corner with dynamic theme colors
-          Positioned(
-            bottom: 10,
-            right: 10,
-            child: FutureBuilder<String>(
-              future: githubService.fetchLatestVersion(),
-              builder: (context, snapshot) {
-                final theme = Theme.of(context);
-                final versionText = (snapshot.hasData && snapshot.data != null && snapshot.data!.isNotEmpty)
-                    ? snapshot.data!
-                    : 'v1.0.3';
-                return Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.surface.withValues(alpha: 0.9),
-                    borderRadius: BorderRadius.circular(8),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.08),
-                        blurRadius: 6,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                    border: Border.all(
-                      color: theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
-                      width: 0.5,
-                    ),
-                  ),
-                  child: Text(
-                    versionText,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                );
-              },
-            ),
+        ),
+      ],
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          if (!ble.isConnected)
+            const _DisconnectedNotice()
+          else
+            _ConnectedBanner(batteryLevel: ble.batteryLevel),
+          const SizedBox(height: Space.xl),
+          DsSection(
+            title: 'Vitals',
+            subtitle: 'Live from your watch',
+            child: _VitalsGrid(ble: ble, columns: columns),
+          ),
+          const SizedBox(height: Space.xxl),
+          DsSection(
+            title: 'Activity',
+            subtitle: 'Today so far',
+            child: _ActivityPanel(activity: ble.activity),
+          ),
+          const SizedBox(height: Space.xxl),
+          DsSection(
+            title: 'Recovery',
+            subtitle: 'Signals worth knowing about',
+            child: _RecoveryPanel(ble: ble),
           ),
         ],
       ),
     );
   }
-
-  SliverAppBar _appBar(BleService ble, BuildContext context) => SliverAppBar(
-    backgroundColor: AppColors.background,
-    surfaceTintColor: Colors.transparent,
-    pinned: true,
-    title: Row(children: [
-      Container(
-        width: 36, height: 36,
-        decoration: BoxDecoration(
-          gradient: AppColors.gradientPrimary,
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: const Icon(Icons.favorite, color: Colors.white, size: 20),
-      ),
-      const SizedBox(width: 10),
-      const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text('Digital Saver', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17, color: AppColors.textPrimary)),
-        Text('Health Monitor', style: TextStyle(fontSize: 11, color: AppColors.textSecondary, fontWeight: FontWeight.normal)),
-        SizedBox(height: 2),
-        Text('Made by Cambric', style: TextStyle(fontSize: 9, color: AppColors.textMuted, fontWeight: FontWeight.w400)),
-      ]),
-    ]),
-    actions: [
-      GestureDetector(
-        onTap: ble.isConnected ? ble.disconnect : () => _showDeviceSelectionSheet(context, ble),
-        child: Container(
-          margin: const EdgeInsets.only(right: 12),
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          decoration: BoxDecoration(
-            color: ble.isConnected ? AppColors.success.withValues(alpha: 0.1) : Colors.grey.shade100,
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Row(mainAxisSize: MainAxisSize.min, children: [
-            Container(width: 8, height: 8, decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: ble.isConnected ? AppColors.success : Colors.grey,
-            )),
-            const SizedBox(width: 6),
-            Text(
-              ble.isConnected ? (ble.demoMode ? 'Demo' : 'Live') : 'Offline',
-              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600,
-                color: ble.isConnected ? AppColors.success : Colors.grey),
-            ),
-          ]),
-        ),
-      ),
-    ],
-  );
 }
 
-class _DeviceSelectionSheet extends StatelessWidget {
-  final BleService ble;
-  const _DeviceSelectionSheet({required this.ble});
+/// Everything is unavailable until a watch connects.
+class _DisconnectedNotice extends StatelessWidget {
+  const _DisconnectedNotice();
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: MediaQuery.of(context).size.height * 0.7,
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      child: Column(
-        children: [
-          const SizedBox(height: 12),
+    return DsCard(
+      child: Row(
+        children: <Widget>[
           Container(
-            width: 40, height: 4,
-            decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2)),
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: Theme.of(context)
+                  .colorScheme
+                  .surfaceContainerHigh,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              Icons.bluetooth_disabled_rounded,
+              size: 20,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
           ),
-          const SizedBox(height: 16),
-          const Text('Select Smartwatch', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 8),
-          const Text('Scanning for nearby smartwatches...', style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
-          const SizedBox(height: 16),
-          if (ble.state == BleState.scanning)
-            const Padding(
-              padding: EdgeInsets.all(20),
-              child: CircularProgressIndicator(),
-            )
-          else if (ble.discoveredDevices.isEmpty)
-            Padding(
-              padding: const EdgeInsets.all(40),
-              child: Column(
-                children: [
-                  Icon(Icons.watch_off, size: 64, color: Colors.grey.shade400),
-                  const SizedBox(height: 16),
-                  const Text('No smartwatches found', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500)),
-                  const SizedBox(height: 8),
-                  const Text('Make sure your watch is turned on and nearby', style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
-                  const SizedBox(height: 20),
-                  ElevatedButton.icon(
-                    onPressed: ble.startScan,
-                    icon: const Icon(Icons.refresh),
-                    label: const Text('Scan Again'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                    ),
-                  ),
-                ],
-              ),
-            )
-          else
-            Expanded(
-              child: ListView.builder(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                itemCount: ble.discoveredDevices.length + 1,
-                itemBuilder: (ctx, index) {
-                  if (index == ble.discoveredDevices.length) {
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      child: OutlinedButton.icon(
-                        onPressed: ble.startScan,
-                        icon: const Icon(Icons.refresh),
-                        label: const Text('Scan for More'),
-                        style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                        ),
-                      ),
-                    );
-                  }
-                  final device = ble.discoveredDevices[index];
-                  return Container(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    child: Material(
-                      color: Colors.grey.shade50,
-                      borderRadius: BorderRadius.circular(16),
-                      child: InkWell(
-                        onTap: () {
-                          Navigator.pop(context);
-                          ble.connectToDevice(device.device);
-                        },
-                        borderRadius: BorderRadius.circular(16),
-                        child: Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                  color: AppColors.primary.withValues(alpha: 0.1),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: const Icon(Icons.watch, color: AppColors.primary),
-                              ),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(device.name, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
-                                    if (device.rssi != null)
-                                      Text('Signal: ${device.rssi} dBm', style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
-                                  ],
-                                ),
-                              ),
-                              const Icon(Icons.chevron_right, color: Colors.grey),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
-          Padding(
-            padding: EdgeInsets.only(
-              left: 16, right: 16, bottom: MediaQuery.of(context).padding.bottom + 16, top: 8,
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () {
-                      Navigator.pop(context);
-                      ble.enableDemoMode();
-                    },
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      side: const BorderSide(color: AppColors.primary),
-                    ),
-                    child: const Text('Try Demo Mode'),
-                  ),
+          const SizedBox(width: Space.lg),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  'No watch connected',
+                  style: Theme.of(context).textTheme.titleSmall,
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () {
-                      Navigator.pop(context);
-                      ble.startScan();
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                    ),
-                    child: const Text('Scan', style: TextStyle(color: Colors.white)),
-                  ),
+                const SizedBox(height: Space.xxs),
+                Text(
+                  'Open the Watch tab to pair, then readings will appear here.',
+                  style: Theme.of(context).textTheme.bodySmall,
                 ),
               ],
             ),
@@ -331,392 +129,391 @@ class _DeviceSelectionSheet extends StatelessWidget {
   }
 }
 
-class _ConnectBanner extends StatelessWidget {
-  final BleService ble;
-  final VoidCallback onScan;
-  const _ConnectBanner({required this.ble, required this.onScan});
-  @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.all(18),
-    decoration: BoxDecoration(
-      gradient: AppColors.gradientPrimary,
-      borderRadius: BorderRadius.circular(20),
-      boxShadow: AppShadows.coloredCard(AppColors.primary),
-    ),
-    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      const Row(children: [
-        Icon(Icons.watch_outlined, color: Colors.white, size: 22),
-        SizedBox(width: 10),
-        Text('Connect Your Watch', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
-      ]),
-      const SizedBox(height: 8),
-      const Text(
-        'Pair your Digital Saver smartwatch via Bluetooth to see live health data from your ESP32 watch.',
-        style: TextStyle(color: Colors.white70, fontSize: 13, height: 1.4),
-      ),
-      const SizedBox(height: 14),
-      Row(children: [
-        Expanded(child: ElevatedButton.icon(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.white, foregroundColor: AppColors.primary,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            padding: const EdgeInsets.symmetric(vertical: 12),
-          ),
-          onPressed: onScan,
-          icon: const Icon(Icons.bluetooth_searching, size: 16),
-          label: const Text('Scan & Connect', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-        )),
-        const SizedBox(width: 10),
-        OutlinedButton(
-          style: OutlinedButton.styleFrom(
-            foregroundColor: Colors.white,
-            side: const BorderSide(color: Colors.white38),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-          ),
-          onPressed: ble.enableDemoMode,
-          child: const Text('Demo', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-        ),
-      ]),
-    ]),
-  );
-}
+class _ConnectedBanner extends StatelessWidget {
+  const _ConnectedBanner({required this.batteryLevel});
 
-class _DemoBanner extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-    decoration: BoxDecoration(
-      color: AppColors.warning.withValues(alpha: 0.10),
-      borderRadius: BorderRadius.circular(12),
-      border: Border.all(color: AppColors.warning.withValues(alpha: 0.3)),
-    ),
-    child: const Row(children: [
-      Icon(Icons.science_outlined, color: AppColors.warning, size: 16),
-      SizedBox(width: 8),
-      Expanded(child: Text(
-        'Demo Mode — simulated data. Connect your watch for real readings.',
-        style: TextStyle(color: AppColors.warning, fontSize: 12, fontWeight: FontWeight.w500),
-      )),
-    ]),
-  );
-}
-
-class _ScoreCard extends StatelessWidget {
-  final Animation<double> animation;
-  final int score;
   final int batteryLevel;
-  final bool isConnected;
-  const _ScoreCard({required this.animation, required this.score, required this.batteryLevel, required this.isConnected});
-
-  Color get _c => score >= 80 ? AppColors.success : score >= 60 ? AppColors.primary : score >= 40 ? AppColors.warning : AppColors.danger;
-  String get _label => score >= 80 ? 'Excellent' : score >= 60 ? 'Good' : score >= 40 ? 'Fair' : 'Needs Care';
-  String get _msg => score >= 80 ? 'All vitals looking great! Keep up the good work.' : score >= 60 ? 'Most vitals are within healthy range.' : 'Some readings need your attention.';
-
-  Color get _batteryColor {
-    if (batteryLevel >= 60) return AppColors.success;
-    if (batteryLevel >= 30) return AppColors.warning;
-    return AppColors.danger;
-  }
-
-  @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.all(24),
-    decoration: BoxDecoration(
-      color: AppColors.surface,
-      borderRadius: BorderRadius.circular(24),
-      boxShadow: AppShadows.card,
-    ),
-    child: Column(children: [
-      const Text('Daily Health Score', style: TextStyle(color: AppColors.textSecondary, fontSize: 13, fontWeight: FontWeight.w600, letterSpacing: 0.3)),
-      const SizedBox(height: 20),
-      AnimatedBuilder(
-        animation: animation,
-        builder: (_, __) => SizedBox(
-          width: 200, height: 200, // Increased from 170 to accommodate larger numbers
-          child: Stack(alignment: Alignment.center, children: [
-            CustomPaint(
-              size: const Size(200, 200),
-              painter: _RingPainter(progress: animation.value * (score / 100), color: _c),
-            ),
-            Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-              Icon(Icons.favorite_rounded, color: _c, size: 28),
-              const SizedBox(height: 4),
-              Text(
-                isConnected ? '$score' : '--',
-                style: const TextStyle(fontSize: 48, fontWeight: FontWeight.bold, color: AppColors.textPrimary, height: 1),
-              ),
-              Text('of 100', style: TextStyle(color: _c, fontSize: 15, fontWeight: FontWeight.w600)),
-            ]),
-          ]),
-        ),
-      ),
-      const SizedBox(height: 16),
-      Container(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-        decoration: BoxDecoration(
-          color: _c.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.favorite_rounded, color: _c, size: 16),
-            const SizedBox(width: 6),
-            Text(
-              isConnected ? _label : 'No Watch Connected',
-              style: TextStyle(color: _c, fontWeight: FontWeight.bold, fontSize: 14),
-            ),
-          ],
-        ),
-      ),
-      const SizedBox(height: 10),
-      Text(
-        isConnected ? _msg : 'Connect your smartwatch to calculate your score',
-        style: const TextStyle(color: AppColors.textSecondary, fontSize: 12), 
-        textAlign: TextAlign.center,
-      ),
-      const SizedBox(height: 6),
-      const Text(
-        'Wellness estimate only. Not a medical diagnosis.',
-        style: TextStyle(color: AppColors.textMuted, fontSize: 10),
-        textAlign: TextAlign.center,
-      ),
-      const SizedBox(height: 14),
-      Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-        decoration: BoxDecoration(
-          color: AppColors.background,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.battery_5_bar, size: 16, color: _batteryColor),
-            const SizedBox(width: 6),
-            Text(
-              isConnected ? 'Watch battery $batteryLevel%' : 'Watch battery unavailable',
-              style: const TextStyle(color: AppColors.textSecondary, fontSize: 12, fontWeight: FontWeight.w600),
-            ),
-          ],
-        ),
-      ),
-    ]),
-  );
-}
-
-class _RingPainter extends CustomPainter {
-  final double progress;
-  final Color color;
-  const _RingPainter({required this.progress, required this.color});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final c = Offset(size.width / 2, size.height / 2);
-    final r = (size.width - 20) / 2;
-    canvas.drawCircle(c, r, Paint()..color = Colors.grey.shade100..style = PaintingStyle.stroke..strokeWidth = 14..strokeCap = StrokeCap.round);
-    final fg = Paint()
-      ..style = PaintingStyle.stroke..strokeWidth = 14..strokeCap = StrokeCap.round
-      ..shader = SweepGradient(
-        startAngle: -math.pi / 2,
-        endAngle: -math.pi / 2 + 2 * math.pi * progress,
-        colors: [color.withValues(alpha: 0.6), color],
-      ).createShader(Rect.fromCircle(center: c, radius: r));
-    canvas.drawArc(Rect.fromCircle(center: c, radius: r), -math.pi / 2, 2 * math.pi * progress, false, fg);
-  }
-
-  @override
-  bool shouldRepaint(_RingPainter o) => o.progress != progress;
-}
-
-class _VitalsGrid extends StatelessWidget {
-  final BleService ble;
-  const _VitalsGrid({required this.ble});
-
-  String get _sysVal {
-    // BP is always 0 from the current firmware. Show a clear label instead of 0/0.
-    return ble.bloodPressure.systolic > 0 ? '${ble.bloodPressure.systolic}' : 'N/A';
-  }
-  String get _bpFull {
-    if (ble.bloodPressure.systolic > 0) {
-      return '${ble.bloodPressure.systolic}/${ble.bloodPressure.diastolic}';
-    }
-    return 'N/A';
-  }
-  @override
-  Widget build(BuildContext context) => Column(children: [
-    Row(children: [
-      Expanded(child: _VitalCard(
-        label: 'Heart Rate', value: ble.isConnected && ble.heartRate.bpm > 0 ? '${ble.heartRate.bpm}' : '--',
-        unit: 'BPM', icon: Icons.favorite, gradient: AppColors.gradientHeart,
-        badge: ble.heartRate.bpm > 0 ? _hrBadge(ble.heartRate.bpm.toDouble()) : null,
-      )),
-      const SizedBox(width: 12),
-      Expanded(child: _VitalCard(
-        label: 'Oxygen SpO₂', value: ble.isConnected && ble.oxygen.spO2 > 0 ? '${ble.oxygen.spO2}' : '--',
-        unit: '%', icon: Icons.air, gradient: AppColors.gradientOxy,
-        badge: ble.oxygen.spO2 > 0 ? _o2Badge(ble.oxygen.spO2.toDouble()) : null,
-      )),
-    ]),
-    const SizedBox(height: 12),
-    Row(children: [
-      Expanded(child: _VitalCard(
-        label: 'Blood Pressure', value: ble.isConnected ? _sysVal : '--',
-        unit: ble.bloodPressure.systolic > 0 ? 'mmHg' : 'Not available',
-        icon: Icons.water_drop, gradient: AppColors.gradientBP,
-        badge: ble.bloodPressure.systolic > 0 ? _bpBadge(_bpFull) : null,
-      )),
-      const SizedBox(width: 12),
-      Expanded(child: _VitalCard(
-        label: 'HRV Index', value: ble.isConnected && ble.heartRate.hrv > 0 ? '${ble.heartRate.hrv}' : '--',
-        unit: 'ms RMSSD', icon: Icons.show_chart, gradient: AppColors.gradientPrimary,
-        badge: _hrvBadge(ble.heartRate.hrv.toDouble()),
-      )),
-    ]),
-  ]);
-
-  _Badge? _hrBadge(double hr) {
-    if (hr == 0) return null;
-    if (hr < 60) return const _Badge('LOW', AppColors.warning);
-    if (hr > 100) return const _Badge('HIGH', AppColors.danger);
-    return const _Badge('NORMAL', AppColors.success);
-  }
-  _Badge? _o2Badge(double o2) {
-    if (o2 == 0) return null;
-    if (o2 >= 95) return const _Badge('NORMAL', AppColors.success);
-    if (o2 >= 90) return const _Badge('LOW', AppColors.warning);
-    return const _Badge('CRITICAL', AppColors.danger);
-  }
-  _Badge? _bpBadge(String bp) {
-    final p = bp.split('/');
-    if (p.length != 2) return null;
-    final s = double.tryParse(p[0]) ?? 120;
-    if (s < 120) return const _Badge('NORMAL', AppColors.success);
-    if (s < 130) return const _Badge('ELEVATED', AppColors.warning);
-    if (s < 140) return const _Badge('HIGH', AppColors.danger);
-    return const _Badge('CRISIS', AppColors.dangerDark);
-  }
-  _Badge? _hrvBadge(double hrv) {
-    if (hrv == 0) return null;
-    if (hrv >= 50) return const _Badge('GREAT', AppColors.success);
-    if (hrv >= 30) return const _Badge('GOOD', AppColors.primary);
-    return const _Badge('LOW', AppColors.warning);
-  }
-}
-
-class _Badge {
-  final String label;
-  final Color color;
-  const _Badge(this.label, this.color);
-}
-
-class _VitalCard extends StatelessWidget {
-  final String label, value, unit;
-  final IconData icon;
-  final Gradient gradient;
-  final _Badge? badge;
-  const _VitalCard({required this.label, required this.value, required this.unit, required this.icon, required this.gradient, this.badge});
-
-  @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.all(16),
-    decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(20), boxShadow: AppShadows.card),
-    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-        Container(padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(gradient: gradient, borderRadius: BorderRadius.circular(10)),
-          child: Icon(icon, color: Colors.white, size: 16)),
-        if (badge != null)
-          Builder(builder: (context) {
-            final b = badge!;
-            return Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-              decoration: BoxDecoration(color: b.color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(6)),
-              child: Text(b.label, style: TextStyle(color: b.color, fontSize: 9, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
-            );
-          }),
-      ]),
-      const SizedBox(height: 12),
-      Text(value, style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: AppColors.textPrimary, height: 1)),
-      Text(unit, style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)),
-      const SizedBox(height: 2),
-      Text(label, style: const TextStyle(fontSize: 11, color: AppColors.textMuted, fontWeight: FontWeight.w500)),
-    ]),
-  );
-}
-
-class _AlertsCard extends StatelessWidget {
-  final BleService ble;
-  const _AlertsCard({required this.ble});
 
   @override
   Widget build(BuildContext context) {
-    if (!ble.isConnected) return const SizedBox.shrink();
-    final alerts = HealthAnalysisService.healthAlerts(
-      hr: ble.heartRate, bp: ble.bloodPressure, o2: ble.oxygen,
-      fallDetected: ble.accel.fallDetected, irregularHR: ble.heartRate.afibProbability > 50,
-    );
-    if (alerts.isEmpty) return const SizedBox.shrink();
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.surface, borderRadius: BorderRadius.circular(20),
-        boxShadow: AppShadows.card,
-        border: Border.all(color: AppColors.danger.withValues(alpha: 0.2)),
-      ),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const Row(children: [
-          Icon(Icons.warning_amber_rounded, color: AppColors.danger, size: 18),
-          SizedBox(width: 8),
-          Text('Health Alerts', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.danger, fontSize: 14)),
-        ]),
-        const SizedBox(height: 10),
-        ...alerts.map((a) => Padding(
-          padding: const EdgeInsets.only(bottom: 6),
-          child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            const Text('• ', style: TextStyle(color: AppColors.danger, fontWeight: FontWeight.bold)),
-            Expanded(child: Text(a, style: const TextStyle(color: AppColors.textSecondary, fontSize: 13, height: 1.4))),
-          ]),
-        )),
-      ]),
+    final scheme = Theme.of(context).colorScheme;
+    final low = batteryLevel > 0 && batteryLevel < 20;
+    final color = low ? AppColors.warning : scheme.secondary;
+
+    return Row(
+      children: <Widget>[
+        DsStatusPill(
+          label: low ? 'Watch battery low' : 'Watch connected',
+          icon: low ? Icons.battery_alert_rounded : Icons.bluetooth_connected_rounded,
+          color: color,
+        ),
+        const SizedBox(width: Space.md),
+        if (batteryLevel > 0)
+          Text('$batteryLevel%', style: Theme.of(context).textTheme.bodySmall),
+      ],
     );
   }
 }
 
-class _TodaySummary extends StatelessWidget {
+class _VitalsGrid extends StatelessWidget {
+  const _VitalsGrid({required this.ble, required this.columns});
+
   final BleService ble;
-  const _TodaySummary({required this.ble});
+  final int columns;
 
   @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.all(18),
-    decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(20), boxShadow: AppShadows.card),
-    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      const Text("Today's Summary", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: AppColors.textPrimary)),
-      const SizedBox(height: 16),
-      Row(mainAxisAlignment: MainAxisAlignment.spaceAround, children: [
-        _Stat(icon: Icons.directions_walk, label: 'Steps', value: ble.isConnected ? '${ble.activity.steps}' : '--', color: AppColors.stepAmber),
-        _Stat(icon: Icons.local_fire_department, label: 'Calories', value: ble.isConnected ? '${ble.activity.calories.round()} kcal' : '--', color: AppColors.heartRed),
-        _Stat(icon: Icons.thermostat, label: 'Temp', value: ble.isConnected && ble.temperature > 0 ? '${ble.temperature.toStringAsFixed(1)}°C' : '--', color: AppColors.accent),
-        const _Stat(icon: Icons.bedtime, label: 'Sleep', value: '--', color: AppColors.sleepPurple),
-      ]),
-    ]),
-  );
+  Widget build(BuildContext context) {
+    final tiles = <Widget>[
+      DsMetricTile(
+        label: 'Heart rate',
+        value: ble.heartRate.bpm > 0 ? '${ble.heartRate.bpm}' : '--',
+        unit: ble.heartRate.bpm > 0 ? 'BPM' : null,
+        accent: _heart(context),
+        status: _heartStatus(ble.heartRate),
+        icon: Icons.favorite_rounded,
+      ),
+      DsMetricTile(
+        label: 'Blood pressure',
+        value: _bloodPressureValue(ble.bloodPressure),
+        unit: ble.bloodPressure.systolic > 0 ? 'mmHg' : null,
+        accent: _bp(context),
+        status: _bloodPressureStatus(ble.bloodPressure),
+        icon: Icons.bloodtype_outlined,
+      ),
+      DsMetricTile(
+        label: 'Oxygen',
+        value: ble.oxygen.spO2 > 0 ? '${ble.oxygen.spO2}' : '--',
+        unit: ble.oxygen.spO2 > 0 ? '%' : null,
+        accent: _oxy(context),
+        status: _oxygenStatus(ble.oxygen),
+        icon: Icons.air_rounded,
+      ),
+      DsMetricTile(
+        label: 'Heart rhythm',
+        value: ble.heartRate.afibProbability > 0
+            ? '${ble.heartRate.afibProbability}%'
+            : '--',
+        accent: _heart(context),
+        status: _afibStatus(ble.heartRate),
+        icon: Icons.monitor_heart_outlined,
+      ),
+    ];
+
+    return _Grid(columns: columns, children: tiles);
+  }
+
+  static Color _heart(BuildContext c) =>
+      AppColors.of(AppColors.heartRed, AppColors.darkHeart, c);
+  static Color _bp(BuildContext c) =>
+      AppColors.of(AppColors.bpBlue, AppColors.darkBp, c);
+  static Color _oxy(BuildContext c) =>
+      AppColors.of(AppColors.oxyGreen, AppColors.darkOxy, c);
 }
 
-class _Stat extends StatelessWidget {
-  final IconData icon;
-  final String label, value;
-  final Color color;
-  const _Stat({required this.icon, required this.label, required this.value, required this.color});
+/// A simple responsive grid, because GridView cannot size to its content inside
+/// a scrolling page.
+class _Grid extends StatelessWidget {
+  const _Grid({required this.children, required this.columns});
+
+  final List<Widget> children;
+  final int columns;
 
   @override
-  Widget build(BuildContext context) => Column(children: [
-    Container(padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(color: color.withValues(alpha: 0.1), shape: BoxShape.circle),
-      child: Icon(icon, color: color, size: 20)),
-    const SizedBox(height: 6),
-    Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.textPrimary)),
-    Text(label, style: const TextStyle(fontSize: 10, color: AppColors.textMuted)),
-  ]);
+  Widget build(BuildContext context) {
+    if (columns <= 1) {
+      return Column(
+        children: <Widget>[
+          for (var i = 0; i < children.length; i++) ...<Widget>[
+            if (i > 0) const SizedBox(height: Space.md),
+            children[i],
+          ],
+        ],
+      );
+    }
+    return Wrap(
+      spacing: Space.md,
+      runSpacing: Space.md,
+      children: <Widget>[
+        for (final child in children)
+          SizedBox(
+            width: _childWidth(context, columns),
+            child: child,
+          ),
+      ],
+    );
+  }
+
+  double _childWidth(BuildContext context, int columns) {
+    final available = MediaQuery.sizeOf(context).width;
+    // DsPage caps content and pads it, so the usable width is derived rather
+    // than measured, which keeps this cheap inside a scrolling page.
+    final usable = available < Breakpoints.compact
+        ? available - Space.lg * 2
+        : available - Space.xl * 2;
+    final capped = usable > 1180 ? 1180.0 : usable;
+    return (capped - Space.md * (columns - 1)) / columns;
+  }
+}
+
+class _ActivityPanel extends StatelessWidget {
+  const _ActivityPanel({required this.activity});
+
+  final ActivityData activity;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final hasData = activity.steps > 0;
+
+    return DsCard(
+      child: hasData
+          ? Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Row(
+                  children: <Widget>[
+                    Expanded(
+                      child: _Progress(
+                        label: 'Steps',
+                        value: activity.steps,
+                        goal: 10000,
+                        unit: '',
+                        color: AppColors.of(
+                            AppColors.stepAmber, AppColors.darkStep, context),
+                      ),
+                    ),
+                    const SizedBox(width: Space.lg),
+                    Expanded(
+                      child: _Progress(
+                        label: 'Active minutes',
+                        value: activity.activeMinutes,
+                        goal: 60,
+                        unit: '',
+                        color: theme.colorScheme.primary,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: Space.lg),
+                Row(
+                  children: <Widget>[
+                    Expanded(
+                      child: _MiniStat(
+                        label: 'Calories',
+                        value: '${activity.calories.round()}',
+                        unit: 'kcal',
+                      ),
+                    ),
+                    Expanded(
+                      child: _MiniStat(
+                        label: 'Distance',
+                        value: activity.distanceKm.toStringAsFixed(2),
+                        unit: 'km',
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            )
+          : const DsEmptyState(
+              icon: Icons.directions_walk_rounded,
+              title: 'No activity yet',
+              message:
+                  'Steps, distance and active minutes appear once the watch '
+                  'reports them for today.',
+            ),
+    );
+  }
+}
+
+class _Progress extends StatelessWidget {
+  const _Progress({
+    required this.label,
+    required this.value,
+    required this.goal,
+    required this.unit,
+    required this.color,
+  });
+
+  final String label;
+  final int value;
+  final int goal;
+  final String unit;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final fraction = goal <= 0 ? 0.0 : (value / goal).clamp(0.0, 1.0);
+    final reached = value >= goal;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.baseline,
+          textBaseline: TextBaseline.alphabetic,
+          children: <Widget>[
+            Expanded(
+              child: Text(
+                value.toString(),
+                style: Type.metricSmall.copyWith(color: theme.colorScheme.onSurface),
+              ),
+            ),
+            Text(
+              ' / $goal',
+              style: theme.textTheme.labelMedium,
+            ),
+            if (reached) ...<Widget>[
+              const SizedBox(width: Space.xs),
+              Icon(Icons.check_circle_rounded, size: 16, color: color),
+            ],
+          ],
+        ),
+        const SizedBox(height: Space.sm),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(Radii.pill),
+          child: LinearProgressIndicator(
+            value: fraction,
+            minHeight: 6,
+            backgroundColor: theme.colorScheme.surfaceContainerHigh,
+            valueColor: AlwaysStoppedAnimation<Color>(color),
+          ),
+        ),
+        const SizedBox(height: Space.xs),
+        Text(label, style: theme.textTheme.bodySmall),
+      ],
+    );
+  }
+}
+
+class _MiniStat extends StatelessWidget {
+  const _MiniStat({
+    required this.label,
+    required this.value,
+    required this.unit,
+  });
+
+  final String label;
+  final String value;
+  final String unit;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.baseline,
+          textBaseline: TextBaseline.alphabetic,
+          children: <Widget>[
+            Text(
+              value,
+              style: Type.metricSmall.copyWith(color: theme.colorScheme.onSurface),
+            ),
+            const SizedBox(width: Space.xxs),
+            Text(unit, style: theme.textTheme.labelMedium),
+          ],
+        ),
+        const SizedBox(height: Space.xxs),
+        Text(label, style: theme.textTheme.bodySmall),
+      ],
+    );
+  }
+}
+
+class _RecoveryPanel extends StatelessWidget {
+  const _RecoveryPanel({required this.ble});
+
+  final BleService ble;
+
+  @override
+  Widget build(BuildContext context) {
+    final hr = ble.heartRate;
+    final hasData = hr.bpm > 0;
+    final hrvLow = hasData && hr.hrv > 0 && hr.hrv < 20;
+
+    return DsCard(
+      child: hasData
+          ? Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Expanded(
+                  child: _MiniStat(
+                    label: 'HRV (RMSSD)',
+                    value: hr.hrv > 0 ? '${hr.hrv}' : '--',
+                    unit: 'ms',
+                  ),
+                ),
+                Expanded(
+                  child: _MiniStat(
+                    label: 'Confidence',
+                    value: '${hr.confidence}',
+                    unit: '%',
+                  ),
+                ),
+                if (hrvLow)
+                  Expanded(
+                    child: DsStatusPill(
+                      label: 'Recovery may be low',
+                      icon: HealthStatus.elevated.icon,
+                      color: Theme.of(context).colorScheme.tertiary,
+                    ),
+                  ),
+              ],
+            )
+          : const DsEmptyState(
+              icon: Icons.bedtime_outlined,
+              title: 'Nothing to interpret yet',
+              message:
+                  'Recovery signals need a few minutes of connected data '
+                  'before they mean anything.',
+            ),
+    );
+  }
+}
+
+// ── Interpretation ─────────────────────────────────────────────────────
+// Thresholds live here, once. They were previously duplicated across the
+// dashboard and the detail screens, which is how the same reading came to
+// look healthy in one place and alarming in another.
+//
+// These are screening cues, not diagnoses. Anything that suggests a problem
+// is phrased as "worth checking", never as a conclusion.
+
+String _bloodPressureValue(BloodPressureData bp) {
+  if (bp.systolic <= 0 || bp.diastolic <= 0) return '--';
+  return '${bp.systolic}/${bp.diastolic}';
+}
+
+HealthStatus _heartStatus(HeartRateData hr) {
+  if (hr.bpm <= 0) return HealthStatus.unknown;
+  if (hr.bpm < 40 || hr.bpm > 180) return HealthStatus.critical;
+  if (hr.bpm < 50 || hr.bpm > 120) return HealthStatus.high;
+  if (hr.bpm > 100) return HealthStatus.elevated;
+  return HealthStatus.normal;
+}
+
+HealthStatus _bloodPressureStatus(BloodPressureData bp) {
+  if (bp.systolic <= 0 || bp.diastolic <= 0) return HealthStatus.unknown;
+  if (bp.systolic >= 180 || bp.diastolic >= 120) return HealthStatus.critical;
+  if (bp.systolic >= 140 || bp.diastolic >= 90) return HealthStatus.high;
+  if (bp.systolic >= 130 || bp.diastolic >= 85) return HealthStatus.elevated;
+  return HealthStatus.normal;
+}
+
+HealthStatus _oxygenStatus(OxygenData o2) {
+  if (o2.spO2 <= 0) return HealthStatus.unknown;
+  if (o2.spO2 < 90) return HealthStatus.critical;
+  if (o2.spO2 < 94) return HealthStatus.high;
+  if (o2.spO2 < 95) return HealthStatus.elevated;
+  return HealthStatus.normal;
+}
+
+HealthStatus _afibStatus(HeartRateData hr) {
+  if (hr.afibProbability <= 0) return HealthStatus.unknown;
+  if (hr.afibProbability >= 60) return HealthStatus.high;
+  if (hr.afibProbability >= 25) return HealthStatus.elevated;
+  return HealthStatus.normal;
 }
