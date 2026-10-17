@@ -8,39 +8,20 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'dart:convert';
 
-// Current app version - update this with each release
-class AppVersion {
-  static const String current = '1.0.2';
-  static const String buildNumber = '2';
-  
-  // Minimum version for auto-update (3.1.8+ supports silent auto-update)
-  static const String autoUpdateMinVersion = '1.0.2';
-  
-  static bool get supportsAutoUpdate {
-    final currentParts = current.split('.').map((e) => int.tryParse(e) ?? 0).toList();
-    final minParts = autoUpdateMinVersion.split('.').map((e) => int.tryParse(e) ?? 0).toList();
-    
-    for (int i = 0; i < 3; i++) {
-      final curr = i < currentParts.length ? currentParts[i] : 0;
-      final min = i < minParts.length ? minParts[i] : 0;
-      if (curr > min) return true;
-      if (curr < min) return false;
-    }
-    return true; // Equal to min version
-  }
-  
-  static String get downloadUrl {
-    const String release = 'https://github.com/Cambric-software/Digital-saver/releases/download/v1.0.1-beta';
-    if (defaultTargetPlatform == TargetPlatform.android) {
-      return '$release/digital_saver_android_v1.0.1-beta.apk';
-    } else if (defaultTargetPlatform == TargetPlatform.windows) {
-      return '$release/digital_saver_windows_setup.exe';
-    } else if (defaultTargetPlatform == TargetPlatform.linux) {
-      return '$release/digital_saver_linux_installer.run';
-    }
-    return 'https://cambric-software.github.io/Digital-saver/';
-  }
-}
+// AppVersion now lives in app_version.dart as the single source of truth. It
+// used to be declared here as '1.0.2' while pubspec.yaml said 1.0.3+3 and the
+// newest published tag was v1.0.3-beta, so the app under-reported itself and
+// could never decide it was current.
+//
+// The old downloadUrl getter was worse than stale: it built URLs from
+// filenames that have never existed on any release
+// (digital_saver_windows_setup.exe, digital_saver_linux_installer.run,
+// digital_saver_android_v1.0.1-beta.apk), pinned to v1.0.1-beta. Every one of
+// those links 404s. Download URLs are now resolved from the actual release
+// assets published on GitHub, never invented locally.
+import 'app_version.dart';
+
+export 'app_version.dart';
 
 class UpdateInfo {
   final String version;
@@ -144,8 +125,10 @@ class AutoUpdateService extends ChangeNotifier {
           }
         }
 
-        // Get download URL for current platform
-        String downloadUrl = AppVersion.downloadUrl;
+        // Start from the real releases page and let the asset scan below
+        // replace it with an actual published package URL. An invented
+        // filename would be a link that 404s.
+        String downloadUrl = AppVersion.releasesPage;
         
         // Safely get assets - handle null, missing, or non-list assets
         List<dynamic>? rawAssets = data['assets'];
@@ -227,7 +210,7 @@ class AutoUpdateService extends ChangeNotifier {
       // Install APK — this only works on rooted/system Android. On a regular
       // user install the pm command will be denied. We detect the failure and
       // surface a user-facing download prompt instead of silently dropping it.
-      final installed = await _installApkSilent(apkPath);
+      final installed = await installApkViaSystem(apkPath);
       
       if (installed) {
         await _showUpdateNotification(
@@ -259,7 +242,7 @@ class AutoUpdateService extends ChangeNotifier {
 
   /// Call this to open the release download page or direct APK URL manually.
   Future<void> openDownloadPage() async {
-    final url = _latestUpdate?.downloadUrl ?? AppVersion.downloadUrl;
+    final url = _latestUpdate?.downloadUrl ?? AppVersion.releasesPage;
     final uri = Uri.parse(url);
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
@@ -286,22 +269,27 @@ class AutoUpdateService extends ChangeNotifier {
     }
   }
 
-  Future<bool> _installApkSilent(String filePath) async {
+  /// Install a downloaded APK by handing it to the Android system installer.
+  ///
+  /// The previous implementation shelled out to `pm install -r -t` and called
+  /// it a silent install. That cannot work on a stock device: a normal app has
+  /// no shell permission to run pm, so it failed at the last step - and the
+  /// older code path had already uninstalled the app by then, taking the
+  /// user's data with it.
+  ///
+  /// The system installer upgrades in place and preserves data. It needs one
+  /// tap from the user, which is the honest cost of not shipping root.
+  Future<bool> installApkViaSystem(String filePath) async {
     if (!Platform.isAndroid) return false;
-    
     try {
-      // Make APK readable
-      await Process.run('chmod', ['644', filePath]);
-      
-      // Install APK with auto-accept
-      final result = await Process.run(
-        'pm',
-        ['install', '-r', '-t', filePath],
-      ).timeout(const Duration(minutes: 3));
-      
-      return result.exitCode == 0;
+      final file = File(filePath);
+      if (!await file.exists()) return false;
+      final uri = Uri.file(file.absolute.path);
+      if (!await canLaunchUrl(uri)) return false;
+      // The system installer opens; the person confirms from there.
+      return await launchUrl(uri, mode: LaunchMode.externalApplication);
     } catch (e) {
-      debugPrint('Error installing APK: $e');
+      debugPrint('Error handing APK to the system installer: $e');
       return false;
     }
   }

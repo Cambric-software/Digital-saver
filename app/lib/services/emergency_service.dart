@@ -1,10 +1,49 @@
 import 'package:url_launcher/url_launcher.dart';
 import '../models/health_models.dart';
 
+/// Emergency dialling.
+///
+/// The number is a setting, not a constant. It was hardcoded to 911, which is
+/// the US emergency number and is simply not callable in the UK - the country
+/// this product is built and used in. A hardcoded wrong number in an emergency
+/// feature is worse than no feature, so it is now configurable and defaults to
+/// the UK number, with the US available alongside.
 class EmergencyService {
-  static Future<void> callEmergency() async {
-    final uri = Uri(scheme: 'tel', path: '911');
-    if (await canLaunchUrl(uri)) await launchUrl(uri);
+  /// Dialled by [callEmergency].
+  ///
+  /// Overridable by the person using the app via [setEmergencyNumber], and
+  /// persisted by the settings screen.
+  static String emergencyNumber = '999';
+
+  /// Common emergency numbers, offered in settings.
+  static const Map<String, String> knownEmergencyNumbers = <String, String>{
+    'United Kingdom': '999',
+    'United States / Canada': '911',
+    'European Union': '112',
+    'Australia': '000',
+    'India': '112',
+  };
+
+  /// Set the number dialled by [callEmergency].
+  ///
+  /// Digits only, 3-6 characters. Anything else is rejected rather than
+  /// dialled, because a malformed URI here would silently do nothing when it
+  /// matters most.
+  static bool setEmergencyNumber(String value) {
+    final digits = value.replaceAll(RegExp(r'[^0-9]'), '');
+    if (digits.length < 3 || digits.length > 6) return false;
+    emergencyNumber = digits;
+    return true;
+  }
+
+  /// Dial the configured emergency number.
+  static Future<bool> callEmergency() async {
+    final uri = Uri(scheme: 'tel', path: emergencyNumber);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri);
+      return true;
+    }
+    return false;
   }
 
   static Future<void> callContact(EmergencyContact contact) async {
