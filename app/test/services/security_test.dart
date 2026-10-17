@@ -20,7 +20,7 @@ Future<String> pbkdf2Hex({
   final out = <int>[];
   var block = 1;
   while (out.length < length) {
-    var u = await hmac.convert(<int>[
+    var u = hmac.convert(<int>[
       ...saltBytes,
       (block >> 24) & 0xFF,
       (block >> 16) & 0xFF,
@@ -29,7 +29,7 @@ Future<String> pbkdf2Hex({
     ]).bytes;
     final acc = List<int>.from(u);
     for (var i = 1; i < iterations; i++) {
-      u = await hmac.convert(u).bytes;
+      u = hmac.convert(u).bytes;
       for (var k = 0; k < acc.length; k++) {
         acc[k] ^= u[k];
       }

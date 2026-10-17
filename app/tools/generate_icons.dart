@@ -3,7 +3,7 @@ import 'package:image/image.dart' as img;
 
 void main() async {
   // Use cambric-icon.png as the source (high resolution)
-  final sourcePath = 'assets/cambric-icon.png';
+  const sourcePath = 'assets/cambric-icon.png';
   
   // Read source image
   final sourceFile = File(sourcePath);

@@ -47,13 +47,13 @@ class _WebLandingPageState extends State<WebLandingPage> with SingleTickerProvid
   Future<void> _loadLatestRelease() async {
     try {
       final tag = await _githubService.fetchLatestVersion();
-      if (tag != null && tag.isNotEmpty) {
+      if (tag.isNotEmpty) {
         // Use the tag returned by GitHub (e.g. "v1.0.2-beta")
         setState(() {
           _currentVersion = tag;
           // Construct download URLs using the release tag in the path.
           // Filenames are kept consistent with your previous naming convention.
-          _androidUrl = 'https://github.com/Cambric-software/Digital-saver/releases/download/$tag/digital_saver_android_${tag}.apk';
+          _androidUrl = 'https://github.com/Cambric-software/Digital-saver/releases/download/$tag/digital_saver_android_$tag.apk';
           _windowsUrl = 'https://github.com/Cambric-software/Digital-saver/releases/download/$tag/digital_saver_windows_setup.exe';
           _linuxUrl = 'https://github.com/Cambric-software/Digital-saver/releases/download/$tag/digital_saver_linux_installer.run';
           _versionLoading = false;
@@ -140,7 +140,7 @@ class _WebLandingPageState extends State<WebLandingPage> with SingleTickerProvid
             borderRadius: BorderRadius.circular(32),
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFF2563EB).withOpacity(0.4),
+                color: const Color(0xFF2563EB).withValues(alpha: 0.4),
                 blurRadius: 30,
                 offset: const Offset(0, 15),
               ),
@@ -186,9 +186,9 @@ class _WebLandingPageState extends State<WebLandingPage> with SingleTickerProvid
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.1),
+            color: Colors.white.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(30),
-            border: Border.all(color: Colors.white.withOpacity(0.2)),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -270,7 +270,7 @@ class _WebLandingPageState extends State<WebLandingPage> with SingleTickerProvid
               color: const Color(0xFFE95420),
               onTap: () => _downloadFile(_linuxUrl, 'digital_saver_linux_installer.run'),
             ),
-            _DownloadButton(
+            const _DownloadButton(
               icon: Icons.apple,
               label: 'iOS',
               subtitle: 'Coming Soon',
@@ -288,9 +288,9 @@ class _WebLandingPageState extends State<WebLandingPage> with SingleTickerProvid
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
+        color: Colors.white.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withOpacity(0.1)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -423,10 +423,10 @@ class _DownloadButton extends StatelessWidget {
           width: 160,
           padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
           decoration: BoxDecoration(
-            color: isComingSoon ? Colors.grey.withOpacity(0.2) : color.withOpacity(0.15),
+            color: isComingSoon ? Colors.grey.withValues(alpha: 0.2) : color.withValues(alpha: 0.15),
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
-              color: isComingSoon ? Colors.grey.withOpacity(0.3) : color.withOpacity(0.4),
+              color: isComingSoon ? Colors.grey.withValues(alpha: 0.3) : color.withValues(alpha: 0.4),
             ),
           ),
           child: Column(
@@ -450,7 +450,7 @@ class _DownloadButton extends StatelessWidget {
               Text(
                 subtitle,
                 style: TextStyle(
-                  color: isComingSoon ? Colors.grey.withOpacity(0.7) : Colors.white70,
+                  color: isComingSoon ? Colors.grey.withValues(alpha: 0.7) : Colors.white70,
                   fontSize: 12,
                 ),
               ),
@@ -459,7 +459,7 @@ class _DownloadButton extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: Colors.grey.withOpacity(0.3),
+                    color: Colors.grey.withValues(alpha: 0.3),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: const Text(

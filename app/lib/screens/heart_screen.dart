@@ -75,7 +75,7 @@ class _HeroBPM extends StatelessWidget {
           const SizedBox(height: 12),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-            decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), borderRadius: BorderRadius.circular(20)),
+            decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(20)),
             child: Text('$zone · $zone2', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
           ),
         ],
@@ -148,7 +148,7 @@ class _HRVStat extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.all(12),
-    decoration: BoxDecoration(color: color.withOpacity(0.06), borderRadius: BorderRadius.circular(14)),
+    decoration: BoxDecoration(color: color.withValues(alpha: 0.06), borderRadius: BorderRadius.circular(14)),
     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Text(label, style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 11, letterSpacing: 0.4)),
       const SizedBox(height: 4),
@@ -183,7 +183,7 @@ class _StressBar extends StatelessWidget {
       const Text('Stress Index', style: TextStyle(color: AppColors.textSecondary, fontSize: 13, fontWeight: FontWeight.w500)),
       Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-        decoration: BoxDecoration(color: _color.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+        decoration: BoxDecoration(color: _color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
         child: Text(_label, style: TextStyle(color: _color, fontWeight: FontWeight.bold, fontSize: 11)),
       ),
     ]),
@@ -246,7 +246,7 @@ class _RRChart extends StatelessWidget {
                     belowBarData: BarAreaData(
                       show: true,
                       gradient: LinearGradient(
-                        colors: [AppColors.heartRed.withOpacity(0.2), AppColors.heartRed.withOpacity(0.0)],
+                        colors: [AppColors.heartRed.withValues(alpha: 0.2), AppColors.heartRed.withValues(alpha: 0.0)],
                         begin: Alignment.topCenter, end: Alignment.bottomCenter,
                       ),
                     ),
@@ -268,15 +268,15 @@ class _AFibPanel extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: irregular ? AppColors.danger.withOpacity(0.05) : AppColors.success.withOpacity(0.05),
+        color: irregular ? AppColors.danger.withValues(alpha: 0.05) : AppColors.success.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: irregular ? AppColors.danger.withOpacity(0.3) : AppColors.success.withOpacity(0.2)),
+        border: Border.all(color: irregular ? AppColors.danger.withValues(alpha: 0.3) : AppColors.success.withValues(alpha: 0.2)),
       ),
       child: Row(children: [
         Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: irregular ? AppColors.danger.withOpacity(0.1) : AppColors.success.withOpacity(0.1),
+            color: irregular ? AppColors.danger.withValues(alpha: 0.1) : AppColors.success.withValues(alpha: 0.1),
             shape: BoxShape.circle,
           ),
           child: Icon(
@@ -333,9 +333,9 @@ class _ZoneGuide extends StatelessWidget {
             margin: const EdgeInsets.only(bottom: 8),
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             decoration: BoxDecoration(
-              color: active ? z.color.withOpacity(0.12) : Colors.grey.shade50,
+              color: active ? z.color.withValues(alpha: 0.12) : Colors.grey.shade50,
               borderRadius: BorderRadius.circular(12),
-              border: active ? Border.all(color: z.color.withOpacity(0.4)) : null,
+              border: active ? Border.all(color: z.color.withValues(alpha: 0.4)) : null,
             ),
             child: Row(children: [
               Container(width: 10, height: 10, decoration: BoxDecoration(shape: BoxShape.circle, color: z.color)),
@@ -344,7 +344,7 @@ class _ZoneGuide extends StatelessWidget {
                 color: active ? z.color : AppColors.textSecondary, fontSize: 13))),
               Text(z.range, style: TextStyle(color: active ? z.color : AppColors.textMuted, fontSize: 12, fontWeight: FontWeight.w500)),
               const SizedBox(width: 8),
-              Text('BPM', style: TextStyle(color: AppColors.textMuted, fontSize: 10)),
+              const Text('BPM', style: TextStyle(color: AppColors.textMuted, fontSize: 10)),
               if (active) ...[
                 const SizedBox(width: 8),
                 Container(padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),

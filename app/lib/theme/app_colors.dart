@@ -132,7 +132,7 @@ class AppShadows {
 
   /// Subtle lift for a resting card.
   static List<BoxShadow> card = <BoxShadow>[
-    BoxShadow(
+    const BoxShadow(
       color: Color(0x0D000000),
       blurRadius: 20,
       offset: Offset(0, 4),
@@ -150,10 +150,10 @@ class AppShadows {
 
   /// A strong lift for a surface that is genuinely above the page.
   static List<BoxShadow> float = <BoxShadow>[
-    BoxShadow(
+    const BoxShadow(
       color: Color(0x1A000000),
       blurRadius: 40,
-      offset: const Offset(0, 12),
+      offset: Offset(0, 12),
     ),
   ];
 }

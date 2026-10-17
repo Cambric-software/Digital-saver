@@ -38,8 +38,8 @@ class _WaveBackgroundState extends State<WaveBackground>
   @override
   Widget build(BuildContext context) {
     final colors = widget.colors ?? [
-      const Color(0xFF2563EB).withOpacity(0.3),
-      const Color(0xFF7C3AED).withOpacity(0.3),
+      const Color(0xFF2563EB).withValues(alpha: 0.3),
+      const Color(0xFF7C3AED).withValues(alpha: 0.3),
     ];
 
     return AnimatedBuilder(
@@ -196,7 +196,7 @@ class _FloatingParticlePainter extends CustomPainter {
       final y = (particle.y * size.height + yOffset) % size.height;
 
       final paint = Paint()
-        ..color = color.withOpacity(particle.opacity)
+        ..color = color.withValues(alpha: particle.opacity)
         ..style = PaintingStyle.fill;
 
       canvas.drawCircle(Offset(x, y), particle.size, paint);
@@ -262,11 +262,11 @@ class _NeonTextState extends State<NeonText>
           style: widget.style?.copyWith(
             shadows: [
               Shadow(
-                color: widget.glowColor.withOpacity(_animation.value),
+                color: widget.glowColor.withValues(alpha: _animation.value),
                 blurRadius: widget.glowRadius * _animation.value,
               ),
               Shadow(
-                color: widget.glowColor.withOpacity(_animation.value * 0.5),
+                color: widget.glowColor.withValues(alpha: _animation.value * 0.5),
                 blurRadius: widget.glowRadius * 2 * _animation.value,
               ),
             ],
@@ -410,10 +410,10 @@ class _PulsingDotsState extends State<PulsingDots>
               height: widget.size,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: widget.color.withOpacity(opacity),
+                color: widget.color.withValues(alpha: opacity),
                 boxShadow: [
                   BoxShadow(
-                    color: widget.color.withOpacity(opacity * 0.5),
+                    color: widget.color.withValues(alpha: opacity * 0.5),
                     blurRadius: widget.size * scale,
                     spreadRadius: widget.size * scale * 0.2,
                   ),
@@ -553,7 +553,7 @@ class _ProgressRingPainter extends CustomPainter {
         endAngle: 3 * math.pi / 2,
         colors: [
           progressColor,
-          progressColor.withOpacity(0.7),
+          progressColor.withValues(alpha: 0.7),
         ],
       ).createShader(Rect.fromCircle(center: center, radius: radius))
       ..style = PaintingStyle.stroke
@@ -641,7 +641,7 @@ class _HeartRateLinePainter extends CustomPainter {
       ..strokeCap = StrokeCap.round;
 
     final path = Path();
-    final points = 50;
+    const points = 50;
     final stepX = size.width / points;
 
     path.moveTo(0, size.height / 2);
@@ -686,7 +686,7 @@ class _HeartRateLinePainter extends CustomPainter {
 
     // Draw glow
     paint
-      ..color = color.withOpacity(0.3)
+      ..color = color.withValues(alpha: 0.3)
       ..strokeWidth = 6
       ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4);
 

@@ -61,13 +61,13 @@ class _StepHero extends StatelessWidget {
         const SizedBox(height: 8),
         Text(ble.isConnected ? '$steps' : '--',
           style: const TextStyle(color: Colors.white, fontSize: 64, fontWeight: FontWeight.bold, height: 1)),
-        Text('/ $goal goal', style: const TextStyle(color: Colors.white70, fontSize: 14)),
+        const Text('/ $goal goal', style: TextStyle(color: Colors.white70, fontSize: 14)),
         const SizedBox(height: 16),
         ClipRRect(
           borderRadius: BorderRadius.circular(8),
           child: LinearProgressIndicator(
             value: pct,
-            backgroundColor: Colors.white.withOpacity(0.2),
+            backgroundColor: Colors.white.withValues(alpha: 0.2),
             valueColor: const AlwaysStoppedAnimation(Colors.white),
             minHeight: 8,
           ),
@@ -87,7 +87,7 @@ class _MetricsRow extends StatelessWidget {
   Widget build(BuildContext context) => Row(children: [
     Expanded(child: _MetricCard(label: 'Calories', value: ble.isConnected ? '${ble.activity.calories.round()}' : '--', unit: 'kcal', icon: Icons.local_fire_department, color: AppColors.heartRed)),
     const SizedBox(width: 12),
-    Expanded(child: _MetricCard(label: 'Distance', value: ble.isConnected ? '${(ble.activity.steps * 0.762 / 1000).toStringAsFixed(2)}' : '--', unit: 'km', icon: Icons.map_outlined, color: AppColors.primary)),
+    Expanded(child: _MetricCard(label: 'Distance', value: ble.isConnected ? (ble.activity.steps * 0.762 / 1000).toStringAsFixed(2) : '--', unit: 'km', icon: Icons.map_outlined, color: AppColors.primary)),
     const SizedBox(width: 12),
     Expanded(child: _MetricCard(label: 'Active', value: ble.isConnected ? '${(ble.activity.steps / 1200).floor()}' : '--', unit: 'min', icon: Icons.timer_outlined, color: AppColors.success)),
   ]);
@@ -132,7 +132,7 @@ class _HourlyChart extends StatelessWidget {
       final s = i <= hour ? stepsData[i] : 0;
       return BarChartGroupData(x: i, barRods: [BarChartRodData(
         toY: s.toDouble(),
-        color: i == hour ? AppColors.stepAmber : AppColors.stepAmber.withOpacity(0.3),
+        color: i == hour ? AppColors.stepAmber : AppColors.stepAmber.withValues(alpha: 0.3),
         width: 8,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
       )]);
@@ -249,15 +249,15 @@ class _FallDetector extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: fall ? AppColors.danger.withOpacity(0.06) : AppColors.success.withOpacity(0.06),
+        color: fall ? AppColors.danger.withValues(alpha: 0.06) : AppColors.success.withValues(alpha: 0.06),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: fall ? AppColors.danger.withOpacity(0.3) : AppColors.success.withOpacity(0.2)),
+        border: Border.all(color: fall ? AppColors.danger.withValues(alpha: 0.3) : AppColors.success.withValues(alpha: 0.2)),
       ),
       child: Row(children: [
         Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: fall ? AppColors.danger.withOpacity(0.1) : AppColors.success.withOpacity(0.1),
+            color: fall ? AppColors.danger.withValues(alpha: 0.1) : AppColors.success.withValues(alpha: 0.1),
             shape: BoxShape.circle,
           ),
           child: Icon(

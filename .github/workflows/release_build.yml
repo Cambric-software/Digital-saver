@@ -30,7 +30,18 @@ jobs:
       # and released without either check.
       - name: Analyze
         working-directory: app
-        run: flutter analyze
+        shell: bash
+        run: |
+          # Gate on errors and warnings. `flutter analyze` exits non-zero for
+          # info-level style lints too, which would fail the release on
+          # formatting rather than on anything that could ship broken.
+          flutter analyze > analysis.txt 2>&1 || true
+          if grep -qE '^[[:space:]]*(error|warning)[[:space:]]+-' analysis.txt; then
+            cat analysis.txt
+            echo "::error::Analyzer reported errors or warnings"
+            exit 1
+          fi
+          echo "No analyzer errors or warnings."
 
       - name: Test
         working-directory: app

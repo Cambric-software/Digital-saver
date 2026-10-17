@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:crypto/crypto.dart';
@@ -11,10 +10,10 @@ import 'package:flutter_test/flutter_test.dart';
 String _rep(String c) => List<String>.filled(64, c).join();
 
 void main() {
-  final _hashA = _rep('a');
-  final _hashB = _rep('b');
-  final _hashC = _rep('c');
-  final _hashD = _rep('d');
+  final hashA = _rep('a');
+  final hashB = _rep('b');
+  final hashC = _rep('c');
+  final hashD = _rep('d');
   group('version reporting', () {
     test('the running version matches pubspec.yaml', () {
       // A version that drifts from pubspec is how the app ended up claiming to
@@ -123,21 +122,21 @@ void main() {
 
   group('asset selection', () {
     final assets = <ReleaseAsset>[
-      ReleaseAsset(name: 'windows.zip', url: 'u', sizeBytes: 1, checksum: _hashA),
+      ReleaseAsset(name: 'windows.zip', url: 'u', sizeBytes: 1, checksum: hashA),
       const ReleaseAsset(name: 'windows.zip.sha256', url: 'u', sizeBytes: 1),
-      ReleaseAsset(name: 'linux.tar.gz', url: 'u', sizeBytes: 1, checksum: _hashB),
-      ReleaseAsset(name: 'android.apk', url: 'u', sizeBytes: 1, checksum: _hashC),
+      ReleaseAsset(name: 'linux.tar.gz', url: 'u', sizeBytes: 1, checksum: hashB),
+      ReleaseAsset(name: 'android.apk', url: 'u', sizeBytes: 1, checksum: hashC),
     ];
 
     test('sidecars are paired with the file they describe', () {
       final paired = ReleaseAsset.attachChecksums(
         assets,
         <String, String>{
-          'windows.zip.sha256': '${_hashD}  windows.zip',
+          'windows.zip.sha256': '$hashD  windows.zip',
         },
       );
       final zip = paired.firstWhere((a) => a.name == 'windows.zip');
-      expect(zip.checksum, _hashD);
+      expect(zip.checksum, hashD);
     });
 
     test('an asset with no sidecar is reported as having no checksum', () {
@@ -194,14 +193,14 @@ void main() {
     test('a wrong checksum does not verify', () async {
       final file = File('${temp.path}/pkg.bin');
       await file.writeAsString('hello world');
-      expect(await PackageVerifier.matches(file, _hashA), isFalse);
+      expect(await PackageVerifier.matches(file, hashA), isFalse);
     });
 
     test('a missing file does not verify', () async {
       expect(
         await PackageVerifier.matches(
           File('${temp.path}/ghost.bin'),
-          _hashA,
+          hashA,
         ),
         isFalse,
       );

@@ -183,14 +183,18 @@ class WatchAI {
   }) {
     int risk = 0;
     final maxHR = 220 - age;
-    if (heartRate > maxHR * 0.95) risk += 40;
-    else if (heartRate > maxHR * 0.85) risk += 20;
-    if (heartRate < 40) risk += 40;
-    else if (heartRate < 50) risk += 15;
-    if (spO2 < 85) risk += 50;
-    else if (spO2 < 92) risk += 25;
-    if (accelerometerMagnitude > 30) risk += 30;
-    else if (accelerometerMagnitude > 15) risk += 10;
+    if (heartRate > maxHR * 0.95) {
+      risk += 40;
+    } else if (heartRate > maxHR * 0.85) risk += 20;
+    if (heartRate < 40) {
+      risk += 40;
+    } else if (heartRate < 50) risk += 15;
+    if (spO2 < 85) {
+      risk += 50;
+    } else if (spO2 < 92) risk += 25;
+    if (accelerometerMagnitude > 30) {
+      risk += 30;
+    } else if (accelerometerMagnitude > 15) risk += 10;
     if (irregularBeat) risk += 25;
     return risk.clamp(0, 100);
   }

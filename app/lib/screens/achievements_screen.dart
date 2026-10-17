@@ -120,7 +120,7 @@ class _AchievementsScreenState extends State<AchievementsScreen>
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
                     colors: [
-                      AppColors.primaryDark.withOpacity(0.08),
+                      AppColors.primaryDark.withValues(alpha: 0.08),
                       AppColors.background,
                     ],
                   ),
@@ -146,7 +146,7 @@ class _AchievementsScreenState extends State<AchievementsScreen>
                       const SizedBox(height: 8),
                       Text(
                         '${_achievements.where((a) => !a.isLocked).length}/${_achievements.length} Unlocked',
-                        style: TextStyle(
+                        style: const TextStyle(
                           color: AppColors.textSecondary,
                           fontSize: 14,
                         ),
@@ -229,19 +229,19 @@ class _AchievementCard extends StatelessWidget {
           offset: Offset(0, achievement.isLocked ? 0 : floatOffset),
           child: Container(
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(achievement.isLocked ? 0.03 : 0.08),
+              color: Colors.white.withValues(alpha: achievement.isLocked ? 0.03 : 0.08),
               borderRadius: BorderRadius.circular(20),
               border: Border.all(
                 color: achievement.isLocked
-                    ? Colors.white.withOpacity(0.1)
-                    : achievement.color.withOpacity(0.5),
+                    ? Colors.white.withValues(alpha: 0.1)
+                    : achievement.color.withValues(alpha: 0.5),
                 width: 2,
               ),
               boxShadow: achievement.isLocked
                   ? null
                   : [
                       BoxShadow(
-                        color: achievement.color.withOpacity(0.3),
+                        color: achievement.color.withValues(alpha: 0.3),
                         blurRadius: 20,
                         spreadRadius: -5,
                       ),
@@ -260,12 +260,12 @@ class _AchievementCard extends StatelessWidget {
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           color: achievement.isLocked
-                              ? Colors.grey.withOpacity(0.2)
-                              : achievement.color.withOpacity(0.2),
+                              ? Colors.grey.withValues(alpha: 0.2)
+                              : achievement.color.withValues(alpha: 0.2),
                           border: Border.all(
                             color: achievement.isLocked
-                                ? Colors.grey.withOpacity(0.3)
-                                : achievement.color.withOpacity(0.5),
+                                ? Colors.grey.withValues(alpha: 0.3)
+                                : achievement.color.withValues(alpha: 0.5),
                             width: 2,
                           ),
                         ),
@@ -292,7 +292,7 @@ class _AchievementCard extends StatelessWidget {
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                          color: Colors.white.withOpacity(achievement.isLocked ? 0.3 : 0.5),
+                          color: Colors.white.withValues(alpha: achievement.isLocked ? 0.3 : 0.5),
                           fontSize: 11,
                         ),
                       ),
@@ -301,8 +301,8 @@ class _AchievementCard extends StatelessWidget {
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                         decoration: BoxDecoration(
                           color: achievement.isLocked
-                              ? Colors.grey.withOpacity(0.1)
-                              : achievement.color.withOpacity(0.2),
+                              ? Colors.grey.withValues(alpha: 0.1)
+                              : achievement.color.withValues(alpha: 0.2),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Text(

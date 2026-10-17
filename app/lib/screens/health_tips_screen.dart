@@ -1,4 +1,3 @@
-import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 
@@ -27,7 +26,7 @@ class _HealthTipsScreenState extends State<HealthTipsScreen>
     HealthTip(
       category: 'Sleep',
       icon: Icons.bedtime,
-      color: Color(0xFF8B5CF6),
+      color: const Color(0xFF8B5CF6),
       title: 'Consistent Sleep Schedule',
       content: 'Going to bed and waking up at the same time every day helps regulate your body\'s internal clock. Aim for 7-9 hours of quality sleep.',
       actionable: 'Set a bedtime reminder',
@@ -35,7 +34,7 @@ class _HealthTipsScreenState extends State<HealthTipsScreen>
     HealthTip(
       category: 'Activity',
       icon: Icons.directions_walk,
-      color: Color(0xFF10B981),
+      color: const Color(0xFF10B981),
       title: 'Take the Stairs',
       content: 'Just 2 minutes of stair climbing can improve heart health, burn calories, and boost energy levels. Small activities add up throughout the day.',
       actionable: 'Log your activity',
@@ -43,7 +42,7 @@ class _HealthTipsScreenState extends State<HealthTipsScreen>
     HealthTip(
       category: 'Hydration',
       icon: Icons.water_drop,
-      color: Color(0xFF3B82F6),
+      color: const Color(0xFF3B82F6),
       title: 'Stay Hydrated',
       content: 'Drink at least 8 glasses of water daily. Your body needs water for every cell function, temperature regulation, and toxin removal.',
       actionable: 'Set a hydration reminder',
@@ -51,7 +50,7 @@ class _HealthTipsScreenState extends State<HealthTipsScreen>
     HealthTip(
       category: 'SpO2',
       icon: Icons.air,
-      color: Color(0xFF06B6D4),
+      color: const Color(0xFF06B6D4),
       title: 'Understanding SpO2',
       content: 'Blood oxygen saturation (SpO2) measures how much oxygen your red blood cells carry. Normal levels are 95-100%. Low levels may indicate breathing issues.',
       actionable: 'Check your SpO2 level',
@@ -59,7 +58,7 @@ class _HealthTipsScreenState extends State<HealthTipsScreen>
     HealthTip(
       category: 'Stress',
       icon: Icons.self_improvement,
-      color: Color(0xFFEC4899),
+      color: const Color(0xFFEC4899),
       title: 'Take Deep Breaths',
       content: 'Practice deep breathing for 5 minutes daily. It activates your parasympathetic nervous system, reducing stress hormones and promoting relaxation.',
       actionable: 'Start a breathing exercise',
@@ -75,7 +74,7 @@ class _HealthTipsScreenState extends State<HealthTipsScreen>
     HealthTip(
       category: 'Posture',
       icon: Icons.accessibility_new,
-      color: Color(0xFF14B8A6),
+      color: const Color(0xFF14B8A6),
       title: 'Check Your Posture',
       content: 'Good posture reduces strain on muscles and joints, prevents back pain, and even boosts confidence. Sit up straight and take regular breaks.',
       actionable: 'Set a posture reminder',
@@ -137,7 +136,7 @@ class _HealthTipsScreenState extends State<HealthTipsScreen>
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
                     colors: [
-                      tip.color.withOpacity(0.3),
+                      tip.color.withValues(alpha: 0.3),
                       AppColors.background,
                     ],
                   ),
@@ -157,7 +156,7 @@ class _HealthTipsScreenState extends State<HealthTipsScreen>
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      Text(
+                      const Text(
                         'Swipe to see more tips',
                         style: TextStyle(
                           color: AppColors.textMuted,
@@ -179,10 +178,10 @@ class _HealthTipsScreenState extends State<HealthTipsScreen>
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     decoration: BoxDecoration(
-                      color: tip.color.withOpacity(0.2),
+                      color: tip.color.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(
-                        color: tip.color.withOpacity(0.5),
+                        color: tip.color.withValues(alpha: 0.5),
                         width: 1,
                       ),
                     ),
@@ -217,18 +216,18 @@ class _HealthTipsScreenState extends State<HealthTipsScreen>
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                           colors: [
-                            tip.color.withOpacity(0.15),
-                            tip.color.withOpacity(0.05),
+                            tip.color.withValues(alpha: 0.15),
+                            tip.color.withValues(alpha: 0.05),
                           ],
                         ),
                         borderRadius: BorderRadius.circular(24),
                         border: Border.all(
-                          color: tip.color.withOpacity(0.3),
+                          color: tip.color.withValues(alpha: 0.3),
                           width: 1,
                         ),
                         boxShadow: [
                           BoxShadow(
-                            color: tip.color.withOpacity(0.2),
+                            color: tip.color.withValues(alpha: 0.2),
                             blurRadius: 30,
                             spreadRadius: -10,
                           ),
@@ -242,7 +241,7 @@ class _HealthTipsScreenState extends State<HealthTipsScreen>
                               Container(
                                 padding: const EdgeInsets.all(12),
                                 decoration: BoxDecoration(
-                                  color: tip.color.withOpacity(0.2),
+                                  color: tip.color.withValues(alpha: 0.2),
                                   borderRadius: BorderRadius.circular(16),
                                 ),
                                 child: Icon(tip.icon, color: tip.color, size: 32),
@@ -264,7 +263,7 @@ class _HealthTipsScreenState extends State<HealthTipsScreen>
                           Text(
                             tip.content,
                             style: TextStyle(
-                              color: Colors.white.withOpacity(0.8),
+                              color: Colors.white.withValues(alpha: 0.8),
                               fontSize: 16,
                               height: 1.6,
                             ),
@@ -274,10 +273,10 @@ class _HealthTipsScreenState extends State<HealthTipsScreen>
                             width: double.infinity,
                             padding: const EdgeInsets.all(16),
                             decoration: BoxDecoration(
-                              color: tip.color.withOpacity(0.1),
+                              color: tip.color.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(12),
                               border: Border.all(
-                                color: tip.color.withOpacity(0.2),
+                                color: tip.color.withValues(alpha: 0.2),
                                 width: 1,
                               ),
                             ),
@@ -362,13 +361,13 @@ class _HealthTipsScreenState extends State<HealthTipsScreen>
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
                             color: _currentTipIndex == index
-                                ? t.color.withOpacity(0.2)
-                                : Colors.white.withOpacity(0.05),
+                                ? t.color.withValues(alpha: 0.2)
+                                : Colors.white.withValues(alpha: 0.05),
                             borderRadius: BorderRadius.circular(16),
                             border: Border.all(
                               color: _currentTipIndex == index
-                                  ? t.color.withOpacity(0.5)
-                                  : Colors.white.withOpacity(0.1),
+                                  ? t.color.withValues(alpha: 0.5)
+                                  : Colors.white.withValues(alpha: 0.1),
                               width: 1,
                             ),
                           ),
@@ -418,10 +417,10 @@ class _HealthTipsScreenState extends State<HealthTipsScreen>
         width: 50,
         height: 50,
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.1),
+          color: Colors.white.withValues(alpha: 0.1),
           shape: BoxShape.circle,
           border: Border.all(
-            color: Colors.white.withOpacity(0.2),
+            color: Colors.white.withValues(alpha: 0.2),
             width: 1,
           ),
         ),

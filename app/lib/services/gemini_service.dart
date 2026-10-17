@@ -330,29 +330,29 @@ RULES
       final hr = h['heartRate']?['bpm'];
       final o2 = h['oxygen']?['percent'];
       if (hr != null || o2 != null) {
-        vitalsNote = '\n\n(Latest watch readings: ' + (hr != null ? 'Heart Rate: $hr BPM ' : '') + (o2 != null ? 'SpO2: $o2%' : '') + ')';
+        vitalsNote = '\n\n(Latest watch readings: ${hr != null ? 'Heart Rate: $hr BPM ' : ''}${o2 != null ? 'SpO2: $o2%' : ''})';
       }
     }
 
     if (lower.contains('heart') || lower.contains('bpm') || lower.contains('pulse') || lower.contains('نبض') || lower.contains('قلب')) {
-      return 'Normal resting heart rate for healthy adults is between 60 and 100 BPM. Lower rates (40-60) are common during sleep or in well-conditioned athletes. If your resting rate remains persistently above 100 or below 50 with dizziness, consult a physician.' + vitalsNote;
+      return 'Normal resting heart rate for healthy adults is between 60 and 100 BPM. Lower rates (40-60) are common during sleep or in well-conditioned athletes. If your resting rate remains persistently above 100 or below 50 with dizziness, consult a physician.$vitalsNote';
     }
     if (lower.contains('oxygen') || lower.contains('spo2') || lower.contains('o2') || lower.contains('أكسجين')) {
-      return 'Healthy blood oxygen saturation (SpO2) is typically between 95% and 100%. If levels consistently drop below 92%, consider re-testing with your watch snug against your wrist, and consult a medical professional if accompanied by shortness of breath.' + vitalsNote;
+      return 'Healthy blood oxygen saturation (SpO2) is typically between 95% and 100%. If levels consistently drop below 92%, consider re-testing with your watch snug against your wrist, and consult a medical professional if accompanied by shortness of breath.$vitalsNote';
     }
     if (lower.contains('sleep') || lower.contains('bed') || lower.contains('rest') || lower.contains('نوم')) {
-      return 'For optimal cardiovascular recovery and memory consolidation, 7 to 9 hours of consistent sleep is recommended. Try keeping a consistent bedtime and avoiding bright blue screens 30 minutes before sleep.' + vitalsNote;
+      return 'For optimal cardiovascular recovery and memory consolidation, 7 to 9 hours of consistent sleep is recommended. Try keeping a consistent bedtime and avoiding bright blue screens 30 minutes before sleep.$vitalsNote';
     }
     if (lower.contains('step') || lower.contains('walk') || lower.contains('activity') || lower.contains('exercise') || lower.contains('خطوات') || lower.contains('مشي')) {
-      return 'Aiming for 8,000 to 10,000 daily steps significantly supports cardiovascular health and metabolic wellness. Even brisk 15-minute walks after meals help regulate glucose levels.' + vitalsNote;
+      return 'Aiming for 8,000 to 10,000 daily steps significantly supports cardiovascular health and metabolic wellness. Even brisk 15-minute walks after meals help regulate glucose levels.$vitalsNote';
     }
     if (lower.contains('water') || lower.contains('hydrat') || lower.contains('ماء') || lower.contains('شرب')) {
-      return 'Staying hydrated is essential for regulating blood viscosity and heart rate. A baseline of 2.5 to 3 liters of water daily is recommended, increasing during physical activity.' + vitalsNote;
+      return 'Staying hydrated is essential for regulating blood viscosity and heart rate. A baseline of 2.5 to 3 liters of water daily is recommended, increasing during physical activity.$vitalsNote';
     }
     if (lower.contains('stress') || lower.contains('relax') || lower.contains('hrv') || lower.contains('توتر')) {
-      return 'High heart rate variability (HRV) generally indicates good recovery and stress resilience. When feeling stressed, practicing deep 4-7-8 diaphragmatic breathing for 3 minutes can effectively lower sympathetic nervous tone.' + vitalsNote;
+      return 'High heart rate variability (HRV) generally indicates good recovery and stress resilience. When feeling stressed, practicing deep 4-7-8 diaphragmatic breathing for 3 minutes can effectively lower sympathetic nervous tone.$vitalsNote';
     }
 
-    return 'I am currently operating in offline wellness mode to protect your privacy and ensure instant guidance without cloud lag. Feel free to ask about your vitals, heart rate, sleep, or daily activity!' + vitalsNote;
+    return 'I am currently operating in offline wellness mode to protect your privacy and ensure instant guidance without cloud lag. Feel free to ask about your vitals, heart rate, sleep, or daily activity!$vitalsNote';
   }
 }

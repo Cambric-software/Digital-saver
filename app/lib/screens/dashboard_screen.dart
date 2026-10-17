@@ -92,17 +92,17 @@ class _DashboardScreenState extends State<DashboardScreen>
                 return Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: theme.colorScheme.surface.withOpacity(0.9),
+                    color: theme.colorScheme.surface.withValues(alpha: 0.9),
                     borderRadius: BorderRadius.circular(8),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.08),
+                        color: Colors.black.withValues(alpha: 0.08),
                         blurRadius: 6,
                         offset: const Offset(0, 2),
                       ),
                     ],
                     border: Border.all(
-                      color: theme.colorScheme.outlineVariant.withOpacity(0.3),
+                      color: theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
                       width: 0.5,
                     ),
                   ),
@@ -110,7 +110,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                     versionText,
                     style: TextStyle(
                       fontSize: 12,
-                      color: theme.colorScheme.onSurface.withOpacity(0.7),
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -137,11 +137,11 @@ class _DashboardScreenState extends State<DashboardScreen>
         child: const Icon(Icons.favorite, color: Colors.white, size: 20),
       ),
       const SizedBox(width: 10),
-      Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const Text('Digital Saver', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17, color: AppColors.textPrimary)),
-        const Text('Health Monitor', style: TextStyle(fontSize: 11, color: AppColors.textSecondary, fontWeight: FontWeight.normal)),
-        const SizedBox(height: 2),
-        const Text('Made by Cambric', style: TextStyle(fontSize: 9, color: AppColors.textMuted, fontWeight: FontWeight.w400)),
+      const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text('Digital Saver', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17, color: AppColors.textPrimary)),
+        Text('Health Monitor', style: TextStyle(fontSize: 11, color: AppColors.textSecondary, fontWeight: FontWeight.normal)),
+        SizedBox(height: 2),
+        Text('Made by Cambric', style: TextStyle(fontSize: 9, color: AppColors.textMuted, fontWeight: FontWeight.w400)),
       ]),
     ]),
     actions: [
@@ -151,7 +151,7 @@ class _DashboardScreenState extends State<DashboardScreen>
           margin: const EdgeInsets.only(right: 12),
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           decoration: BoxDecoration(
-            color: ble.isConnected ? AppColors.success.withOpacity(0.1) : Colors.grey.shade100,
+            color: ble.isConnected ? AppColors.success.withValues(alpha: 0.1) : Colors.grey.shade100,
             borderRadius: BorderRadius.circular(20),
           ),
           child: Row(mainAxisSize: MainAxisSize.min, children: [
@@ -263,7 +263,7 @@ class _DeviceSelectionSheet extends StatelessWidget {
                               Container(
                                 padding: const EdgeInsets.all(12),
                                 decoration: BoxDecoration(
-                                  color: AppColors.primary.withOpacity(0.1),
+                                  color: AppColors.primary.withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                                 child: const Icon(Icons.watch, color: AppColors.primary),
@@ -387,9 +387,9 @@ class _DemoBanner extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
     decoration: BoxDecoration(
-      color: AppColors.warning.withOpacity(0.10),
+      color: AppColors.warning.withValues(alpha: 0.10),
       borderRadius: BorderRadius.circular(12),
-      border: Border.all(color: AppColors.warning.withOpacity(0.3)),
+      border: Border.all(color: AppColors.warning.withValues(alpha: 0.3)),
     ),
     child: const Row(children: [
       Icon(Icons.science_outlined, color: AppColors.warning, size: 16),
@@ -455,7 +455,7 @@ class _ScoreCard extends StatelessWidget {
       Container(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
         decoration: BoxDecoration(
-          color: _c.withOpacity(0.1),
+          color: _c.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(20),
         ),
         child: Row(
@@ -464,7 +464,7 @@ class _ScoreCard extends StatelessWidget {
             Icon(Icons.favorite_rounded, color: _c, size: 16),
             const SizedBox(width: 6),
             Text(
-              isConnected ? '$_label' : 'No Watch Connected',
+              isConnected ? _label : 'No Watch Connected',
               style: TextStyle(color: _c, fontWeight: FontWeight.bold, fontSize: 14),
             ),
           ],
@@ -520,7 +520,7 @@ class _RingPainter extends CustomPainter {
       ..shader = SweepGradient(
         startAngle: -math.pi / 2,
         endAngle: -math.pi / 2 + 2 * math.pi * progress,
-        colors: [color.withOpacity(0.6), color],
+        colors: [color.withValues(alpha: 0.6), color],
       ).createShader(Rect.fromCircle(center: c, radius: r));
     canvas.drawArc(Rect.fromCircle(center: c, radius: r), -math.pi / 2, 2 * math.pi * progress, false, fg);
   }
@@ -631,7 +631,7 @@ class _VitalCard extends StatelessWidget {
             final b = badge!;
             return Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-              decoration: BoxDecoration(color: b.color.withOpacity(0.12), borderRadius: BorderRadius.circular(6)),
+              decoration: BoxDecoration(color: b.color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(6)),
               child: Text(b.label, style: TextStyle(color: b.color, fontSize: 9, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
             );
           }),
@@ -662,7 +662,7 @@ class _AlertsCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.surface, borderRadius: BorderRadius.circular(20),
         boxShadow: AppShadows.card,
-        border: Border.all(color: AppColors.danger.withOpacity(0.2)),
+        border: Border.all(color: AppColors.danger.withValues(alpha: 0.2)),
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         const Row(children: [
@@ -698,7 +698,7 @@ class _TodaySummary extends StatelessWidget {
         _Stat(icon: Icons.directions_walk, label: 'Steps', value: ble.isConnected ? '${ble.activity.steps}' : '--', color: AppColors.stepAmber),
         _Stat(icon: Icons.local_fire_department, label: 'Calories', value: ble.isConnected ? '${ble.activity.calories.round()} kcal' : '--', color: AppColors.heartRed),
         _Stat(icon: Icons.thermostat, label: 'Temp', value: ble.isConnected && ble.temperature > 0 ? '${ble.temperature.toStringAsFixed(1)}°C' : '--', color: AppColors.accent),
-        _Stat(icon: Icons.bedtime, label: 'Sleep', value: '--', color: AppColors.sleepPurple),
+        const _Stat(icon: Icons.bedtime, label: 'Sleep', value: '--', color: AppColors.sleepPurple),
       ]),
     ]),
   );
@@ -713,7 +713,7 @@ class _Stat extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Column(children: [
     Container(padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(color: color.withOpacity(0.1), shape: BoxShape.circle),
+      decoration: BoxDecoration(color: color.withValues(alpha: 0.1), shape: BoxShape.circle),
       child: Icon(icon, color: color, size: 20)),
     const SizedBox(height: 6),
     Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.textPrimary)),

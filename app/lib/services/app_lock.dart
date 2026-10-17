@@ -67,10 +67,10 @@ class AppLock extends ChangeNotifier {
     var block = 1;
     while (out.length < outputLength) {
       // U1 = HMAC(password, salt || INT_32_BE(block))
-      var u = await hmac.convert(<int>[...salt, ..._int32be(block)]).bytes;
+      var u = hmac.convert(<int>[...salt, ..._int32be(block)]).bytes;
       final acc = List<int>.from(u);
       for (var i = 1; i < iterations; i++) {
-        u = await hmac.convert(u).bytes;
+        u = hmac.convert(u).bytes;
         for (var k = 0; k < acc.length; k++) {
           acc[k] ^= u[k];
         }

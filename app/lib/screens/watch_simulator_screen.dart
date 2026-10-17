@@ -131,7 +131,7 @@ class _WatchSimulatorScreenState extends State<WatchSimulatorScreen>
           ),
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFF2563EB).withOpacity(0.3),
+              color: const Color(0xFF2563EB).withValues(alpha: 0.3),
               blurRadius: 40,
               spreadRadius: 10,
             ),
@@ -155,7 +155,7 @@ class _WatchSimulatorScreenState extends State<WatchSimulatorScreen>
                     style: TextStyle(
                       fontSize: 48,
                       fontWeight: FontWeight.w200,
-                      color: Colors.white.withOpacity(0.9),
+                      color: Colors.white.withValues(alpha: 0.9),
                       letterSpacing: 4,
                     ),
                   ),
@@ -164,7 +164,7 @@ class _WatchSimulatorScreenState extends State<WatchSimulatorScreen>
                     'MON, AUG 02',
                     style: TextStyle(
                       fontSize: 12,
-                      color: Colors.white.withOpacity(0.5),
+                      color: Colors.white.withValues(alpha: 0.5),
                       letterSpacing: 2,
                     ),
                   ),
@@ -183,7 +183,7 @@ class _WatchSimulatorScreenState extends State<WatchSimulatorScreen>
                           children: [
                             Icon(
                               Icons.favorite,
-                              color: Colors.red.withOpacity(0.5 + _heartbeatController.value * 0.5),
+                              color: Colors.red.withValues(alpha: 0.5 + _heartbeatController.value * 0.5),
                               size: 24,
                             ),
                             const SizedBox(width: 8),
@@ -216,10 +216,10 @@ class _WatchSimulatorScreenState extends State<WatchSimulatorScreen>
                       return Container(
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF3B82F6).withOpacity(0.2),
+                          color: const Color(0xFF3B82F6).withValues(alpha: 0.2),
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(
-                            color: const Color(0xFF3B82F6).withOpacity(0.3 + _breathingController.value * 0.2),
+                            color: const Color(0xFF3B82F6).withValues(alpha: 0.3 + _breathingController.value * 0.2),
                             width: 1,
                           ),
                         ),
@@ -228,7 +228,7 @@ class _WatchSimulatorScreenState extends State<WatchSimulatorScreen>
                           children: [
                             Icon(
                               Icons.air,
-                              color: const Color(0xFF3B82F6).withOpacity(0.5 + _breathingController.value * 0.5),
+                              color: const Color(0xFF3B82F6).withValues(alpha: 0.5 + _breathingController.value * 0.5),
                               size: 18,
                             ),
                             const SizedBox(width: 6),
@@ -293,10 +293,10 @@ class _WatchSimulatorScreenState extends State<WatchSimulatorScreen>
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
+        color: Colors.white.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: Colors.white.withOpacity(0.1),
+          color: Colors.white.withValues(alpha: 0.1),
           width: 1,
         ),
       ),
@@ -320,7 +320,7 @@ class _WatchSimulatorScreenState extends State<WatchSimulatorScreen>
                 unit,
                 style: TextStyle(
                   fontSize: 14,
-                  color: Colors.white.withOpacity(0.5),
+                  color: Colors.white.withValues(alpha: 0.5),
                 ),
               ),
             ],
@@ -330,7 +330,7 @@ class _WatchSimulatorScreenState extends State<WatchSimulatorScreen>
             label,
             style: TextStyle(
               fontSize: 12,
-              color: Colors.white.withOpacity(0.5),
+              color: Colors.white.withValues(alpha: 0.5),
             ),
           ),
         ],
@@ -342,10 +342,10 @@ class _WatchSimulatorScreenState extends State<WatchSimulatorScreen>
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
+        color: Colors.white.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: Colors.white.withOpacity(0.1),
+          color: Colors.white.withValues(alpha: 0.1),
           width: 1,
         ),
       ),
@@ -386,7 +386,7 @@ class _WatchSimulatorScreenState extends State<WatchSimulatorScreen>
                           '/ 10,000',
                           style: TextStyle(
                             fontSize: 14,
-                            color: Colors.white.withOpacity(0.5),
+                            color: Colors.white.withValues(alpha: 0.5),
                           ),
                         ),
                       ],
@@ -396,7 +396,7 @@ class _WatchSimulatorScreenState extends State<WatchSimulatorScreen>
                       borderRadius: BorderRadius.circular(4),
                       child: LinearProgressIndicator(
                         value: (_steps / 10000).clamp(0.0, 1.0),
-                        backgroundColor: Colors.white.withOpacity(0.1),
+                        backgroundColor: Colors.white.withValues(alpha: 0.1),
                         valueColor: const AlwaysStoppedAnimation(Color(0xFF10B981)),
                         minHeight: 8,
                       ),
@@ -448,10 +448,10 @@ class _WatchSimulatorScreenState extends State<WatchSimulatorScreen>
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: color.withOpacity(0.2),
+          color: color.withValues(alpha: 0.2),
           width: 1,
         ),
       ),
@@ -476,7 +476,7 @@ class _WatchSimulatorScreenState extends State<WatchSimulatorScreen>
                     unit,
                     style: TextStyle(
                       fontSize: 12,
-                      color: Colors.white.withOpacity(0.5),
+                      color: Colors.white.withValues(alpha: 0.5),
                     ),
                   ),
                 ],
@@ -485,7 +485,7 @@ class _WatchSimulatorScreenState extends State<WatchSimulatorScreen>
                 label,
                 style: TextStyle(
                   fontSize: 11,
-                  color: Colors.white.withOpacity(0.5),
+                  color: Colors.white.withValues(alpha: 0.5),
                 ),
               ),
             ],
@@ -499,10 +499,10 @@ class _WatchSimulatorScreenState extends State<WatchSimulatorScreen>
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
+        color: Colors.white.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: Colors.white.withOpacity(0.1),
+          color: Colors.white.withValues(alpha: 0.1),
           width: 1,
         ),
       ),
@@ -529,7 +529,7 @@ class _WatchSimulatorScreenState extends State<WatchSimulatorScreen>
           label,
           style: TextStyle(
             fontSize: 14,
-            color: Colors.white.withOpacity(0.5),
+            color: Colors.white.withValues(alpha: 0.5),
           ),
         ),
         Text(

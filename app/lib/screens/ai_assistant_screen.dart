@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/digital_saver_ai.dart';
 import '../services/ble_service.dart';
-import '../services/gemini_service.dart';
 import '../theme/app_theme.dart';
 
 class AIAssistantScreen extends StatefulWidget {
@@ -363,7 +362,7 @@ class _AIAssistantScreenState extends State<AIAssistantScreen> with SingleTicker
                 ),
                 const SizedBox(height: 14),
                 DropdownButtonFormField<String>(
-                  value: _personalityTone,
+                  initialValue: _personalityTone,
                   decoration: const InputDecoration(
                     labelText: 'Tone of Voice',
                     border: OutlineInputBorder(),
@@ -381,7 +380,7 @@ class _AIAssistantScreenState extends State<AIAssistantScreen> with SingleTicker
                 ),
                 const SizedBox(height: 14),
                 DropdownButtonFormField<String>(
-                  value: _medicalFocus,
+                  initialValue: _medicalFocus,
                   decoration: const InputDecoration(
                     labelText: 'Primary Health Focus',
                     border: OutlineInputBorder(),
@@ -399,7 +398,7 @@ class _AIAssistantScreenState extends State<AIAssistantScreen> with SingleTicker
                 ),
                 const SizedBox(height: 14),
                 DropdownButtonFormField<String>(
-                  value: _preferredLanguage,
+                  initialValue: _preferredLanguage,
                   decoration: const InputDecoration(
                     labelText: 'Conversation Language',
                     border: OutlineInputBorder(),

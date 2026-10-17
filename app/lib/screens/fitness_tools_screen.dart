@@ -19,7 +19,7 @@ class _FitnessToolsScreenState extends State<FitnessToolsScreen> {
     '01:00 PM - Omega-3 Fish Oil',
     '09:00 PM - Magnesium Glycinate (200mg)'
   ];
-  Map<String, bool> _medsTakenToday = {};
+  final Map<String, bool> _medsTakenToday = {};
 
   // 2. Heart Rate Recovery (HRR) Calculator (#3)
   int _peakHr = 155;
@@ -50,9 +50,9 @@ class _FitnessToolsScreenState extends State<FitnessToolsScreen> {
   bool _watchPaging = false;
 
   // 8. 3-Day Weather Forecaster & Sync (#25)
-  String _weatherCity = 'Cairo, EG';
-  int _weatherTemp = 28;
-  String _weatherCondition = 'Sunny';
+  final String _weatherCity = 'Cairo, EG';
+  final int _weatherTemp = 28;
+  final String _weatherCondition = 'Sunny';
 
   // 9. Smart Wake & Silent Alarm (#26)
   TimeOfDay _alarmTime = const TimeOfDay(hour: 6, minute: 45);
@@ -284,7 +284,7 @@ Status: Excellent Recovery Baseline
             color: Colors.green,
             children: [
               DropdownButtonFormField<String>(
-                value: _selectedWorkout,
+                initialValue: _selectedWorkout,
                 items: _workoutTypes.map((w) => DropdownMenuItem(value: w, child: Text(w))).toList(),
                 onChanged: (v) => setState(() => _selectedWorkout = v ?? _selectedWorkout),
                 decoration: const InputDecoration(border: OutlineInputBorder(), contentPadding: EdgeInsets.all(10)),
@@ -354,7 +354,12 @@ Status: Excellent Recovery Baseline
                     _rpeNotes.clear();
                   });
                   await prefs.setStringList('rpe_logs', _savedRpeLogs);
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('RPE Log saved!')));
+                  // The write is async, so this element may already be gone;
+                  // reaching for its messenger would throw. The check belongs
+                  // on this context rather than on an enclosing State.
+                  if (!context.mounted) return;
+                  ScaffoldMessenger.of(context)
+                      .showSnackBar(const SnackBar(content: Text('RPE Log saved!')));
                 },
                 icon: const Icon(Icons.save_outlined),
                 label: const Text('Save Exertion Rating'),

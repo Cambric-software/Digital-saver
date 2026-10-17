@@ -14,6 +14,10 @@ analyzer:
     - ios/**
     - web/**
     - windows/**
+    # tools/ holds command-line scripts. Printing is their output, so
+    # avoid_print is excluded along with them rather than suppressed
+    # line by line.
+    - tools/**
 include: package:flutter_lints/flutter.yaml
 
 linter:

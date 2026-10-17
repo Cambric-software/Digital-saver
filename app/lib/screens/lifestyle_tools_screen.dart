@@ -19,13 +19,13 @@ class _LifestyleToolsScreenState extends State<LifestyleToolsScreen> {
   Timer? _fastingTimer;
 
   // 2. Sleep Debt & Recovery (#8)
-  double _targetSleep = 8.0;
-  double _actualSleepAvg = 6.4;
-  double _sleepDebtHours = 11.2;
+  final double _targetSleep = 8.0;
+  final double _actualSleepAvg = 6.4;
+  final double _sleepDebtHours = 11.2;
 
   // 3. Noise Exposure & Hearing Safety (#9)
-  int _currentDbLevel = 62;
-  String _hearingSafetyRating = 'Safe (Moderate)';
+  final int _currentDbLevel = 62;
+  final String _hearingSafetyRating = 'Safe (Moderate)';
 
   // 4. Daily Mood & Energy Logger (#16)
   int _selectedMoodIndex = 1; // 0: Great, 1: Good, 2: Okay, 3: Tired, 4: Stressed
@@ -40,13 +40,13 @@ class _LifestyleToolsScreenState extends State<LifestyleToolsScreen> {
   int _calcAge = 25;
   double _calcWeightKg = 72.0;
   double _calcHeightCm = 175.0;
-  String _calcGender = 'Male';
-  double _activityMultiplier = 1.375; // Lightly active
+  final String _calcGender = 'Male';
+  final double _activityMultiplier = 1.375; // Lightly active
   double _bmrResult = 1705;
   double _tdeeResult = 2344;
 
   // 6. Posture & Sedentary Break Timer (#19)
-  int _postureIntervalMinutes = 30;
+  final int _postureIntervalMinutes = 30;
   int _postureSecondsRemaining = 1800;
   bool _postureTimerActive = false;
   Timer? _postureTimer;
@@ -191,6 +191,9 @@ class _LifestyleToolsScreenState extends State<LifestyleToolsScreen> {
     final prefs = await SharedPreferences.getInstance();
     final entry = '${_moodIcons[_selectedMoodIndex]} ${_moodLabels[_selectedMoodIndex]} (Energy: ${_energyLevel.toInt()}/10)';
     await prefs.setString('today_logged_mood', entry);
+    // Both the setState and the messenger lookup happen after an await, so
+    // this State may have been disposed by now.
+    if (!mounted) return;
     setState(() => _lastSavedMood = entry);
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Daily mood & energy logged successfully!')),
@@ -212,9 +215,9 @@ class _LifestyleToolsScreenState extends State<LifestyleToolsScreen> {
           Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: AppColors.primary.withOpacity(0.08),
+              color: AppColors.primary.withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppColors.primary.withOpacity(0.2)),
+              border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
             ),
             child: const Row(
               children: [
@@ -296,8 +299,9 @@ class _LifestyleToolsScreenState extends State<LifestyleToolsScreen> {
     final secs = elapsedSec % 60;
 
     String stage = 'Digestion Window';
-    if (hours >= 12) stage = 'Ketosis & Fat-Burning';
-    else if (hours >= 8) stage = 'Blood Sugar Normalizing';
+    if (hours >= 12) {
+      stage = 'Ketosis & Fat-Burning';
+    } else if (hours >= 8) stage = 'Blood Sugar Normalizing';
     else if (hours >= 4) stage = 'Early Fasting Stage';
 
     return _buildCard(
@@ -326,7 +330,7 @@ class _LifestyleToolsScreenState extends State<LifestyleToolsScreen> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: _isFasting ? Colors.green.withOpacity(0.1) : Colors.grey.withOpacity(0.1),
+                color: _isFasting ? Colors.green.withValues(alpha: 0.1) : Colors.grey.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(
@@ -343,7 +347,7 @@ class _LifestyleToolsScreenState extends State<LifestyleToolsScreen> {
         const SizedBox(height: 8),
         LinearProgressIndicator(
           value: progress,
-          backgroundColor: Colors.grey.withOpacity(0.2),
+          backgroundColor: Colors.grey.withValues(alpha: 0.2),
           valueColor: const AlwaysStoppedAnimation(AppColors.primary),
           minHeight: 8,
           borderRadius: BorderRadius.circular(4),
@@ -422,9 +426,9 @@ class _LifestyleToolsScreenState extends State<LifestyleToolsScreen> {
         Container(
           padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
-            color: Colors.orange.withOpacity(0.08),
+            color: Colors.orange.withValues(alpha: 0.08),
             borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: Colors.orange.withOpacity(0.2)),
+            border: Border.all(color: Colors.orange.withValues(alpha: 0.2)),
           ),
           child: Row(
             children: [
@@ -462,7 +466,7 @@ class _LifestyleToolsScreenState extends State<LifestyleToolsScreen> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               decoration: BoxDecoration(
-                color: Colors.green.withOpacity(0.1),
+                color: Colors.green.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: const Text('WHO Limit: 85 dB (8h)', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
@@ -495,9 +499,9 @@ class _LifestyleToolsScreenState extends State<LifestyleToolsScreen> {
               child: Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: isSelected ? AppColors.primary.withOpacity(0.15) : Colors.transparent,
+                  color: isSelected ? AppColors.primary.withValues(alpha: 0.15) : Colors.transparent,
                   borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: isSelected ? AppColors.primary : Colors.grey.withOpacity(0.3)),
+                  border: Border.all(color: isSelected ? AppColors.primary : Colors.grey.withValues(alpha: 0.3)),
                 ),
                 child: Column(
                   children: [
@@ -639,7 +643,7 @@ class _LifestyleToolsScreenState extends State<LifestyleToolsScreen> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.blue.withOpacity(0.08),
+                color: Colors.blue.withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Column(
@@ -654,7 +658,7 @@ class _LifestyleToolsScreenState extends State<LifestyleToolsScreen> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.orange.withOpacity(0.08),
+                color: Colors.orange.withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Column(

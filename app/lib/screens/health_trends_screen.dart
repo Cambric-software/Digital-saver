@@ -55,7 +55,7 @@ class _HealthTrendsScreenState extends State<HealthTrendsScreen>
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
                     colors: [
-                      AppColors.primaryDark.withOpacity(0.08),
+                      AppColors.primaryDark.withValues(alpha: 0.08),
                       Colors.transparent,
                     ],
                   ),
@@ -183,7 +183,7 @@ class _HealthTrendsScreenState extends State<HealthTrendsScreen>
               Text(
                 title,
                 style: TextStyle(
-                  color: Colors.white.withOpacity(0.6),
+                  color: Colors.white.withValues(alpha: 0.6),
                   fontSize: 12,
                 ),
               ),
@@ -207,7 +207,7 @@ class _HealthTrendsScreenState extends State<HealthTrendsScreen>
                 child: Text(
                   unit,
                   style: TextStyle(
-                    color: Colors.white.withOpacity(0.5),
+                    color: Colors.white.withValues(alpha: 0.5),
                     fontSize: 14,
                   ),
                 ),
@@ -218,7 +218,7 @@ class _HealthTrendsScreenState extends State<HealthTrendsScreen>
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
-              color: color.withOpacity(0.2),
+              color: color.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Text(
@@ -345,10 +345,10 @@ class _HealthTrendsScreenState extends State<HealthTrendsScreen>
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
+        color: Colors.white.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: color.withOpacity(0.3),
+          color: color.withValues(alpha: 0.3),
           width: 1,
         ),
       ),
@@ -358,7 +358,7 @@ class _HealthTrendsScreenState extends State<HealthTrendsScreen>
             width: 48,
             height: 48,
             decoration: BoxDecoration(
-              color: color.withOpacity(0.2),
+              color: color.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(icon, color: color, size: 24),
@@ -380,7 +380,7 @@ class _HealthTrendsScreenState extends State<HealthTrendsScreen>
                 Text(
                   description,
                   style: TextStyle(
-                    color: Colors.white.withOpacity(0.6),
+                    color: Colors.white.withValues(alpha: 0.6),
                     fontSize: 12,
                   ),
                 ),
@@ -389,7 +389,7 @@ class _HealthTrendsScreenState extends State<HealthTrendsScreen>
                   borderRadius: BorderRadius.circular(4),
                   child: LinearProgressIndicator(
                     value: progress,
-                    backgroundColor: Colors.white.withOpacity(0.1),
+                    backgroundColor: Colors.white.withValues(alpha: 0.1),
                     valueColor: AlwaysStoppedAnimation(color),
                     minHeight: 6,
                   ),
@@ -407,7 +407,7 @@ class _HeartRateChartPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = Colors.red.withOpacity(0.8)
+      ..color = Colors.red.withValues(alpha: 0.8)
       ..strokeWidth = 2
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round;
@@ -417,8 +417,8 @@ class _HeartRateChartPainter extends CustomPainter {
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
         colors: [
-          Colors.red.withOpacity(0.3),
-          Colors.red.withOpacity(0.0),
+          Colors.red.withValues(alpha: 0.3),
+          Colors.red.withValues(alpha: 0.0),
         ],
       ).createShader(Rect.fromLTWH(0, 0, size.width, size.height))
       ..style = PaintingStyle.fill;
@@ -450,7 +450,7 @@ class _HeartRateChartPainter extends CustomPainter {
     final textPainter = TextPainter(
       text: TextSpan(
         text: '120',
-        style: TextStyle(color: Colors.white.withOpacity(0.4), fontSize: 10),
+        style: TextStyle(color: Colors.white.withValues(alpha: 0.4), fontSize: 10),
       ),
       textDirection: TextDirection.ltr,
     );
@@ -459,7 +459,7 @@ class _HeartRateChartPainter extends CustomPainter {
     
     textPainter.text = TextSpan(
       text: '60',
-      style: TextStyle(color: Colors.white.withOpacity(0.4), fontSize: 10),
+      style: TextStyle(color: Colors.white.withValues(alpha: 0.4), fontSize: 10),
     );
     textPainter.layout();
     textPainter.paint(canvas, Offset(4, size.height - 20));
@@ -490,7 +490,7 @@ class _ActivityChartPainter extends CustomPainter {
       ..style = PaintingStyle.fill;
 
     final barPaintAlt = Paint()
-      ..color = const Color(0xFF10B981).withOpacity(0.5)
+      ..color = const Color(0xFF10B981).withValues(alpha: 0.5)
       ..style = PaintingStyle.fill;
 
     final data = _generateActivityData();
@@ -514,7 +514,7 @@ class _ActivityChartPainter extends CustomPainter {
 
     // Draw baseline
     final linePaint = Paint()
-      ..color = Colors.white.withOpacity(0.2)
+      ..color = Colors.white.withValues(alpha: 0.2)
       ..strokeWidth = 1;
 
     canvas.drawLine(
@@ -533,7 +533,7 @@ class _ActivityChartPainter extends CustomPainter {
       final x = 24 + i * barWidth + (barWidth - 8) / 2;
       textPainter.text = TextSpan(
         text: days[i],
-        style: TextStyle(color: Colors.white.withOpacity(0.4), fontSize: 10),
+        style: TextStyle(color: Colors.white.withValues(alpha: 0.4), fontSize: 10),
       );
       textPainter.layout();
       textPainter.paint(canvas, Offset(x - textPainter.width / 2, size.height - 12));

@@ -82,7 +82,7 @@ class _PulsingRingState extends State<PulsingRing>
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     border: Border.all(
-                      color: widget.color.withOpacity(_opacityAnimation.value),
+                      color: widget.color.withValues(alpha: _opacityAnimation.value),
                       width: 3,
                     ),
                   ),
@@ -96,7 +96,7 @@ class _PulsingRingState extends State<PulsingRing>
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               border: Border.all(
-                color: widget.color.withOpacity(0.3),
+                color: widget.color.withValues(alpha: 0.3),
                 width: 2,
               ),
             ),
@@ -228,7 +228,7 @@ class _ScoreCirclePainter extends CustomPainter {
     final radius = size.width / 2 - 8;
 
     final bgPaint = Paint()
-      ..color = Colors.white.withOpacity(0.1)
+      ..color = Colors.white.withValues(alpha: 0.1)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 12
       ..strokeCap = StrokeCap.round;
@@ -251,7 +251,7 @@ class _ScoreCirclePainter extends CustomPainter {
     );
 
     final glowPaint = Paint()
-      ..color = color.withOpacity(0.3)
+      ..color = color.withValues(alpha: 0.3)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 20
       ..strokeCap = StrokeCap.round
@@ -330,13 +330,13 @@ class _BreathingIndicatorState extends State<BreathingIndicator>
               shape: BoxShape.circle,
               gradient: RadialGradient(
                 colors: [
-                  widget.color.withOpacity(_opacityAnimation.value),
-                  widget.color.withOpacity(_opacityAnimation.value * 0.3),
+                  widget.color.withValues(alpha: _opacityAnimation.value),
+                  widget.color.withValues(alpha: _opacityAnimation.value * 0.3),
                 ],
               ),
               boxShadow: [
                 BoxShadow(
-                  color: widget.color.withOpacity(_opacityAnimation.value * 0.5),
+                  color: widget.color.withValues(alpha: _opacityAnimation.value * 0.5),
                   blurRadius: 20,
                   spreadRadius: 5,
                 ),
@@ -448,7 +448,7 @@ class _ParticlePainter extends CustomPainter {
       );
 
       final paint = Paint()
-        ..color = color.withOpacity(opacity)
+        ..color = color.withValues(alpha: opacity)
         ..style = PaintingStyle.fill;
 
       canvas.drawCircle(offset, particle.size * (1 - adjustedProgress * 0.5), paint);

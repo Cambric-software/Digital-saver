@@ -138,7 +138,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
     await LocalStore.saveProfile(nextProfile);
 
-    // If BLE is connected, send watchface switch
+    // Saving the profile is async, so the person may have navigated away and
+    // this State may no longer be mounted.
+    if (!mounted) return;
     final ble = context.read<BleService>();
     if (ble.isConnected) {
       await ble.setWatchFace(_selectedWatchFace);

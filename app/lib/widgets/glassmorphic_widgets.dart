@@ -44,16 +44,16 @@ class GlassCard extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: backgroundColor ?? 
                     (isDark 
-                      ? Colors.white.withOpacity(0.1) 
-                      : Colors.white.withOpacity(0.2)),
+                      ? Colors.white.withValues(alpha: 0.1) 
+                      : Colors.white.withValues(alpha: 0.2)),
                   borderRadius: BorderRadius.circular(borderRadius),
                   border: border ?? Border.all(
-                    color: Colors.white.withOpacity(0.2),
+                    color: Colors.white.withValues(alpha: 0.2),
                     width: 1.5,
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
+                      color: Colors.black.withValues(alpha: 0.1),
                       blurRadius: 20,
                       offset: const Offset(0, 10),
                     ),
@@ -91,8 +91,8 @@ class GradientGlassCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = gradientColors ?? [
-      const Color(0xFF2563EB).withOpacity(0.3),
-      const Color(0xFF7C3AED).withOpacity(0.3),
+      const Color(0xFF2563EB).withValues(alpha: 0.3),
+      const Color(0xFF7C3AED).withValues(alpha: 0.3),
     ];
 
     return Container(
@@ -116,12 +116,12 @@ class GradientGlassCard extends StatelessWidget {
                   ),
                   borderRadius: BorderRadius.circular(borderRadius),
                   border: Border.all(
-                    color: Colors.white.withOpacity(0.3),
+                    color: Colors.white.withValues(alpha: 0.3),
                     width: 1.5,
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: colors.first.withOpacity(0.3),
+                      color: colors.first.withValues(alpha: 0.3),
                       blurRadius: 20,
                       offset: const Offset(0, 10),
                     ),
@@ -216,7 +216,7 @@ class _GlowButtonState extends State<GlowButton>
               borderRadius: BorderRadius.circular(16),
               boxShadow: [
                 BoxShadow(
-                  color: colors.first.withOpacity(_glowAnimation.value),
+                  color: colors.first.withValues(alpha: _glowAnimation.value),
                   blurRadius: 20,
                   offset: const Offset(0, 8),
                 ),
@@ -314,15 +314,15 @@ class _GlowIconButtonState extends State<GlowIconButton>
               width: widget.size,
               height: widget.size,
               decoration: BoxDecoration(
-                color: widget.backgroundColor ?? Colors.white.withOpacity(0.1),
+                color: widget.backgroundColor ?? Colors.white.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: color.withOpacity(0.3),
+                  color: color.withValues(alpha: 0.3),
                   width: 1.5,
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: color.withOpacity(0.2),
+                    color: color.withValues(alpha: 0.2),
                     blurRadius: 12,
                     spreadRadius: 2,
                   ),
@@ -410,7 +410,7 @@ class _StatusIndicatorState extends State<StatusIndicator>
             boxShadow: widget.isActive
                 ? [
                     BoxShadow(
-                      color: color.withOpacity(0.5 + _controller.value * 0.5),
+                      color: color.withValues(alpha: 0.5 + _controller.value * 0.5),
                       blurRadius: 8 + _controller.value * 8,
                       spreadRadius: _controller.value * 4,
                     ),

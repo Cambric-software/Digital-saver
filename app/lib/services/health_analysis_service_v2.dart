@@ -147,8 +147,9 @@ class HealthAnalyticsService {
     // Diastolic scoring
     int diaDiff = bp.diastolic - optimalDiastolic;
     if (diaDiff > 0) {
-      if (diaDiff <= 5) score -= 3;
-      else if (diaDiff <= 10) score -= 10;
+      if (diaDiff <= 5) {
+        score -= 3;
+      } else if (diaDiff <= 10) score -= 10;
       else score -= 20;
     }
 
@@ -178,15 +179,17 @@ class HealthAnalyticsService {
 
     // Augmentation Index (2026 ESC Guidelines)
     if (bp.augmentationIndex > 0) {
-      if (bp.augmentationIndex > 35) score -= 15;
-      else if (bp.augmentationIndex > 25) score -= 8;
+      if (bp.augmentationIndex > 35) {
+        score -= 15;
+      } else if (bp.augmentationIndex > 25) score -= 8;
       else score += 5; // Optimal range
     }
 
     // Pulse Wave Velocity estimation (2026 Vascular Research)
     if (bp.pulseWaveVelocity > 0) {
-      if (bp.pulseWaveVelocity > 12) score -= 25;
-      else if (bp.pulseWaveVelocity > 10) score -= 15;
+      if (bp.pulseWaveVelocity > 12) {
+        score -= 25;
+      } else if (bp.pulseWaveVelocity > 10) score -= 15;
       else if (bp.pulseWaveVelocity > 8) score -= 5;
     }
 
@@ -202,16 +205,18 @@ class HealthAnalyticsService {
     double risk = 0;
 
     // Age factor (primary risk factor)
-    if (age >= 75) risk += 30;
-    else if (age >= 65) risk += 20;
+    if (age >= 75) {
+      risk += 30;
+    } else if (age >= 65) risk += 20;
     else if (age >= 55) risk += 10;
 
     // Existing AFib probability from device
     risk += hr.afibProbability * 0.4;
 
     // HRV (low HRV indicates autonomic dysfunction)
-    if (hrv > 0 && hrv < 20) risk += 15;
-    else if (hrv > 0 && hrv < 30) risk += 8;
+    if (hrv > 0 && hrv < 20) {
+      risk += 15;
+    } else if (hrv > 0 && hrv < 30) risk += 8;
 
     // Blood pressure
     if (bp.systolic >= 160 || bp.diastolic >= 100) risk += 10;
@@ -219,8 +224,9 @@ class HealthAnalyticsService {
     // RR interval irregularity (2026 Rhythm Analysis)
     if (hr.rrIntervals.length >= 10) {
       double irregularity = _calculateRRIrregularity(hr.rrIntervals);
-      if (irregularity > 0.3) risk += 20;
-      else if (irregularity > 0.15) risk += 10;
+      if (irregularity > 0.3) {
+        risk += 20;
+      } else if (irregularity > 0.15) risk += 10;
     }
 
     return risk.clamp(0, 100);
@@ -428,22 +434,27 @@ class HealthAnalyticsService {
 
     // Steps (primary metric)
     double stepProgress = activity.steps / 10000.0;
-    if (stepProgress >= 1.0) score += 30;
-    else score += stepProgress * 30;
+    if (stepProgress >= 1.0) {
+      score += 30;
+    } else {
+      score += stepProgress * 30;
+    }
 
     // Active minutes (2026 WHO Guidelines: 150-300 min/week)
     double activeMinutesProgress = activity.activeMinutes / 30.0; // Daily target
     score += (activeMinutesProgress.clamp(0, 1) * 20);
 
     // Calories burned
-    if (activity.calories >= 300) score += 10;
-    else if (activity.calories >= 200) score += 5;
+    if (activity.calories >= 300) {
+      score += 10;
+    } else if (activity.calories >= 200) score += 5;
 
     // Consistency bonus (for regular activity patterns)
     if (activity.hourlySteps.isNotEmpty) {
       int activeHours = activity.hourlySteps.where((s) => s >= 500).length;
-      if (activeHours >= 6) score += 10;
-      else if (activeHours >= 3) score += 5;
+      if (activeHours >= 6) {
+        score += 10;
+      } else if (activeHours >= 3) score += 5;
     }
 
     return score.clamp(0, 100);
@@ -471,8 +482,9 @@ class HealthAnalyticsService {
     }
 
     // Sleep quality
-    if (sleep.qualityScore >= 80) score += 15;
-    else if (sleep.qualityScore >= 60) score += 10;
+    if (sleep.qualityScore >= 80) {
+      score += 15;
+    } else if (sleep.qualityScore >= 60) score += 10;
     else if (sleep.qualityScore < 40) score -= 10;
 
     // Sleep architecture (2026 Sleep Research)
@@ -516,30 +528,34 @@ class HealthAnalyticsService {
 
     // Total cholesterol
     if (totalCholesterol != null) {
-      if (totalCholesterol > 240) score -= 30;
-      else if (totalCholesterol > 200) score -= 15;
+      if (totalCholesterol > 240) {
+        score -= 30;
+      } else if (totalCholesterol > 200) score -= 15;
       else if (totalCholesterol < 160) score -= 10;
     }
 
     // HDL (good cholesterol)
     if (hdlCholesterol != null) {
-      if (hdlCholesterol >= 60) score += 5; // Cardioprotective
-      else if (hdlCholesterol < 40) score -= 20;
+      if (hdlCholesterol >= 60) {
+        score += 5; // Cardioprotective
+      } else if (hdlCholesterol < 40) score -= 20;
       else if (hdlCholesterol < 50) score -= 10;
     }
 
     // LDL
     if (ldlCholesterol != null) {
-      if (ldlCholesterol >= 190) score -= 30;
-      else if (ldlCholesterol >= 160) score -= 20;
+      if (ldlCholesterol >= 190) {
+        score -= 30;
+      } else if (ldlCholesterol >= 160) score -= 20;
       else if (ldlCholesterol >= 130) score -= 10;
       else if (ldlCholesterol < 70) score += 5; // Optimal
     }
 
     // Triglycerides
     if (triglycerides != null) {
-      if (triglycerides >= 500) score -= 25;
-      else if (triglycerides >= 200) score -= 15;
+      if (triglycerides >= 500) {
+        score -= 25;
+      } else if (triglycerides >= 200) score -= 15;
       else if (triglycerides < 100) score += 5;
     }
 
@@ -552,14 +568,16 @@ class HealthAnalyticsService {
     double score = 100;
 
     if (hba1c != null) {
-      if (hba1c >= 6.5) score -= 30; // Diabetic
-      else if (hba1c >= 6.0) score -= 15; // Prediabetic
+      if (hba1c >= 6.5) {
+        score -= 30; // Diabetic
+      } else if (hba1c >= 6.0) score -= 15; // Prediabetic
       else if (hba1c < 5.5) score -= 5; // May indicate reactive hypoglycemia
     }
 
     if (fastingGlucose != null) {
-      if (fastingGlucose >= 126) score -= 30;
-      else if (fastingGlucose >= 100) score -= 15;
+      if (fastingGlucose >= 126) {
+        score -= 30;
+      } else if (fastingGlucose >= 100) score -= 15;
       else if (fastingGlucose < 70) score -= 10;
     }
 
@@ -671,8 +689,9 @@ class HealthAnalyticsService {
     double stress = 30; // Base
 
     // Poor sleep increases stress
-    if (sleep.qualityScore < 50) stress += 30;
-    else if (sleep.qualityScore < 70) stress += 15;
+    if (sleep.qualityScore < 50) {
+      stress += 30;
+    } else if (sleep.qualityScore < 70) stress += 15;
 
     // Sleep debt
     int sleepDeficit = max(0, 480 - sleep.totalMinutes); // vs 8 hours
@@ -691,13 +710,15 @@ class HealthAnalyticsService {
     double stress = 30; // Baseline
 
     // Sedentary lifestyle increases stress
-    if (activity.steps < 3000) stress += 25;
-    else if (activity.steps < 5000) stress += 15;
+    if (activity.steps < 3000) {
+      stress += 25;
+    } else if (activity.steps < 5000) stress += 15;
     else if (activity.steps >= 10000) stress -= 15;
 
     // Overtraining can increase stress
-    if (activity.activeMinutes > 120) stress += 20;
-    else if (activity.activeMinutes >= 30 && activity.activeMinutes <= 60) stress -= 10;
+    if (activity.activeMinutes > 120) {
+      stress += 20;
+    } else if (activity.activeMinutes >= 30 && activity.activeMinutes <= 60) stress -= 10;
 
     return stress.clamp(0, 100);
   }
@@ -777,8 +798,9 @@ class HealthAnalyticsService {
 
     // HRV bonus/penalty
     if (hr.hrv > 0) {
-      if (hr.hrv >= 50) totalScore += 5;
-      else if (hr.hrv < 25) totalScore -= 10;
+      if (hr.hrv >= 50) {
+        totalScore += 5;
+      } else if (hr.hrv < 25) totalScore -= 10;
     }
 
     // AFib penalty
