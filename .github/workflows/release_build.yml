@@ -127,8 +127,13 @@ jobs:
       - name: Install Linux dependencies
         run: |
           sudo apt-get update -y
+          # libsecret-1-dev is required by flutter_secure_storage_linux, which
+          # backs the watch pairing PIN. Without it CMake stops at
+          # pkg_check_modules with "libsecret-1>=0.18.4" and the build cannot
+          # generate at all.
           sudo apt-get install -y clang cmake ninja-build pkg-config \
-            libgtk-3-dev liblzma-dev libstdc++-12-dev
+            libgtk-3-dev liblzma-dev libstdc++-12-dev \
+            libsecret-1-dev libjsoncpp-dev
 
       - name: Install dependencies
         working-directory: app
