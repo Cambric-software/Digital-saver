@@ -2,6 +2,8 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
+import 'emergency_service.dart';
+
 /// Configuration for the Gemini AI service.
 /// Uses the secure Cambric Cloudflare Worker relay by default so no keys
 /// leak in client binaries, with optional direct API key override.
@@ -45,9 +47,26 @@ class GeminiService {
 
   static const int _maxHistoryTurns = 20;
 
-  /// The system prompt that gives Gemini its identity, medical knowledge,
-  /// Veyro-specific knowledge, and troubleshooting context.
-  static const String systemPrompt = '''
+  /// The system prompt with the configured emergency number filled in.
+  ///
+  /// Resolved on each call rather than cached, because the number is a setting
+  /// the person can change while the app is running.
+  static String get systemPrompt => _promptTemplate.replaceAll(
+        '{{EMERGENCY_NUMBER}}',
+        EmergencyService.emergencyNumber,
+      );
+
+  /// The system prompt template.
+  ///
+  /// The emergency number is a placeholder rather than literal text. It used
+  /// to be hardcoded to Egypt's 123, while [EmergencyService] uses a
+  /// configurable number defaulting to 999 for the UK, so anyone outside Egypt
+  /// asking for emergency help was told to call a number that reaches nobody.
+  ///
+  /// Only the single general emergency number is used, because that is all the
+  /// app knows. Naming a separate police or fire line here would be inventing
+  /// detail the rest of the product does not have.
+  static const String _promptTemplate = '''
 You are Digital Saver AI — a smart, friendly, and deeply knowledgeable health assistant built into the Digital Saver app by Cambric, created by a young Egyptian developer.
 
 IDENTITY
@@ -130,8 +149,12 @@ STRESS
 - Techniques: deep breathing (box breathing, 4-7-8), meditation, walking, sleep.
 
 EMERGENCY GUIDANCE (always encourage calling emergency services)
-- Egypt ambulance: 123. Police: 122. Fire: 180.
-- If someone is unconscious and not breathing: call 123, start CPR (30 compressions, 2 breaths).
+- The emergency number for the country this app is configured for is
+  {{EMERGENCY_NUMBER}}. Use that number and no other. If you have reason to
+  think the person is in a different country from the one the app is set to,
+  ask where they are before naming a number.
+- If someone is unconscious and not breathing: call {{EMERGENCY_NUMBER}} and
+  start CPR (30 compressions, 2 breaths).
 - Chest pain + left arm pain + sweating = potential heart attack. Call emergency immediately.
 - SpO2 < 88% with difficulty breathing = seek emergency care.
 - Fall + head injury + confusion = do not move the person, call 123.
