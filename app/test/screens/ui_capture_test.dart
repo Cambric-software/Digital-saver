@@ -44,6 +44,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import 'stub_notifications.dart';
 import 'package:provider/provider.dart';
 
 /// Whether to write the rendered images.
@@ -225,7 +227,10 @@ List<String> _stopCollecting() {
 }
 
 void main() {
-  setUpAll(loadRealFonts);
+  setUpAll(() async {
+    await loadRealFonts();
+    useStubNotifications();
+  });
 
   setUp(() {
     // Each test starts from empty preferences.

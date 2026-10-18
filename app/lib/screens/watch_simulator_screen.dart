@@ -12,7 +12,11 @@ class WatchSimulatorScreen extends StatefulWidget {
 }
 
 class _WatchSimulatorScreenState extends State<WatchSimulatorScreen>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
+  // TickerProviderStateMixin, not SingleTickerProviderStateMixin: this State
+  // creates two controllers, the breathing pulse and the heartbeat, and the
+  // single-ticker mixin throws on the second one. That exception fires when the
+  // screen is opened, so the simulator could not start at all.
   late AnimationController _breathingController;
   late AnimationController _heartbeatController;
   
