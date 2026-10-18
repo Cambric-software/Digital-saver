@@ -63,6 +63,8 @@ const Set<String> _contentScreens = <String>{
   'dashboard',
   'vitals',
   'heart',
+  'activity',
+  'sleep',
 };
 
 final Map<String, Widget Function()> _screens = <String, Widget Function()>{

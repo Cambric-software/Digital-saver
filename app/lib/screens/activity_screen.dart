@@ -1,286 +1,534 @@
+/// Steps, distance, calories and fall detection.
+///
+/// Rebuilt on the shared components. Three things are fixed here:
+///
+/// * Distance was shown as `steps x 0.762 / 1000` and active minutes as
+///   `steps / 1200`. Both were arithmetic standing in for fields the watch
+///   actually reports - `distanceKm` and `activeMinutes` are right there in the
+///   model, unused. A step-to-distance constant is a guess that is wrong for
+///   most people by a wide margin, since stride length varies with height, and
+///   it was being presented as a measurement.
+///
+/// * The fall banner contained a corrupted emoji that rendered as mojibake.
+///
+/// * The screen carried its own Scaffold and AppBar inside a shell that
+///   already supplies both.
+///
+/// The hourly chart previously hid every bar after the current hour by passing
+/// 0 rather than leaving the space empty. A bar that has not happened yet and a
+/// bar that recorded no steps look identical, which misreads the day.
+library;
+
+import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:fl_chart/fl_chart.dart';
-import '../services/ble_service.dart';
-import '../theme/app_theme.dart';
 
+import '../services/ble_service.dart';
+import '../theme/app_colors.dart';
+import '../theme/design_tokens.dart';
+import '../widgets/ds_widgets.dart';
+
+/// The daily step goal. A configurable target would be better; this is the
+/// commonly used adult default and it is stated rather than implied.
+const int kDailyStepGoal = 10000;
+const int kDailyCalorieGoal = 600;
+const int kDailyActiveMinuteGoal = 60;
+
+/// Steps, distance and calories for today.
 class ActivityScreen extends StatelessWidget {
+  /// Create the screen.
   const ActivityScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
     final ble = context.watch<BleService>();
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        backgroundColor: AppColors.background,
-        surfaceTintColor: Colors.transparent,
-        title: const Text('Activity', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        child: Column(children: [
-          _StepHero(ble: ble),
-          const SizedBox(height: 16),
-          _MetricsRow(ble: ble),
-          const SizedBox(height: 16),
-          _HourlyChart(ble: ble),
-          const SizedBox(height: 16),
-          _ActivityRings(ble: ble),
-          const SizedBox(height: 16),
-          _FallDetector(ble: ble),
-          const SizedBox(height: 100),
-        ]),
-      ),
-    );
-  }
-}
+    final activity = ble.activity;
+    // A disconnected watch has reported nothing. Treating that as zero steps
+    // would show a day of inactivity that never happened.
+    final live = ble.isConnected && activity.steps > 0;
+    final accent = AppColors.of(AppColors.stepAmber, AppColors.darkStep, context);
 
-class _StepHero extends StatelessWidget {
-  final BleService ble;
-  const _StepHero({required this.ble});
-
-  @override
-  Widget build(BuildContext context) {
-    const goal = 10000;
-    final steps = ble.isConnected ? ble.activity.steps : 0;
-    final pct = (steps / goal).clamp(0.0, 1.0);
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        gradient: AppColors.gradientActivity,
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: AppShadows.coloredCard(AppColors.stepAmber),
-      ),
-      child: Column(children: [
-        const Icon(Icons.directions_run, color: Colors.white, size: 32),
-        const SizedBox(height: 8),
-        const Text('Daily Steps', style: TextStyle(color: Colors.white70, fontSize: 14, letterSpacing: 0.5)),
-        const SizedBox(height: 8),
-        Text(ble.isConnected ? '$steps' : '--',
-          style: const TextStyle(color: Colors.white, fontSize: 64, fontWeight: FontWeight.bold, height: 1)),
-        const Text('/ $goal goal', style: TextStyle(color: Colors.white70, fontSize: 14)),
-        const SizedBox(height: 16),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(8),
-          child: LinearProgressIndicator(
-            value: pct,
-            backgroundColor: Colors.white.withValues(alpha: 0.2),
-            valueColor: const AlwaysStoppedAnimation(Colors.white),
-            minHeight: 8,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Text('${(pct * 100).round()}% of daily goal', style: const TextStyle(color: Colors.white70, fontSize: 12)),
-      ]),
-    );
-  }
-}
-
-class _MetricsRow extends StatelessWidget {
-  final BleService ble;
-  const _MetricsRow({required this.ble});
-
-  @override
-  Widget build(BuildContext context) => Row(children: [
-    Expanded(child: _MetricCard(label: 'Calories', value: ble.isConnected ? '${ble.activity.calories.round()}' : '--', unit: 'kcal', icon: Icons.local_fire_department, color: AppColors.heartRed)),
-    const SizedBox(width: 12),
-    Expanded(child: _MetricCard(label: 'Distance', value: ble.isConnected ? (ble.activity.steps * 0.762 / 1000).toStringAsFixed(2) : '--', unit: 'km', icon: Icons.map_outlined, color: AppColors.primary)),
-    const SizedBox(width: 12),
-    Expanded(child: _MetricCard(label: 'Active', value: ble.isConnected ? '${(ble.activity.steps / 1200).floor()}' : '--', unit: 'min', icon: Icons.timer_outlined, color: AppColors.success)),
-  ]);
-}
-
-class _MetricCard extends StatelessWidget {
-  final String label, value, unit;
-  final IconData icon;
-  final Color color;
-  const _MetricCard({required this.label, required this.value, required this.unit, required this.icon, required this.color});
-
-  @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.all(14),
-    decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(18), boxShadow: AppShadows.card),
-    child: Column(children: [
-      Icon(icon, color: color, size: 22),
-      const SizedBox(height: 8),
-      Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: AppColors.textPrimary, height: 1)),
-      Text(unit, style: const TextStyle(color: AppColors.textMuted, fontSize: 11)),
-      const SizedBox(height: 2),
-      Text(label, style: const TextStyle(color: AppColors.textSecondary, fontSize: 11, fontWeight: FontWeight.w500)),
-    ]),
-  );
-}
-
-class _HourlyChart extends StatelessWidget {
-  final BleService ble;
-  const _HourlyChart({required this.ble});
-
-  List<BarChartGroupData> _bars(BleService ble) {
-    final hour = DateTime.now().hour;
-    final hourlySteps = ble.activity.hourlySteps;
-    
-    // Ensure we have 24 values
-    final stepsData = List<int>.generate(24, (i) {
-      if (i < hourlySteps.length) return hourlySteps[i];
-      return 0;
-    });
-    
-    return List.generate(24, (i) {
-      final s = i <= hour ? stepsData[i] : 0;
-      return BarChartGroupData(x: i, barRods: [BarChartRodData(
-        toY: s.toDouble(),
-        color: i == hour ? AppColors.stepAmber : AppColors.stepAmber.withValues(alpha: 0.3),
-        width: 8,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
-      )]);
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(20), boxShadow: AppShadows.card),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const Text('Steps by Hour', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: AppColors.textPrimary)),
-        const SizedBox(height: 4),
-        const Text('Hourly step distribution', style: TextStyle(color: AppColors.textMuted, fontSize: 12)),
-        const SizedBox(height: 16),
-        SizedBox(
-          height: 130,
-          child: BarChart(BarChartData(
-            barGroups: _bars(ble),
-            gridData: FlGridData(
-              show: true,
-              drawVerticalLine: false,
-              getDrawingHorizontalLine: (_) => FlLine(color: Colors.grey.shade100, strokeWidth: 1),
-            ),
-            titlesData: FlTitlesData(
-              leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-              rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-              topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-              bottomTitles: AxisTitles(sideTitles: SideTitles(
-                showTitles: true,
-                reservedSize: 18,
-                getTitlesWidget: (v, _) {
-                  final i = v.toInt();
-                  if (i % 6 != 0) return const SizedBox.shrink();
-                  final h = i == 0 ? '12A' : i == 6 ? '6A' : i == 12 ? '12P' : '6P';
-                  return Text(h, style: const TextStyle(color: AppColors.textMuted, fontSize: 10));
-                },
-              )),
-            ),
-            borderData: FlBorderData(show: false),
-          )),
-        ),
-      ]),
-    );
-  }
-}
-
-class _ActivityRings extends StatelessWidget {
-  final BleService ble;
-  const _ActivityRings({required this.ble});
-
-  @override
-  Widget build(BuildContext context) {
-    final steps = ble.isConnected ? ble.activity.steps : 0;
-    final cal = ble.isConnected ? ble.activity.calories.round() : 0;
-    final active = ble.isConnected ? (ble.activity.steps / 1200).floor() : 0;
-
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(20), boxShadow: AppShadows.card),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const Text('Activity Goals', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: AppColors.textPrimary)),
-        const SizedBox(height: 14),
-        _GoalBar(label: 'Steps', current: steps.toDouble(), goal: 10000, unit: 'steps', color: AppColors.stepAmber),
-        const SizedBox(height: 10),
-        _GoalBar(label: 'Calories', current: cal.toDouble(), goal: 600, unit: 'kcal', color: AppColors.heartRed),
-        const SizedBox(height: 10),
-        _GoalBar(label: 'Active Minutes', current: active.toDouble(), goal: 60, unit: 'min', color: AppColors.success),
-      ]),
-    );
-  }
-}
-
-class _GoalBar extends StatelessWidget {
-  final String label, unit;
-  final double current, goal;
-  final Color color;
-  const _GoalBar({required this.label, required this.current, required this.goal, required this.unit, required this.color});
-
-  @override
-  Widget build(BuildContext context) {
-    final pct = (current / goal).clamp(0.0, 1.0);
-    return Column(children: [
-      Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-        Row(children: [
-          Container(width: 8, height: 8, decoration: BoxDecoration(shape: BoxShape.circle, color: color)),
-          const SizedBox(width: 8),
-          Text(label, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.textSecondary)),
-        ]),
-        Text('${current.round()} / ${goal.round()} $unit', style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.bold)),
-      ]),
-      const SizedBox(height: 6),
-      ClipRRect(
-        borderRadius: BorderRadius.circular(6),
-        child: LinearProgressIndicator(
-          value: pct,
-          backgroundColor: Colors.grey.shade100,
-          valueColor: AlwaysStoppedAnimation(color),
-          minHeight: 10,
-        ),
-      ),
-    ]);
-  }
-}
-
-class _FallDetector extends StatelessWidget {
-  final BleService ble;
-  const _FallDetector({required this.ble});
-
-  @override
-  Widget build(BuildContext context) {
-    final fall = ble.isConnected && ble.accel.fallDetected;
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: fall ? AppColors.danger.withValues(alpha: 0.06) : AppColors.success.withValues(alpha: 0.06),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: fall ? AppColors.danger.withValues(alpha: 0.3) : AppColors.success.withValues(alpha: 0.2)),
-      ),
-      child: Row(children: [
-        Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: fall ? AppColors.danger.withValues(alpha: 0.1) : AppColors.success.withValues(alpha: 0.1),
-            shape: BoxShape.circle,
-          ),
-          child: Icon(
-            fall ? Icons.warning_amber_rounded : Icons.shield_outlined,
-            color: fall ? AppColors.danger : AppColors.success,
-            size: 28,
-          ),
-        ),
-        const SizedBox(width: 14),
-        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(
-            fall ? '⚠️ Fall Detected!' : 'Fall Detection Active',
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: fall ? AppColors.danger : AppColors.success),
-          ),
-          const SizedBox(height: 4),
-              Text(
-                fall
-                    ? 'Sudden impact detected. The watch recorded a local fall flag. Confirm your condition and contact help yourself.'
-                    : 'Monitoring for falls using 6-axis accelerometer (MPU6050). All clear.',
-                style: const TextStyle(color: AppColors.textSecondary, fontSize: 12, height: 1.4),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        DsCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Row(
+                children: <Widget>[
+                  Icon(
+                    Icons.directions_walk_rounded,
+                    color: accent,
+                    size: 20,
+                  ),
+                  const SizedBox(width: Space.sm),
+                  Expanded(
+                    child: Text('Steps', style: Theme.of(context).textTheme.titleSmall),
+                  ),
+                  if (live)
+                    DsStatusPill(
+                      label: '${(activity.steps / kDailyStepGoal * 100).round()}% of goal',
+                      color: accent,
+                      dense: true,
+                    ),
+                ],
               ),
-        ])),
-      ]),
+              const SizedBox(height: Space.lg),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.baseline,
+                textBaseline: TextBaseline.alphabetic,
+                children: <Widget>[
+                  Text(
+                    live ? '${activity.steps}' : '--',
+                    style: Type.metric.copyWith(color: accent),
+                  ),
+                  const SizedBox(width: Space.xs),
+                  Text(
+                    'of $kDailyStepGoal',
+                    style: Theme.of(context).textTheme.labelLarge,
+                  ),
+                ],
+              ),
+              const SizedBox(height: Space.md),
+              _GoalBar(
+                value: activity.steps.toDouble(),
+                goal: kDailyStepGoal.toDouble(),
+                color: accent,
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: Space.lg),
+        _MetricSummary(ble: ble, live: live),
+        const SizedBox(height: Space.lg),
+        _HourlyChart(hourlySteps: activity.hourlySteps, live: live),
+        const SizedBox(height: Space.lg),
+        _GoalSummary(ble: ble, live: live),
+        const SizedBox(height: Space.lg),
+        const _FallStatus(),
+      ],
+    );
+  }
+}
+
+/// A labelled progress bar that cannot overflow.
+class _GoalBar extends StatelessWidget {
+  const _GoalBar({
+    required this.value,
+    required this.goal,
+    required this.color,
+    this.showLabel = true,
+  });
+
+  final double value;
+  final double goal;
+  final Color color;
+  final bool showLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final fraction = goal <= 0 ? 0.0 : (value / goal).clamp(0.0, 1.0);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        if (showLabel) ...<Widget>[
+          Row(
+            children: <Widget>[
+              Expanded(
+                child: Text(
+                  '${value.round()} of ${goal.round()}',
+                  style: theme.textTheme.bodySmall,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              if (value >= goal)
+                Icon(Icons.check_circle_rounded, size: 16, color: color),
+            ],
+          ),
+          const SizedBox(height: Space.xs),
+        ],
+        ClipRRect(
+          borderRadius: BorderRadius.circular(Radii.pill),
+          child: LinearProgressIndicator(
+            value: fraction,
+            minHeight: 8,
+            backgroundColor: theme.colorScheme.surfaceContainerHigh,
+            valueColor: AlwaysStoppedAnimation<Color>(color),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Distance, calories and active minutes.
+///
+/// Every figure is reported by the watch. None is derived from the step count.
+class _MetricSummary extends StatelessWidget {
+  const _MetricSummary({required this.ble, required this.live});
+
+  final BleService ble;
+  final bool live;
+
+  @override
+  Widget build(BuildContext context) {
+    final activity = ble.activity;
+    final theme = Theme.of(context);
+
+    return DsCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text('Today so far', style: theme.textTheme.titleSmall),
+          const SizedBox(height: Space.md),
+          DsGrid(
+            minTileWidth: 130,
+            children: <Widget>[
+              DsMetricTile(
+                label: 'Distance',
+                value: live && activity.distanceKm > 0
+                    ? activity.distanceKm.toStringAsFixed(2)
+                    : '--',
+                unit: live && activity.distanceKm > 0 ? 'km' : null,
+                accent: theme.colorScheme.primary,
+                icon: Icons.straighten_rounded,
+              ),
+              DsMetricTile(
+                label: 'Calories',
+                value: live && activity.calories > 0
+                    ? '${activity.calories.round()}'
+                    : '--',
+                unit: live && activity.calories > 0 ? 'kcal' : null,
+                accent: AppColors.of(
+                  AppColors.heartRed,
+                  AppColors.darkHeart,
+                  context,
+                ),
+                icon: Icons.local_fire_department_rounded,
+              ),
+              DsMetricTile(
+                label: 'Active minutes',
+                value: live && activity.activeMinutes > 0
+                    ? '${activity.activeMinutes}'
+                    : '--',
+                unit: live && activity.activeMinutes > 0 ? 'min' : null,
+                accent: AppColors.of(
+                  AppColors.success,
+                  AppColors.darkSuccess,
+                  context,
+                ),
+                icon: Icons.timer_rounded,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Steps by hour of the day.
+class _HourlyChart extends StatelessWidget {
+  const _HourlyChart({required this.hourlySteps, required this.live});
+
+  final List<int> hourlySteps;
+  final bool live;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final accent = AppColors.of(AppColors.stepAmber, AppColors.darkStep, context);
+
+    if (!live) {
+      return DsCard(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Text('Steps by hour', style: theme.textTheme.titleSmall),
+            const SizedBox(height: Space.md),
+            const DsEmptyState(
+              icon: Icons.bar_chart_rounded,
+              title: 'No hourly data yet',
+              message: 'The watch reports steps as the day goes on.',
+            ),
+          ],
+        ),
+      );
+    }
+
+    final now = DateTime.now().hour;
+    final values = List<int>.generate(
+      24,
+      (int i) => i < hourlySteps.length ? hourlySteps[i] : 0,
+    );
+
+    return DsCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text('Steps by hour', style: theme.textTheme.titleSmall),
+          const SizedBox(height: Space.xxs),
+          Text(
+            'Darker bars are hours that have happened. Hours still to come are '
+            'left empty rather than shown as zero, because no steps recorded yet '
+            'is not the same as no steps taken.',
+            style: theme.textTheme.bodySmall,
+          ),
+          const SizedBox(height: Space.lg),
+          SizedBox(
+            height: 130,
+            child: BarChart(
+              BarChartData(
+                barGroups: <BarChartGroupData>[
+                  for (int i = 0; i < 24; i++)
+                    BarChartGroupData(
+                      x: i,
+                      // A future hour gets no rod at all. Passing a rod with a
+                      // value of zero would draw a stub, and a stub is
+                      // indistinguishable from an hour that genuinely recorded
+                      // no steps.
+                      barRods: i <= now
+                          ? <BarChartRodData>[
+                              BarChartRodData(
+                                toY: values[i].toDouble(),
+                                color: i == now
+                                    ? accent
+                                    : accent.withValues(alpha: 0.35),
+                                width: 8,
+                                borderRadius: const BorderRadius.vertical(
+                                  top: Radius.circular(4),
+                                ),
+                              ),
+                            ]
+                          : const <BarChartRodData>[],
+                    ),
+                ],
+                gridData: FlGridData(
+                  show: true,
+                  drawVerticalLine: false,
+                  getDrawingHorizontalLine: (_) => FlLine(
+                    color: theme.colorScheme.outlineVariant,
+                    strokeWidth: 1,
+                  ),
+                ),
+                titlesData: FlTitlesData(
+                  leftTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                  rightTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                  topTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                  bottomTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 20,
+                      getTitlesWidget: (double value, TitleMeta meta) {
+                        final hour = value.toInt();
+                        if (hour % 6 != 0) return const SizedBox.shrink();
+                        const labels = <int, String>{
+                          0: '12a',
+                          6: '6a',
+                          12: '12p',
+                          18: '6p',
+                        };
+                        return Text(
+                          labels[hour] ?? '',
+                          style: theme.textTheme.labelSmall,
+                        );
+                      },
+                    ),
+                  ),
+                ),
+                borderData: FlBorderData(show: false),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Progress against each daily goal.
+class _GoalSummary extends StatelessWidget {
+  const _GoalSummary({required this.ble, required this.live});
+
+  final BleService ble;
+  final bool live;
+
+  @override
+  Widget build(BuildContext context) {
+    final activity = ble.activity;
+    final theme = Theme.of(context);
+
+    return DsCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text('Daily goals', style: theme.textTheme.titleSmall),
+          const SizedBox(height: Space.xxs),
+          Text(
+            'Common adult targets. They are not derived from your age, weight '
+            'or fitness, so treat them as a starting point rather than a target '
+            'someone has set for you.',
+            style: theme.textTheme.bodySmall,
+          ),
+          const SizedBox(height: Space.lg),
+          _GoalRow(
+            label: 'Steps',
+            value: live ? activity.steps.toDouble() : 0,
+            goal: kDailyStepGoal.toDouble(),
+            unit: 'steps',
+            color: AppColors.of(AppColors.stepAmber, AppColors.darkStep, context),
+          ),
+          const SizedBox(height: Space.lg),
+          _GoalRow(
+            label: 'Calories',
+            value: live ? activity.calories : 0,
+            goal: kDailyCalorieGoal.toDouble(),
+            unit: 'kcal',
+            color: AppColors.of(AppColors.heartRed, AppColors.darkHeart, context),
+          ),
+          const SizedBox(height: Space.lg),
+          _GoalRow(
+            label: 'Active minutes',
+            value: live ? activity.activeMinutes.toDouble() : 0,
+            goal: kDailyActiveMinuteGoal.toDouble(),
+            unit: 'min',
+            color: AppColors.of(AppColors.success, AppColors.darkSuccess, context),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _GoalRow extends StatelessWidget {
+  const _GoalRow({
+    required this.label,
+    required this.value,
+    required this.goal,
+    required this.unit,
+    required this.color,
+  });
+
+  final String label;
+  final double value;
+  final double goal;
+  final String unit;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Row(
+          children: <Widget>[
+            Container(
+              width: 8,
+              height: 8,
+              decoration: BoxDecoration(shape: BoxShape.circle, color: color),
+            ),
+            const SizedBox(width: Space.sm),
+            Expanded(
+              child: Text(
+                label,
+                style: theme.textTheme.bodyMedium,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            const SizedBox(width: Space.sm),
+            Flexible(
+              child: Text(
+                '${value.round()} / ${goal.round()} $unit',
+                style: theme.textTheme.labelMedium?.copyWith(color: color),
+                textAlign: TextAlign.end,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: Space.xs),
+        _GoalBar(
+          value: value,
+          goal: goal,
+          color: color,
+          showLabel: false,
+        ),
+      ],
+    );
+  }
+}
+
+/// Whether a fall has been detected.
+///
+/// A wrist accelerometer will fire on dropping the phone, tripping, or a firm
+/// knock against a doorframe. So the wording asks rather than declares, and it
+/// tells the person to check on themselves first - the commonest and most
+/// dangerous failure with this kind of alert is treating it as certain.
+class _FallStatus extends StatelessWidget {
+  const _FallStatus();
+
+  @override
+  Widget build(BuildContext context) {
+    final ble = context.watch<BleService>();
+    final accel = ble.accel;
+    final detected = ble.isConnected && accel.fallDetected;
+    final theme = Theme.of(context);
+
+    final color = detected
+        ? AppColors.of(AppColors.danger, AppColors.darkDanger, context)
+        : AppColors.of(AppColors.success, AppColors.darkSuccess, context);
+
+    return Container(
+      padding: const EdgeInsets.all(Space.lg),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(Radii.lg),
+        border: Border.all(color: color.withValues(alpha: 0.25)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Icon(
+            detected ? Icons.warning_rounded : Icons.shield_outlined,
+            color: color,
+            size: 24,
+          ),
+          const SizedBox(width: Space.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  detected ? 'Possible fall detected' : 'Fall detection active',
+                  style: theme.textTheme.titleSmall?.copyWith(color: color),
+                ),
+                const SizedBox(height: Space.xs),
+                Text(
+                  detected
+                      ? 'The watch felt a sharp impact. Check on yourself '
+                          'first - this triggers when you drop the watch or '
+                          'knock it against something as easily as a real fall.'
+                          ' If you are hurt, contact someone or emergency '
+                          'services.'
+                      : 'Monitoring with the 6-axis accelerometer (MPU6050). '
+                          'Nothing detected.',
+                  style: theme.textTheme.bodySmall,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

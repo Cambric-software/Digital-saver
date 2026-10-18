@@ -426,16 +426,25 @@ class DsSegmented<T> extends StatelessWidget {
         color: theme.colorScheme.surfaceContainerHigh,
         borderRadius: BorderRadius.circular(Radii.sm + 2),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          for (final option in options)
-            _SegmentButton<T>(
-              option: option,
-              selected: option.value == value,
-              onTap: () => onChanged(option.value),
-            ),
-        ],
+      // Scrolls rather than overflowing.
+      //
+      // Four options with labels do not fit a phone, and these choices have real
+      // content behind them, so they cannot be dropped or abbreviated into
+      // meaninglessness. Scrolling also makes it visible that more exist, which
+      // a control that silently clipped them did not.
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            for (final option in options)
+              _SegmentButton<T>(
+                option: option,
+                selected: option.value == value,
+                onTap: () => onChanged(option.value),
+              ),
+          ],
+        ),
       ),
     );
   }
