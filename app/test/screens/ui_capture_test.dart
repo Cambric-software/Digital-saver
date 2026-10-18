@@ -36,12 +36,14 @@ import 'package:digital_saver/services/app_lock.dart';
 import 'package:digital_saver/services/auto_update_service.dart';
 import 'package:digital_saver/services/ble_service.dart';
 import 'package:digital_saver/services/heart_rate_tracker.dart';
+import 'package:digital_saver/services/locale_service.dart';
 import 'package:digital_saver/services/theme_service.dart';
 import 'package:digital_saver/theme/app_theme.dart';
 import 'package:digital_saver/widgets/ds_widgets.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:provider/provider.dart';
 
 /// Whether to write the rendered images.
@@ -151,6 +153,11 @@ Widget harness(Widget child, {required bool isContent}) {
       ChangeNotifierProvider<HeartRateTracker>(create: (_) => HeartRateTracker()),
       ChangeNotifierProvider<AppLock>(create: (_) => AppLock()),
       ChangeNotifierProvider<ThemeService>(create: (_) => ThemeService()),
+      // Settings reads the current language from this during initState.
+      // Without it the lookup threw inside a setState callback, the exception
+      // never surfaced, and the screen sat on its loading spinner forever -
+      // which is exactly how a person would report "settings is broken".
+      ChangeNotifierProvider<LocaleService>(create: (_) => LocaleService()),
       ChangeNotifierProvider<AutoUpdateService>(
         create: (_) => AutoUpdateService(),
       ),
@@ -185,8 +192,51 @@ Future<void> _capture(WidgetTester tester, String name) async {
   );
 }
 
+/// Collects framework errors instead of letting them end the test.
+///
+/// A RenderFlex overflow is reported through FlutterError.onError. Left alone,
+/// the first one throws out of the test and leaves the binding in a state where
+/// every later test in the same file fails immediately without rendering
+/// anything - which is how four overflowing screens came to look like all
+/// nineteen were broken.
+///
+/// Collecting them means each screen is judged on its own, and the message can
+/// be reported precisely instead of as a generic failure.
+final List<String> _collectedErrors = <String>[];
+
+/// Installs the collector for the duration of one test.
+void _startCollecting() {
+  _collectedErrors.clear();
+  final previous = FlutterError.onError;
+  FlutterError.onError = (FlutterErrorDetails details) {
+    final text = details.exceptionAsString();
+    _collectedErrors.add(text);
+    // Anything that is not a layout problem still goes to the original handler,
+    // so a genuine error surfaces loudly rather than being swept up.
+    if (!text.contains('overflowed')) previous?.call(details);
+  };
+}
+
+/// Stops collecting and returns what was seen.
+List<String> _stopCollecting() {
+  final found = List<String>.of(_collectedErrors);
+  FlutterError.onError = FlutterError.presentError;
+  return found;
+}
+
 void main() {
   setUpAll(loadRealFonts);
+
+  setUp(() {
+    // Each test starts from empty preferences.
+    //
+    // Several screens read and write SharedPreferences - sleep reads demo_mode,
+    // settings writes six keys - and in a single test file that store persists
+    // between tests. Without this, state left by one screen changed what the
+    // next one rendered, and once a test threw, every later test in the file
+    // failed immediately without rendering anything at all.
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+  });
 
   for (final viewport in _viewports) {
     group('at ${viewport.name} (${viewport.size.width.toInt()}px)', () {
@@ -197,21 +247,50 @@ void main() {
             tester.view.physicalSize = viewport.size;
             tester.view.devicePixelRatio = 1.0;
             addTearDown(tester.view.reset);
+            _startCollecting();
+            addTearDown(_stopCollecting);
+
+            // Inside the body, not in a teardown: the binding checks for live animations as
+            // soon as the body returns, which is before tearDowns run.
+            //
+            // watch_simulator runs two AnimationControllers with repeat(). They
+            // are disposed correctly in the widget's own dispose(), but that
+            // only runs once the tree is torn down. Without doing it here, the
+            // scheduler reported "an animation is still running even after the
+            // widget tree was disposed" against whichever test ran next, so one
+            // screen's animation made every screen after it look broken.
+            await tester.pumpWidget(const SizedBox.shrink());
+            await tester.pump(const Duration(milliseconds: 20));
 
             await tester.pumpWidget(
-            harness(entry.value(), isContent: _contentScreens.contains(entry.key)),
-          );
+              harness(
+                entry.value(),
+                isContent: _contentScreens.contains(entry.key),
+              ),
+            );
             // Fixed pumps, not settle: an indeterminate progress indicator
             // never settles, so pumpAndSettle would hang until timeout.
             for (var i = 0; i < 6; i++) {
               await tester.pump(const Duration(milliseconds: 120));
             }
 
+            final thrown = tester.takeException();
+            final overflows = _collectedErrors
+                .where((String e) => e.contains('overflowed'))
+                .toList();
+
             expect(
-              tester.takeException(),
+              thrown,
               isNull,
               reason: '${entry.key} threw at '
                   '${viewport.size.width.toInt()}px wide',
+            );
+            expect(
+              overflows,
+              isEmpty,
+              reason: '${entry.key} overflows at '
+                  '${viewport.size.width.toInt()}px wide:\n'
+                  '${overflows.join('\n')}',
             );
 
             await _capture(tester, '${entry.key}_${viewport.name}');

@@ -25,6 +25,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
   UserProfile _profile = UserProfile();
   List<EmergencyContact> _contacts = [];
   bool _loading = true;
+
+  /// Set when loading settings failed.
+  ///
+  /// The screen used to have no failure path at all: any exception in [_load]
+  /// left `_loading` true, so the person was shown a spinner that never
+  /// stopped and no way to find out why. A settings screen that silently hangs
+  /// looks identical to one that is broken.
+  String? _loadError;
   final _name = TextEditingController();
   final _age = TextEditingController();
   final _weight = TextEditingController();
@@ -73,33 +81,46 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _load() async {
-    final p = await LocalStore.loadProfile();
-    final c = await LocalStore.loadContacts();
-    final prefs = await SharedPreferences.getInstance();
+    try {
+      final p = await LocalStore.loadProfile();
+      final c = await LocalStore.loadContacts();
+      final prefs = await SharedPreferences.getInstance();
+      final locale = context.read<LocaleService>();
 
-    setState(() {
-      _profile = p;
-      _contacts = c;
+      // The screen may have been left while these were loading.
+      if (!mounted) return;
+
       _name.text = p.name;
       _age.text = '${p.age}';
       _weight.text = '${p.weightKg.round()}';
-      final locale = context.read<LocaleService>();
-      _selectedLanguage = locale.currentLanguage;
-      _demoMode = prefs.getBool('demo_mode') ?? false;
-      _selectedWatchFace = prefs.getInt('selected_watch_face') ?? 0;
-      _autoSyncHistory = prefs.getBool('auto_sync_history') ?? true;
-      _highHrThreshold = prefs.getDouble('high_hr_threshold') ?? 120.0;
-      _lowSpo2Threshold = prefs.getDouble('low_spo2_threshold') ?? 90.0;
 
-      _complicationTop = prefs.getString('complication_top') ?? 'Steps';
-      _complicationBottom = prefs.getString('complication_bottom') ?? 'Heart Rate';
-      final savedReplies = prefs.getStringList('quick_replies');
-      if (savedReplies != null && savedReplies.isNotEmpty) {
-        _quickReplies = savedReplies;
-      }
+      setState(() {
+        _profile = p;
+        _contacts = c;
+        _selectedLanguage = locale.currentLanguage;
+        _demoMode = prefs.getBool('demo_mode') ?? false;
+        _selectedWatchFace = prefs.getInt('selected_watch_face') ?? 0;
+        _autoSyncHistory = prefs.getBool('auto_sync_history') ?? true;
+        _highHrThreshold = prefs.getDouble('high_hr_threshold') ?? 120.0;
+        _lowSpo2Threshold = prefs.getDouble('low_spo2_threshold') ?? 90.0;
 
-      _loading = false;
-    });
+        _complicationTop = prefs.getString('complication_top') ?? 'Steps';
+        _complicationBottom =
+            prefs.getString('complication_bottom') ?? 'Heart Rate';
+        final savedReplies = prefs.getStringList('quick_replies');
+        if (savedReplies != null && savedReplies.isNotEmpty) {
+          _quickReplies = savedReplies;
+        }
+
+        _loading = false;
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _loadError = '$error';
+        _loading = false;
+      });
+    }
   }
 
   @override
@@ -210,6 +231,48 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget build(BuildContext context) {
     if (_loading) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
+    // A spinner that never stops tells the person nothing. Say what happened and
+    // let them try again.
+    if (_loadError != null) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Settings')),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                const Icon(Icons.error_outline_rounded, size: 40),
+                const SizedBox(height: 12),
+                const Text(
+                  'Settings could not be loaded',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  _loadError!,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontSize: 12),
+                ),
+                const SizedBox(height: 16),
+                FilledButton.icon(
+                  onPressed: () {
+                    setState(() {
+                      _loadError = null;
+                      _loading = true;
+                    });
+                    _load();
+                  },
+                  icon: const Icon(Icons.refresh_rounded),
+                  label: const Text('Try again'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
     }
 
     final ble = context.watch<BleService>();
