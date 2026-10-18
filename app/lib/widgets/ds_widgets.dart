@@ -584,3 +584,198 @@ class DsPage extends StatelessWidget {
     );
   }
 }
+/// A grid of equally sized children that sizes to its own content.
+///
+/// [GridView] cannot do this inside a scrolling page: it either needs a bounded
+/// height, which breaks the page, or a shrink-wrap that is expensive and still
+/// fights the scroll view. Every screen here wanted the same thing - a
+/// responsive grid of tiles that flows with the page - so it is here once.
+///
+/// The column count follows the available width rather than a fixed number, so
+/// a tile is never asked to be narrower than it can render.
+class DsGrid extends StatelessWidget {
+  /// Create a grid.
+  const DsGrid({
+    required this.children,
+    this.minTileWidth = 260,
+    this.spacing = Space.md,
+    super.key,
+  });
+
+  /// The tiles, in reading order.
+  final List<Widget> children;
+
+  /// Below this, a tile becomes a single full-width column.
+  final double minTileWidth;
+
+  /// Gap between tiles, horizontally and vertically.
+  final double spacing;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints constraints) {
+        final available = constraints.maxWidth.isFinite
+            ? constraints.maxWidth
+            : MediaQuery.sizeOf(context).width;
+        final columns = (available / minTileWidth).floor().clamp(1, 4);
+
+        if (columns <= 1) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              for (var i = 0; i < children.length; i++) ...<Widget>[
+                if (i > 0) SizedBox(height: spacing),
+                children[i],
+              ],
+            ],
+          );
+        }
+
+        final width =
+            (available - spacing * (columns - 1)) / columns;
+        return Wrap(
+          spacing: spacing,
+          runSpacing: spacing,
+          children: <Widget>[
+            for (final child in children)
+              SizedBox(width: width, child: child),
+          ],
+        );
+      },
+    );
+  }
+}
+
+/// A card describing one piece of hardware, what it measures, and its state.
+///
+/// The previous version laid the icon, title and status out in a [Row], and the
+/// status strings - "Active (I2C 0x57)", "Armed & Active" - are long enough that
+/// the row overflowed at phone widths. It overflowed on every screen that used
+/// it, which is only visible by rendering at a phone width.
+///
+/// Here the header is laid out by available width, and every text run is
+/// allowed to wrap, so no combination of title and status can overflow.
+class DsSensorCard extends StatelessWidget {
+  /// Create a sensor card.
+  const DsSensorCard({
+    required this.title,
+    required this.subtitle,
+    required this.status,
+    required this.icon,
+    required this.details,
+    super.key,
+  });
+
+  /// Name of the component.
+  final String title;
+
+  /// What it measures.
+  final String subtitle;
+
+  /// Current state, shown as a pill.
+  final String status;
+
+  /// Icon identifying the component.
+  final IconData icon;
+
+  /// Bullet points describing the component.
+  final List<String> details;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return DsCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          LayoutBuilder(
+            builder: (BuildContext context, BoxConstraints constraints) {
+              final stacked = constraints.maxWidth < 420;
+              final heading = Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Container(
+                    padding: const EdgeInsets.all(Space.sm),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.primaryContainer,
+                      borderRadius: BorderRadius.circular(Radii.md),
+                    ),
+                    child: Icon(
+                      icon,
+                      size: 20,
+                      color: theme.colorScheme.onPrimaryContainer,
+                    ),
+                  ),
+                  const SizedBox(width: Space.md),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        Text(title, style: theme.textTheme.titleSmall),
+                        const SizedBox(height: Space.xxs),
+                        Text(
+                          subtitle,
+                          style: theme.textTheme.bodySmall,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              );
+
+              final pill = DsStatusPill(
+                label: status,
+                color: theme.colorScheme.primary,
+                dense: true,
+              );
+
+              // Side by side only when there is room for both without
+              // squeezing the heading.
+              if (stacked) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    heading,
+                    const SizedBox(height: Space.md),
+                    pill,
+                  ],
+                );
+              }
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: <Widget>[
+                  Expanded(child: heading),
+                  const SizedBox(width: Space.md),
+                  Flexible(child: pill),
+                ],
+              );
+            },
+          ),
+          const SizedBox(height: Space.md),
+          Divider(height: 1, color: theme.colorScheme.outlineVariant),
+          const SizedBox(height: Space.md),
+          for (final detail in details)
+            Padding(
+              padding: const EdgeInsets.only(bottom: Space.sm),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Icon(
+                    Icons.circle,
+                    size: 6,
+                    color: theme.colorScheme.primary,
+                  ),
+                  const SizedBox(width: Space.sm),
+                  Expanded(
+                    child: Text(detail, style: theme.textTheme.bodySmall),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}

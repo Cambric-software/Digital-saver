@@ -187,3 +187,27 @@ enum HealthStatus {
   /// Shape cue, so status does not rely on hue alone.
   final IconData icon;
 }
+/// The colour for a reading's status, resolved against the active theme.
+///
+/// A getter on the enum cannot do this: colour depends on whether the app is in
+/// light or dark mode, which needs a [BuildContext]. Screens were each picking
+/// their own colour for the same status, which is how one screen could show an
+/// elevated reading in amber and another in red.
+///
+/// Colour is never the only signal. Each status also carries a [HealthStatus.label]
+/// and a distinct [HealthStatus.icon], so this carries meaning rather than
+/// decoration.
+Color healthStatusColor(HealthStatus status, BuildContext context) {
+  switch (status) {
+    case HealthStatus.normal:
+      return AppColors.of(AppColors.success, AppColors.darkSuccess, context);
+    case HealthStatus.elevated:
+      return AppColors.of(AppColors.warning, AppColors.darkWarning, context);
+    case HealthStatus.high:
+      return AppColors.of(AppColors.danger, AppColors.darkDanger, context);
+    case HealthStatus.critical:
+      return AppColors.of(AppColors.danger, AppColors.darkDanger, context);
+    case HealthStatus.unknown:
+      return AppColors.of(AppColors.textMuted, AppColors.darkTextMuted, context);
+  }
+}

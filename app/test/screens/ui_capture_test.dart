@@ -35,12 +35,21 @@ import 'package:digital_saver/screens/wellness_tools_screen.dart';
 import 'package:digital_saver/services/app_lock.dart';
 import 'package:digital_saver/services/auto_update_service.dart';
 import 'package:digital_saver/services/ble_service.dart';
+import 'package:digital_saver/services/heart_rate_tracker.dart';
 import 'package:digital_saver/services/theme_service.dart';
 import 'package:digital_saver/theme/app_theme.dart';
+import 'package:digital_saver/widgets/ds_widgets.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
+
+/// Whether to write the rendered images.
+///
+/// Off unless CAPTURE_UI=1, so a normal test run asserts behaviour and does not
+/// compare against stored pixels.
+final bool captureImages =
+    Platform.environment['CAPTURE_UI'] == '1';
 
 /// Phone and laptop, chosen because they are the two the app is actually used
 /// at and the two most layouts are written for.
@@ -48,6 +57,13 @@ const List<({String name, Size size})> _viewports = <({String name, Size size})>
   (name: 'phone', size: Size(390, 844)),
   (name: 'laptop', size: Size(1440, 900)),
 ];
+
+/// Screens rebuilt onto the design system. These render inside [DsPage].
+const Set<String> _contentScreens = <String>{
+  'dashboard',
+  'vitals',
+  'heart',
+};
 
 final Map<String, Widget Function()> _screens = <String, Widget Function()>{
   'dashboard': DashboardScreen.new,
@@ -93,20 +109,44 @@ Future<void> loadRealFonts() async {
 
   Future<void> load(String family, String file) async {
     final bytes = File('${dir.path}/$file').readAsBytesSync();
-    final loader = FontLoader(family)..addFont(Future<ByteData>.value(ByteData.view(bytes.buffer)));
+    final loader = FontLoader(family)
+      ..addFont(Future<ByteData>.value(ByteData.view(bytes.buffer)));
     await loader.load();
   }
 
-  await load('Roboto', 'roboto-regular.ttf');
-  await load('MaterialIcons', 'MaterialIcons-Regular.otf');
+  // Every weight goes under the one family. Registering only roboto-regular
+  // left bold and medium text with nothing to use, so it fell back to the
+  // placeholder font and rendered as filled rectangles: the first capture of
+  // the rebuilt heart screen was full of red blocks where the numbers should
+  // have been, which looked like a colour bug in the screen rather than a
+  // missing font in the harness.
+  for (final weight in <String>[
+    'roboto-light',
+    'roboto-regular',
+    'roboto-medium',
+    'roboto-bold',
+  ]) {
+    await load('Roboto', '$weight.ttf');
+  }
+  await load('MaterialIcons', 'materialicons-regular.otf');
 }
 
 /// Wraps a screen in the providers the app supplies, and paints the real theme
 /// so the capture reflects what someone would see.
-Widget harness(Widget child) {
+///
+/// [isContent] distinguishes screens that render inside [DsPage] from screens
+/// that are pages in their own right. Content screens must not provide their own
+/// Scaffold, because DsPage supplies the title bar and the scroll view; giving
+/// one here reproduces a nested scroll that the real shell would not have.
+Widget harness(Widget child, {required bool isContent}) {
   return MultiProvider(
     providers: <ChangeNotifierProvider<ChangeNotifier>>[
       ChangeNotifierProvider<BleService>(create: (_) => BleService()),
+      // Supplied by main.dart, and the heart screen reads it for the session
+      // minimum and maximum. Omitting it produced a ProviderNotFoundException
+      // rather than a missing-value message, which is a poor way to find out a
+      // screen needs a provider.
+      ChangeNotifierProvider<HeartRateTracker>(create: (_) => HeartRateTracker()),
       ChangeNotifierProvider<AppLock>(create: (_) => AppLock()),
       ChangeNotifierProvider<ThemeService>(create: (_) => ThemeService()),
       ChangeNotifierProvider<AutoUpdateService>(
@@ -116,7 +156,7 @@ Widget harness(Widget child) {
     child: MaterialApp(
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
-      home: Scaffold(body: child),
+      home: isContent ? DsPage(child: child) : Scaffold(body: child),
     ),
   );
 }
@@ -131,6 +171,12 @@ Widget harness(Widget child) {
 /// goldens, so they cannot go stale in the repository, which is the usual reason
 /// golden files rot and stop being looked at.
 Future<void> _capture(WidgetTester tester, String name) async {
+  // Opt-in. Without this the golden comparison runs on every test, and a screen
+  // that rendered correctly would fail because antialiasing differed by a shade
+  // from the stored image. Capturing is a thing a person asks for; verifying is
+  // something CI does.
+  if (!captureImages) return;
+
   await expectLater(
     find.byType(MaterialApp),
     matchesGoldenFile('../../build/ui_capture/$name.png'),
@@ -150,7 +196,9 @@ void main() {
             tester.view.devicePixelRatio = 1.0;
             addTearDown(tester.view.reset);
 
-            await tester.pumpWidget(harness(entry.value()));
+            await tester.pumpWidget(
+            harness(entry.value(), isContent: _contentScreens.contains(entry.key)),
+          );
             // Fixed pumps, not settle: an indeterminate progress indicator
             // never settles, so pumpAndSettle would hang until timeout.
             for (var i = 0; i < 6; i++) {

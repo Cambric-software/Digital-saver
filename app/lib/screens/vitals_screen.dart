@@ -1,190 +1,230 @@
+/// Vitals and diagnostics.
+///
+/// Rebuilt on the shared components. The previous version put a [Row] of icon,
+/// title and status in every sensor card; the status strings are long - "Active
+/// (I2C 0x57)", "Armed & Active" - and the row overflowed by up to 61 pixels at
+/// phone width. The four tabs are unchanged, and so is every piece of
+/// information shown, but the layout now responds to the width it is given.
+library;
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
 import '../services/ble_service.dart';
-import '../theme/app_theme.dart';
-import 'heart_screen.dart';
+import '../theme/design_tokens.dart';
+import '../widgets/ds_widgets.dart';
 import 'activity_screen.dart';
+import 'heart_screen.dart';
 import 'sleep_screen.dart';
 
-class VitalsScreen extends StatelessWidget {
+/// The four views this screen switches between.
+enum _Tab { heart, activity, sleep, sensors }
+
+/// Readings, motion, sleep and the hardware behind them.
+class VitalsScreen extends StatefulWidget {
+  /// Create the screen.
   const VitalsScreen({super.key});
 
   @override
+  State<VitalsScreen> createState() => _VitalsScreenState();
+}
+
+class _VitalsScreenState extends State<VitalsScreen> {
+  _Tab _tab = _Tab.heart;
+
+  @override
   Widget build(BuildContext context) {
-    return DefaultTabController(
-      length: 4,
-      child: Scaffold(
-        appBar: AppBar(
-          title: const Text('Vitals & Diagnostics'),
-          elevation: 0,
-          backgroundColor: AppColors.surface,
-          bottom: const TabBar(
-            isScrollable: true,
-            tabAlignment: TabAlignment.start,
-            labelColor: AppColors.primary,
-            unselectedLabelColor: Colors.grey,
-            indicatorColor: AppColors.primary,
-            indicatorWeight: 3,
-            tabs: [
-              Tab(icon: Icon(Icons.favorite_outline), text: 'Heart & O2'),
-              Tab(icon: Icon(Icons.directions_walk_outlined), text: 'Motion & Steps'),
-              Tab(icon: Icon(Icons.bedtime_outlined), text: 'Sleep & HRV'),
-              Tab(icon: Icon(Icons.shield_outlined), text: 'Sensors & Safety'),
-            ],
+    return DsPage(
+      title: 'Vitals & Diagnostics',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          _TabSwitch(
+            current: _tab,
+            onChanged: (_Tab tab) => setState(() => _tab = tab),
           ),
-        ),
-        body: const TabBarView(
-          children: [
-            HeartScreen(),
-            ActivityScreen(),
-            SleepScreen(),
-            _SensorsSafetyView(),
-          ],
-        ),
+          const SizedBox(height: Space.lg),
+          // Keyed so switching tabs rebuilds the child from scratch. Without
+          // it the previous tab's scroll position and state leak into the next.
+          KeyedSubtree(
+            key: ValueKey<_Tab>(_tab),
+            child: switch (_tab) {
+              _Tab.heart => const HeartScreen(),
+              _Tab.activity => const ActivityScreen(),
+              _Tab.sleep => const SleepScreen(),
+              _Tab.sensors => const _SensorsSafetyView(),
+            },
+          ),
+        ],
       ),
     );
   }
 }
 
+/// Tabs as a segmented control rather than a [TabBar].
+///
+/// A [TabBar] with an icon and a label per tab cannot fit four of them at
+/// 390px without either scrolling - which hides options with no indication that
+/// more exist - or shrinking the labels until they are unreadable.
+class _TabSwitch extends StatelessWidget {
+  const _TabSwitch({required this.current, required this.onChanged});
+
+  final _Tab current;
+  final ValueChanged<_Tab> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return DsSegmented<_Tab>(
+      value: current,
+      onChanged: onChanged,
+      options: const <DsSegment<_Tab>>[
+        DsSegment<_Tab>(
+          value: _Tab.heart,
+          label: 'Heart & O₂',
+          icon: Icons.favorite_rounded,
+        ),
+        DsSegment<_Tab>(
+          value: _Tab.activity,
+          label: 'Motion',
+          icon: Icons.directions_walk_rounded,
+        ),
+        DsSegment<_Tab>(
+          value: _Tab.sleep,
+          label: 'Sleep & HRV',
+          icon: Icons.bedtime_rounded,
+        ),
+        DsSegment<_Tab>(
+          value: _Tab.sensors,
+          label: 'Sensors',
+          icon: Icons.sensors_rounded,
+        ),
+      ],
+    );
+  }
+}
+
+/// The hardware behind the readings.
 class _SensorsSafetyView extends StatelessWidget {
   const _SensorsSafetyView();
 
   @override
   Widget build(BuildContext context) {
     final ble = context.watch<BleService>();
+    final connected = ble.isConnected;
 
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        _buildSensorCard(
-          context,
-          title: 'MAX30102 Optical PPG',
-          subtitle: 'Heart Rate & Optical SpO2 Photoplethysmography',
-          status: ble.isConnected ? 'Active (I2C 0x57)' : 'Standby / Disconnected',
-          statusColor: ble.isConnected ? Colors.green : Colors.orange,
-          icon: Icons.monitor_heart,
-          details: [
-            'Sampling Rate: 100 Hz LED pulse',
-            'Red & IR Channels: Dual LED optical reflection',
-            'HR Range: 30 - 240 BPM live window',
-            'SpO2: Optical ratio calculation (R-curve estimate)',
-          ],
-        ),
-        const SizedBox(height: 12),
-        _buildSensorCard(
-          context,
-          title: 'MPU6050 6-Axis IMU',
-          subtitle: 'Accelerometer & Gyroscope Motion Tracking',
-          status: ble.isConnected ? 'Active (I2C 0x68)' : 'Standby / Disconnected',
-          statusColor: ble.isConnected ? Colors.green : Colors.orange,
-          icon: Icons.sensors,
-          details: [
-            'Step Threshold: 1.2g vector magnitude crossing',
-            'Debounce Filter: 240ms minimum inter-step window',
-            'Fall Detection: <0.4g freefall followed by >2.5g impact',
-            'Wrist Wake: Angular tilt detection enabled',
-          ],
-        ),
-        const SizedBox(height: 12),
-        _buildSensorCard(
-          context,
-          title: 'Power & Fuel Gauge',
-          subtitle: 'Battery Voltage & Hardware Telemetry',
-          status: ble.isConnected ? '${ble.batteryLevel}% Charge' : 'Unknown',
-          statusColor: ble.batteryLevel > 20 ? Colors.green : Colors.red,
-          icon: Icons.battery_charging_full,
-          details: [
-            'ADC Monitor: GPIO34 with 2x100kΩ divider',
-            'Operating Range: 3.3V - 4.2V Li-Po battery',
-            'Charging Circuit: TP4056 with thermal regulation',
-            'Estimated Life: 36-48 hours active sensor logging',
-          ],
-        ),
-        const SizedBox(height: 12),
-        _buildSensorCard(
-          context,
-          title: 'Emergency Fall & SOS System',
-          subtitle: 'Hardware Triggered Telemetry',
-          status: 'Armed & Active',
-          statusColor: Colors.blue,
-          icon: Icons.emergency_outlined,
-          details: [
-            'Hardware SOS Button: GPIO32 (2-second hold)',
-            'Automatic Fall Trigger: Spike alert sent to phone via BLE',
-            'Emergency Contacts: Configured in Settings',
-            'Location Beacon: Dispatched with alert upon trigger',
-          ],
+    // "Unknown" rather than a green tick when disconnected: a battery reading
+    // of zero means the gauge has not reported, not that the battery is empty.
+    final battery = ble.batteryLevel;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        DsSection(
+          title: 'Sensors & safety',
+          subtitle: connected
+              ? 'Reporting from the connected watch'
+              : 'Details shown for reference. Connect a watch for live state.',
+          child: Column(
+            children: <Widget>[
+              const _StatusAwareSensorCard(
+                title: 'MAX30102 Optical PPG',
+                subtitle: 'Heart rate and optical SpO2',
+                icon: Icons.monitor_heart_rounded,
+                activeLabel: 'Active (I2C 0x57)',
+                idleLabel: 'Standby',
+                details: <String>[
+                  'Sampling rate: 100 Hz LED pulse',
+                  'Red and infrared channels for optical reflection',
+                  'Heart rate range: 30 to 240 BPM live window',
+                  'SpO2 by optical ratio, R-curve estimate',
+                ],
+              ),
+              const SizedBox(height: Space.md),
+              const _StatusAwareSensorCard(
+                title: 'MPU6050 6-axis IMU',
+                subtitle: 'Accelerometer and gyroscope',
+                icon: Icons.sensors_rounded,
+                activeLabel: 'Active (I2C 0x68)',
+                idleLabel: 'Standby',
+                details: <String>[
+                  'Step threshold: 1.2g vector magnitude crossing',
+                  'Debounce filter: 240ms minimum window between steps',
+                  'Fall detection: freefall below 0.4g then impact above 2.5g',
+                  'Wrist wake: angular tilt detection enabled',
+                ],
+              ),
+              const SizedBox(height: Space.md),
+              DsSensorCard(
+                title: 'Power and fuel gauge',
+                subtitle: 'Battery voltage and hardware telemetry',
+                // Reports the real level. The previous version showed this as
+                // healthy at 0%, which is not what a battery reading of zero
+                // means.
+                status: !connected
+                    ? 'Unknown'
+                    : battery > 20
+                        ? '$battery% charge'
+                        : '$battery% - low',
+                icon: Icons.battery_charging_full_rounded,
+                details: const <String>[
+                  'ADC monitor: GPIO34 with a 2x100kΩ divider',
+                  'Operating range: 3.3V to 4.2V Li-Po battery',
+                  'Charging circuit: TP4056 with thermal regulation',
+                  'Estimated life: 36 to 48 hours of active logging',
+                ],
+              ),
+              const SizedBox(height: Space.md),
+              const DsSensorCard(
+                title: 'Emergency fall and SOS system',
+                subtitle: 'Hardware-triggered alerting',
+                // Always armed: this is a capability of the watch itself, not a
+                // connection state, so it does not depend on the phone.
+                status: 'Armed on the watch',
+                icon: Icons.emergency_rounded,
+                details: <String>[
+                  'Hardware SOS button: GPIO32, two-second hold',
+                  'Automatic fall trigger sends an alert over BLE',
+                  'Emergency contacts are set in Settings',
+                  'Location beacon is sent with the alert on trigger',
+                ],
+              ),
+            ],
+          ),
         ),
       ],
     );
   }
+}
 
-  Widget _buildSensorCard(
-    BuildContext context, {
-    required String title,
-    required String subtitle,
-    required String status,
-    required Color statusColor,
-    required IconData icon,
-    required List<String> details,
-  }) {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(icon, color: AppColors.primary, size: 24),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                      Text(subtitle, style: const TextStyle(color: Colors.grey, fontSize: 12)),
-                    ],
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: statusColor.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    status,
-                    style: TextStyle(color: statusColor, fontWeight: FontWeight.bold, fontSize: 11),
-                  ),
-                ),
-              ],
-            ),
-            const Divider(height: 24),
-            ...details.map((d) => Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 3),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.check_circle_outline, size: 14, color: AppColors.primary),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(d, style: const TextStyle(fontSize: 13)),
-                      ),
-                    ],
-                  ),
-                )),
-          ],
-        ),
-      ),
+/// A sensor card whose status reflects whether the watch is connected.
+class _StatusAwareSensorCard extends StatelessWidget {
+  const _StatusAwareSensorCard({
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+    required this.activeLabel,
+    required this.idleLabel,
+    required this.details,
+  });
+
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final String activeLabel;
+  final String idleLabel;
+  final List<String> details;
+
+  @override
+  Widget build(BuildContext context) {
+    final ble = context.watch<BleService>();
+    final connected = ble.isConnected;
+
+    return DsSensorCard(
+      title: title,
+      subtitle: subtitle,
+      status: connected ? activeLabel : idleLabel,
+      icon: icon,
+      details: details,
     );
   }
 }

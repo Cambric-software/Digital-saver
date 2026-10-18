@@ -1,360 +1,614 @@
+/// Heart rate, variability, rhythm and training zones.
+///
+/// Rebuilt on the shared components. Four problems are fixed here, three of them
+/// substantive rather than cosmetic:
+///
+/// * SDNN was displayed as `HRV x 1.4` and pNN50 as `(HRV - 15) / 0.85`. Both
+///   were invented. The model already carries real `sdnn` and `pnn50` values
+///   from the watch, and they were being ignored in favour of arithmetic that
+///   produced plausible-looking numbers which meant nothing. A health screen
+///   showing invented figures under real labels is the worst kind of wrong,
+///   because nothing about it looks wrong.
+///
+/// * The rhythm panel said "No signs of AFib detected". A wrist optical sensor
+///   cannot rule out atrial fibrillation - it has neither the sensitivity nor
+///   the specificity to exclude it, and the false reassurance is more
+///   dangerous than the uncertainty. It now says what was actually observed.
+///
+/// * The zone ranges were stored with a corrupted dash character, so they
+///   rendered as "60?100" rather than "60-100".
+///
+/// * The layout overflowed at phone widths in two places, both [Row]s holding
+///   content that could not shrink.
+library;
+
+import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:fl_chart/fl_chart.dart';
-import '../services/ble_service.dart';
-import '../services/heart_rate_tracker.dart';
-import '../services/health_analysis_service.dart';
-import '../theme/app_theme.dart';
 
+import '../services/ble_service.dart';
+import '../services/health_analysis_service.dart';
+import '../services/heart_rate_tracker.dart';
+import '../theme/app_colors.dart';
+import '../theme/design_tokens.dart';
+import '../utils/health_interpretation.dart';
+import '../widgets/ds_widgets.dart';
+
+/// Live heart rate and the detail behind it.
 class HeartScreen extends StatelessWidget {
+  /// Create the screen.
   const HeartScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
     final ble = context.watch<BleService>();
-    final hrTracker = context.watch<HeartRateTracker>();
-    final zone = ble.heartRate.bpm > 0 ? HealthAnalysisService.heartRateZone(ble.heartRate.bpm) : null;
-    final zone2 = ble.heartRate.bpm > 0 ? HealthAnalysisService.getHeartRateZone2(ble.heartRate.bpm) : null;
+    final tracker = context.watch<HeartRateTracker>();
+    final bpm = ble.heartRate.bpm;
+    final live = hasHeartRate(bpm);
 
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        backgroundColor: AppColors.background,
-        surfaceTintColor: Colors.transparent,
-        title: const Text('Heart Rate', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        child: Column(children: [
-          _HeroBPM(ble: ble, zone: zone, zone2: zone2, hrTracker: hrTracker),
-          const SizedBox(height: 16),
-          _HRVPanel(ble: ble),
-          const SizedBox(height: 16),
-          _RRChart(ble: ble),
-          const SizedBox(height: 16),
-          _AFibPanel(ble: ble),
-          const SizedBox(height: 16),
-          _ZoneGuide(currentHR: ble.heartRate.bpm.toDouble()),
-          const SizedBox(height: 100),
-        ]),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        _LiveReading(ble: ble, tracker: tracker),
+        const SizedBox(height: Space.lg),
+        _VariabilityPanel(ble: ble),
+        const SizedBox(height: Space.lg),
+        _RhythmPanel(ble: ble),
+        const SizedBox(height: Space.lg),
+        _ZoneGuide(currentBpm: live ? bpm : 0),
+      ],
+    );
+  }
+}
+
+/// The current rate, with the session's own range beneath it.
+class _LiveReading extends StatelessWidget {
+  const _LiveReading({required this.ble, required this.tracker});
+
+  final BleService ble;
+  final HeartRateTracker tracker;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final hr = ble.heartRate;
+    final bpm = hr.bpm;
+    final live = hasHeartRate(bpm);
+    final accent = AppColors.of(AppColors.heartRed, AppColors.darkHeart, context);
+    final status = interpretHeartRate(bpm);
+
+    final zone = live ? HealthAnalysisService.heartRateZone(bpm) : null;
+
+    return DsCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: <Widget>[
+              Icon(Icons.favorite_rounded, color: accent, size: 20),
+              const SizedBox(width: Space.sm),
+              Expanded(
+                child: Text('Heart rate', style: theme.textTheme.titleSmall),
+              ),
+              if (live)
+                DsStatusPill(
+                  label: status.label,
+                  color: healthStatusColor(status, context),
+                ),
+            ],
+          ),
+          const SizedBox(height: Space.lg),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.baseline,
+            textBaseline: TextBaseline.alphabetic,
+            children: <Widget>[
+              Text(
+                live ? '$bpm' : '--',
+                style: Type.metric.copyWith(color: accent),
+              ),
+              const SizedBox(width: Space.xs),
+              Text('BPM', style: theme.textTheme.labelLarge),
+            ],
+          ),
+          if (zone != null) ...<Widget>[
+            const SizedBox(height: Space.xs),
+            Text(zone, style: theme.textTheme.bodySmall),
+          ],
+          const SizedBox(height: Space.lg),
+          DsGrid(
+            minTileWidth: 110,
+            spacing: Space.sm,
+            children: <Widget>[
+              _MiniStat(
+                label: 'Session low',
+                value: tracker.bestMin > 0 ? '${tracker.bestMin}' : '--',
+              ),
+              _MiniStat(
+                label: 'Current',
+                value: live ? '$bpm' : '--',
+              ),
+              _MiniStat(
+                label: 'Session high',
+                value: tracker.bestMax > 0 ? '${tracker.bestMax}' : '--',
+              ),
+            ],
+          ),
+          if (guidanceFor(status, 'heart rate') case final String guidance)
+            ...<Widget>[
+              const SizedBox(height: Space.md),
+              _Guidance(text: guidance, status: status),
+            ],
+        ],
       ),
     );
   }
 }
 
-class _HeroBPM extends StatelessWidget {
-  final BleService ble;
-  final String? zone, zone2;
-  final HeartRateTracker hrTracker;
-  const _HeroBPM({required this.ble, this.zone, this.zone2, required this.hrTracker});
+class _MiniStat extends StatelessWidget {
+  const _MiniStat({required this.label, required this.value});
+
+  final String label;
+  final String value;
 
   @override
   Widget build(BuildContext context) {
-    final currentBpm = ble.isConnected && ble.heartRate.bpm > 0 ? ble.heartRate.bpm : 0;
-    final minVal = hrTracker.bestMin > 0 ? '${hrTracker.bestMin}' : '--';
-    final maxVal = hrTracker.bestMax > 0 ? '${hrTracker.bestMax}' : '--';
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Text(value, style: Type.metricSmall),
+        const SizedBox(height: Space.xxs),
+        Text(label, style: theme.textTheme.bodySmall),
+      ],
+    );
+  }
+}
+
+/// Advice about the reading, styled by how serious it is.
+class _Guidance extends StatelessWidget {
+  const _Guidance({required this.text, required this.status});
+
+  final String text;
+  final HealthStatus status;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(Space.md),
       decoration: BoxDecoration(
-        gradient: AppColors.gradientHeart,
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: AppShadows.coloredCard(AppColors.heartRed),
-      ),
-      child: Column(children: [
-        const Icon(Icons.favorite, color: Colors.white, size: 32),
-        const SizedBox(height: 8),
-        const Text('Heart Rate', style: TextStyle(color: Colors.white70, fontSize: 14, letterSpacing: 0.5)),
-        const SizedBox(height: 8),
-        Text(
-          currentBpm > 0 ? '$currentBpm' : '--',
-          style: const TextStyle(color: Colors.white, fontSize: 72, fontWeight: FontWeight.bold, height: 1),
+        color: healthStatusColor(status, context).withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(Radii.md),
+        border: Border.all(
+          color: healthStatusColor(status, context).withValues(alpha: 0.25),
         ),
-        const Text('BPM', style: TextStyle(color: Colors.white70, fontSize: 16)),
-        if (zone != null) ...[
-          const SizedBox(height: 12),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-            decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(20)),
-            child: Text('$zone · $zone2', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Icon(status.icon, size: 18, color: healthStatusColor(status, context)),
+          const SizedBox(width: Space.sm),
+          Expanded(
+            child: Text(text, style: theme.textTheme.bodySmall),
           ),
         ],
-        const SizedBox(height: 16),
-        Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [
-          _HeroStat('Session Min', minVal),
-          Container(width: 1, height: 28, color: Colors.white30),
-          _HeroStat('Current', currentBpm > 0 ? '$currentBpm' : '--'),
-          Container(width: 1, height: 28, color: Colors.white30),
-          _HeroStat('Session Max', maxVal),
-        ]),
-      ]),
+      ),
     );
   }
 }
 
-class _HeroStat extends StatelessWidget {
-  final String label, value;
-  const _HeroStat(this.label, this.value);
-  @override
-  Widget build(BuildContext context) => Column(children: [
-    Text(label, style: const TextStyle(color: Colors.white60, fontSize: 11)),
-    Text(value, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
-  ]);
-}
+/// Heart rate variability.
+///
+/// Every figure here comes from the watch. Nothing is derived from another
+/// figure, because a number labelled as a distinct measurement but actually
+/// computed from a different one is not a measurement.
+class _VariabilityPanel extends StatelessWidget {
+  const _VariabilityPanel({required this.ble});
 
-class _HRVPanel extends StatelessWidget {
   final BleService ble;
-  const _HRVPanel({required this.ble});
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(20), boxShadow: AppShadows.card),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(children: [
-          Container(padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(gradient: AppColors.gradientPrimary, borderRadius: BorderRadius.circular(10)),
-            child: const Icon(Icons.show_chart, color: Colors.white, size: 16)),
-          const SizedBox(width: 10),
-          const Text('Heart Rate Variability', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: AppColors.textPrimary)),
-        ]),
-        const SizedBox(height: 16),
-        Row(children: [
-          Expanded(child: _HRVStat(label: 'RMSSD', value: ble.isConnected && ble.heartRate.hrv > 0 ? '${ble.heartRate.hrv} ms' : '--',
-            subtitle: 'Parasympathetic tone', color: AppColors.primary)),
-          const SizedBox(width: 12),
-          Expanded(child: _HRVStat(label: 'SDNN', value: ble.isConnected && ble.heartRate.hrv > 0 ? '${(ble.heartRate.hrv * 1.4).round()} ms' : '--',
-            subtitle: 'Overall variability', color: AppColors.success)),
-          const SizedBox(width: 12),
-          Expanded(child: _HRVStat(label: 'pNN50', value: ble.isConnected && ble.heartRate.hrv > 0 ? '${((ble.heartRate.hrv - 15) / 0.85).clamp(0, 100).round()}%' : '--',
-            subtitle: '> 50ms intervals', color: AppColors.accent)),
-        ]),
-        if (ble.isConnected && ble.heartRate.hrv > 0) ...[
-          const SizedBox(height: 14),
-          const Divider(height: 1),
-          const SizedBox(height: 12),
-          _StressBar(hrv: ble.heartRate.hrv.toDouble()),
+    final theme = Theme.of(context);
+    final hr = ble.heartRate;
+    final connected = ble.isConnected;
+    final hasData = connected && hr.hrv > 0;
+
+    return DsCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              Icon(
+                Icons.monitor_heart_outlined,
+                size: 20,
+                color: theme.colorScheme.primary,
+              ),
+              const SizedBox(width: Space.sm),
+              Expanded(
+                child: Text(
+                  'Heart rate variability',
+                  style: theme.textTheme.titleSmall,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: Space.md),
+          if (!hasData)
+            const DsEmptyState(
+              icon: Icons.timeline_rounded,
+              title: 'No variability yet',
+              message: 'HRV needs a few minutes of steady connected data '
+                  'before it means anything.',
+            )
+          else ...<Widget>[
+            DsGrid(
+              minTileWidth: 120,
+              spacing: Space.sm,
+              children: <Widget>[
+                _VariabilityStat(
+                  label: 'RMSSD',
+                  value: '${hr.hrv}',
+                  unit: 'ms',
+                  caption: 'Beat-to-beat',
+                ),
+                _VariabilityStat(
+                  label: 'SDNN',
+                  value: hr.sdnn > 0 ? '${hr.sdnn}' : '--',
+                  unit: 'ms',
+                  caption: 'Overall spread',
+                ),
+                _VariabilityStat(
+                  label: 'pNN50',
+                  value: hr.pnn50 > 0 ? '${hr.pnn50}' : '--',
+                  unit: '%',
+                  caption: 'Intervals over 50ms',
+                ),
+              ],
+            ),
+            const SizedBox(height: Space.lg),
+            _RRChart(rrIntervals: hr.rrIntervals),
+            const SizedBox(height: Space.md),
+            Text(
+              'Higher variability generally indicates better recovery. A '
+              'single reading is not meaningful on its own - it moves with '
+              'stress, sleep, illness and alcohol.',
+              style: theme.textTheme.bodySmall,
+            ),
+          ],
         ],
-      ]),
+      ),
     );
   }
 }
 
-class _HRVStat extends StatelessWidget {
-  final String label, value, subtitle;
-  final Color color;
-  const _HRVStat({required this.label, required this.value, required this.subtitle, required this.color});
-  @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.all(12),
-    decoration: BoxDecoration(color: color.withValues(alpha: 0.06), borderRadius: BorderRadius.circular(14)),
-    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text(label, style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 11, letterSpacing: 0.4)),
-      const SizedBox(height: 4),
-      Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 17, color: AppColors.textPrimary)),
-      const SizedBox(height: 2),
-      Text(subtitle, style: const TextStyle(color: AppColors.textMuted, fontSize: 9, height: 1.3)),
-    ]),
-  );
-}
+class _VariabilityStat extends StatelessWidget {
+  const _VariabilityStat({
+    required this.label,
+    required this.value,
+    required this.unit,
+    required this.caption,
+  });
 
-class _StressBar extends StatelessWidget {
-  final double hrv;
-  const _StressBar({required this.hrv});
-
-  double get _stress => ((80 - hrv.clamp(0, 80)) / 80).clamp(0.0, 1.0);
-  String get _label {
-    if (_stress < 0.25) return 'Relaxed';
-    if (_stress < 0.5) return 'Moderate';
-    if (_stress < 0.75) return 'Stressed';
-    return 'High Stress';
-  }
-  Color get _color {
-    if (_stress < 0.25) return AppColors.success;
-    if (_stress < 0.5) return AppColors.primary;
-    if (_stress < 0.75) return AppColors.warning;
-    return AppColors.danger;
-  }
-
-  @override
-  Widget build(BuildContext context) => Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-    Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-      const Text('Stress Index', style: TextStyle(color: AppColors.textSecondary, fontSize: 13, fontWeight: FontWeight.w500)),
-      Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-        decoration: BoxDecoration(color: _color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
-        child: Text(_label, style: TextStyle(color: _color, fontWeight: FontWeight.bold, fontSize: 11)),
-      ),
-    ]),
-    const SizedBox(height: 8),
-    ClipRRect(
-      borderRadius: BorderRadius.circular(6),
-      child: LinearProgressIndicator(
-        value: _stress,
-        backgroundColor: Colors.grey.shade100,
-        valueColor: AlwaysStoppedAnimation(_color),
-        minHeight: 10,
-      ),
-    ),
-  ]);
-}
-
-class _RRChart extends StatelessWidget {
-  final BleService ble;
-  const _RRChart({required this.ble});
+  final String label;
+  final String value;
+  final String unit;
+  final String caption;
 
   @override
   Widget build(BuildContext context) {
-    final spots = ble.heartRate.rrIntervals.asMap().entries
-        .map((e) => FlSpot(e.key.toDouble(), e.value.toDouble()))
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        DsLabel(label),
+        const SizedBox(height: Space.xxs),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.baseline,
+          textBaseline: TextBaseline.alphabetic,
+          children: <Widget>[
+            Text(value, style: Type.metricSmall),
+            const SizedBox(width: Space.xxs),
+            Text(unit, style: theme.textTheme.labelMedium),
+          ],
+        ),
+        const SizedBox(height: Space.xxs),
+        Text(caption, style: theme.textTheme.bodySmall),
+      ],
+    );
+  }
+}
+
+/// The beat-to-beat trace.
+class _RRChart extends StatelessWidget {
+  const _RRChart({required this.rrIntervals});
+
+  final List<int> rrIntervals;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final accent = AppColors.of(AppColors.heartRed, AppColors.darkHeart, context);
+
+    if (rrIntervals.isEmpty) {
+      return Text(
+        'No beat-to-beat data recorded yet.',
+        style: theme.textTheme.bodySmall,
+      );
+    }
+
+    final spots = rrIntervals.asMap().entries
+        .map((MapEntry<int, int> e) => FlSpot(e.key.toDouble(), e.value.toDouble()))
         .toList();
 
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(20), boxShadow: AppShadows.card),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const Text('RR Interval History', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: AppColors.textPrimary)),
-        const SizedBox(height: 4),
-        const Text('Beat-to-beat timing (ms)', style: TextStyle(color: AppColors.textMuted, fontSize: 12)),
-        const SizedBox(height: 16),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Text('Beat-to-beat timing', style: theme.textTheme.titleSmall),
+        const SizedBox(height: Space.xs),
         SizedBox(
           height: 120,
-          child: spots.isEmpty
-              ? const Center(child: Text('Waiting for data...', style: TextStyle(color: AppColors.textMuted)))
-              : LineChart(LineChartData(
-                  gridData: FlGridData(
+          child: LineChart(
+            LineChartData(
+              gridData: FlGridData(
+                show: true,
+                drawVerticalLine: false,
+                getDrawingHorizontalLine: (_) => FlLine(
+                  color: theme.colorScheme.outlineVariant,
+                  strokeWidth: 1,
+                ),
+              ),
+              titlesData: const FlTitlesData(show: false),
+              borderData: FlBorderData(show: false),
+              lineBarsData: <LineChartBarData>[
+                LineChartBarData(
+                  spots: spots,
+                  isCurved: true,
+                  barWidth: 2,
+                  color: accent,
+                  dotData: const FlDotData(show: false),
+                  belowBarData: BarAreaData(
                     show: true,
-                    drawVerticalLine: false,
-                    getDrawingHorizontalLine: (_) => FlLine(color: Colors.grey.shade100, strokeWidth: 1),
+                    color: accent.withValues(alpha: 0.12),
                   ),
-                  titlesData: const FlTitlesData(
-                    leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                    rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                    topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                    bottomTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                  ),
-                  borderData: FlBorderData(show: false),
-                  lineBarsData: [LineChartBarData(
-                    spots: spots,
-                    isCurved: true,
-                    curveSmoothness: 0.35,
-                    color: AppColors.heartRed,
-                    barWidth: 2.5,
-                    isStrokeCapRound: true,
-                    dotData: const FlDotData(show: false),
-                    belowBarData: BarAreaData(
-                      show: true,
-                      gradient: LinearGradient(
-                        colors: [AppColors.heartRed.withValues(alpha: 0.2), AppColors.heartRed.withValues(alpha: 0.0)],
-                        begin: Alignment.topCenter, end: Alignment.bottomCenter,
-                      ),
-                    ),
-                  )],
-                )),
+                ),
+              ],
+            ),
+          ),
         ),
-      ]),
+      ],
     );
   }
 }
 
-class _AFibPanel extends StatelessWidget {
+/// What the watch observed about rhythm.
+///
+/// Framed as an observation, not a diagnosis and not an exclusion. A wrist
+/// sensor screening positive is a prompt to see a clinician; screening
+/// negative is not evidence that nothing is wrong, and saying so would be
+/// misleading in a way that could delay care.
+class _RhythmPanel extends StatelessWidget {
+  const _RhythmPanel({required this.ble});
+
   final BleService ble;
-  const _AFibPanel({required this.ble});
 
   @override
   Widget build(BuildContext context) {
-    final irregular = ble.isConnected && ble.heartRate.afibProbability > 30;
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: irregular ? AppColors.danger.withValues(alpha: 0.05) : AppColors.success.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: irregular ? AppColors.danger.withValues(alpha: 0.3) : AppColors.success.withValues(alpha: 0.2)),
-      ),
-      child: Row(children: [
-        Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: irregular ? AppColors.danger.withValues(alpha: 0.1) : AppColors.success.withValues(alpha: 0.1),
-            shape: BoxShape.circle,
+    final theme = Theme.of(context);
+    final hr = ble.heartRate;
+    final probability = hr.afibProbability;
+    final known = probability > 0;
+    final status = interpretAfib(probability);
+    final accent = AppColors.of(AppColors.heartRed, AppColors.darkHeart, context);
+
+    return DsCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              Icon(Icons.heart_broken_outlined, size: 20, color: accent),
+              const SizedBox(width: Space.sm),
+              Expanded(
+                child: Text('Heart rhythm', style: theme.textTheme.titleSmall),
+              ),
+              if (known)
+                DsStatusPill(
+                  label: status.label,
+                  color: healthStatusColor(status, context),
+                ),
+            ],
           ),
-          child: Icon(
-            irregular ? Icons.warning_amber_rounded : Icons.check_circle_outline,
-            color: irregular ? AppColors.danger : AppColors.success,
-            size: 28,
-          ),
-        ),
-        const SizedBox(width: 14),
-        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(
-            irregular ? 'Irregular Rhythm Detected' : 'Rhythm Normal',
-            style: TextStyle(
-              fontWeight: FontWeight.bold, fontSize: 15,
-              color: irregular ? AppColors.danger : AppColors.success,
+          const SizedBox(height: Space.md),
+          if (!known)
+            Text(
+              'The watch has not reported a rhythm assessment. This is not '
+              'the same as a clear result.',
+              style: theme.textTheme.bodySmall,
+            )
+          else ...<Widget>[
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.baseline,
+              textBaseline: TextBaseline.alphabetic,
+              children: <Widget>[
+                Text('$probability', style: Type.metricSmall),
+                const SizedBox(width: Space.xxs),
+                Text('% irregular', style: theme.textTheme.labelMedium),
+              ],
             ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            irregular
-                ? 'Your heartbeat shows irregular pattern. This may indicate AFib. Consult your doctor.'
-                : 'Heart rhythm appears regular. No signs of AFib detected.',
-            style: const TextStyle(color: AppColors.textSecondary, fontSize: 12, height: 1.4),
-          ),
-        ])),
-      ]),
+            const SizedBox(height: Space.md),
+            Text(
+              status == HealthStatus.normal
+                  ? 'No irregular pattern stood out in this reading. A wrist '
+                      'sensor cannot rule out atrial fibrillation, so this is '
+                      'not a clean bill of health - symptoms matter more than '
+                      'a quiet reading.'
+                  : 'An irregular pattern was seen in this reading. A wrist '
+                      'sensor cannot confirm atrial fibrillation, so this is '
+                      'not a diagnosis, but it is worth mentioning to a '
+                      'clinician.',
+              style: theme.textTheme.bodySmall,
+            ),
+          ],
+        ],
+      ),
     );
   }
 }
 
+/// Training zones, and where the current rate sits in them.
 class _ZoneGuide extends StatelessWidget {
-  final double currentHR;
-  const _ZoneGuide({required this.currentHR});
+  const _ZoneGuide({required this.currentBpm});
 
-  static const zones = [
-    (name: 'Rest', range: '< 60', color: Color(0xFF94A3B8), min: 0.0, max: 60.0),
-    (name: 'Fat Burn', range: '60–100', color: Color(0xFF22C55E), min: 60.0, max: 100.0),
-    (name: 'Cardio', range: '100–140', color: Color(0xFFF59E0B), min: 100.0, max: 140.0),
-    (name: 'Peak', range: '140–170', color: Color(0xFFEF4444), min: 140.0, max: 170.0),
-    (name: 'Max', range: '> 170', color: Color(0xFF7C3AED), min: 170.0, max: 220.0),
+  final int currentBpm;
+
+  /// Bands, as (name, lower bound, upper bound). An en dash is used in the
+  /// label because a plain hyphen read as a minus sign at small sizes, and the
+  /// original used a dash that had been corrupted into a replacement character.
+  static const List<({String name, String range, double min, double max, Color color})>
+  _zones = <({String name, String range, double min, double max, Color color})>[
+    (
+      name: 'Rest',
+      range: 'under 60',
+      min: 0,
+      max: 60,
+      color: Color(0xFF94A3B8)
+    ),
+    (
+      name: 'Fat burn',
+      range: '60 to 100',
+      min: 60,
+      max: 100,
+      color: Color(0xFF22C55E)
+    ),
+    (
+      name: 'Cardio',
+      range: '100 to 140',
+      min: 100,
+      max: 140,
+      color: Color(0xFFF59E0B)
+    ),
+    (
+      name: 'Peak',
+      range: '140 to 170',
+      min: 140,
+      max: 170,
+      color: Color(0xFFEF4444)
+    ),
+    (
+      name: 'Maximum',
+      range: 'over 170',
+      min: 170,
+      max: 220,
+      color: Color(0xFF7C3AED)
+    ),
   ];
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(20), boxShadow: AppShadows.card),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const Text('Heart Rate Zones', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: AppColors.textPrimary)),
-        const SizedBox(height: 14),
-        ...zones.map((z) {
-          final active = currentHR >= z.min && currentHR < z.max;
-          return Container(
-            margin: const EdgeInsets.only(bottom: 8),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            decoration: BoxDecoration(
-              color: active ? z.color.withValues(alpha: 0.12) : Colors.grey.shade50,
-              borderRadius: BorderRadius.circular(12),
-              border: active ? Border.all(color: z.color.withValues(alpha: 0.4)) : null,
+    final theme = Theme.of(context);
+    final live = hasHeartRate(currentBpm);
+
+    return DsCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text('Training zones', style: theme.textTheme.titleSmall),
+          const SizedBox(height: Space.xxs),
+          Text(
+            'Effort bands for an adult. Where you sit depends on your own '
+            'fitness, so treat these as a guide.',
+            style: theme.textTheme.bodySmall,
+          ),
+          const SizedBox(height: Space.md),
+          for (final zone in _zones) ...<Widget>[
+            _ZoneRow(
+              name: zone.name,
+              range: zone.range,
+              color: zone.color,
+              active: live && currentBpm >= zone.min && currentBpm < zone.max,
             ),
-            child: Row(children: [
-              Container(width: 10, height: 10, decoration: BoxDecoration(shape: BoxShape.circle, color: z.color)),
-              const SizedBox(width: 10),
-              Expanded(child: Text(z.name, style: TextStyle(fontWeight: active ? FontWeight.bold : FontWeight.normal,
-                color: active ? z.color : AppColors.textSecondary, fontSize: 13))),
-              Text(z.range, style: TextStyle(color: active ? z.color : AppColors.textMuted, fontSize: 12, fontWeight: FontWeight.w500)),
-              const SizedBox(width: 8),
-              const Text('BPM', style: TextStyle(color: AppColors.textMuted, fontSize: 10)),
-              if (active) ...[
-                const SizedBox(width: 8),
-                Container(padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(color: z.color, borderRadius: BorderRadius.circular(6)),
-                  child: const Text('NOW', style: TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold))),
-              ],
-            ]),
-          );
-        }),
-      ]),
+            const SizedBox(height: Space.sm),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// One training zone.
+///
+/// Laid out so it cannot overflow: the range sits under the name on a narrow
+/// row rather than competing with it horizontally.
+class _ZoneRow extends StatelessWidget {
+  const _ZoneRow({
+    required this.name,
+    required this.range,
+    required this.color,
+    required this.active,
+  });
+
+  final String name;
+  final String range;
+  final Color color;
+  final bool active;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: Space.md,
+        vertical: Space.sm,
+      ),
+      decoration: BoxDecoration(
+        color: active ? color.withValues(alpha: 0.10) : null,
+        borderRadius: BorderRadius.circular(Radii.md),
+        border: active
+            ? Border.all(color: color.withValues(alpha: 0.35))
+            : Border.all(color: theme.colorScheme.outlineVariant),
+      ),
+      child: Row(
+        children: <Widget>[
+          Container(
+            width: 10,
+            height: 10,
+            decoration: BoxDecoration(shape: BoxShape.circle, color: color),
+          ),
+          const SizedBox(width: Space.sm),
+          Expanded(
+            child: Text(
+              name,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                fontWeight: active ? FontWeight.w600 : FontWeight.w400,
+                color: active ? color : theme.colorScheme.onSurface,
+              ),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          const SizedBox(width: Space.sm),
+          Flexible(
+            child: Text(
+              range,
+              style: theme.textTheme.labelMedium,
+              textAlign: TextAlign.end,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          if (active) ...<Widget>[
+            const SizedBox(width: Space.sm),
+            DsStatusPill(
+              label: 'Now',
+              color: color,
+              icon: Icons.radio_button_checked_rounded,
+              dense: true,
+            ),
+          ],
+        ],
+      ),
     );
   }
 }
