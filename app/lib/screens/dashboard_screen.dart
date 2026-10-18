@@ -21,6 +21,7 @@ import 'package:provider/provider.dart';
 import '../models/health_models.dart';
 import '../services/ble_service.dart';
 import '../theme/app_colors.dart';
+import '../utils/health_interpretation.dart';
 import '../theme/design_tokens.dart';
 import '../widgets/ds_widgets.dart';
 
@@ -166,26 +167,26 @@ class _VitalsGrid extends StatelessWidget {
     final tiles = <Widget>[
       DsMetricTile(
         label: 'Heart rate',
-        value: ble.heartRate.bpm > 0 ? '${ble.heartRate.bpm}' : '--',
-        unit: ble.heartRate.bpm > 0 ? 'BPM' : null,
+        value: hasHeartRate(ble.heartRate.bpm) ? '${ble.heartRate.bpm}' : '--',
+        unit: hasHeartRate(ble.heartRate.bpm) ? 'BPM' : null,
         accent: _heart(context),
-        status: _heartStatus(ble.heartRate),
+        status: interpretHeartRate(ble.heartRate.bpm),
         icon: Icons.favorite_rounded,
       ),
       DsMetricTile(
         label: 'Blood pressure',
-        value: _bloodPressureValue(ble.bloodPressure),
-        unit: ble.bloodPressure.systolic > 0 ? 'mmHg' : null,
+        value: formatBloodPressure(ble.bloodPressure),
+        unit: hasBloodPressure(ble.bloodPressure) ? 'mmHg' : null,
         accent: _bp(context),
-        status: _bloodPressureStatus(ble.bloodPressure),
+        status: interpretBloodPressure(ble.bloodPressure),
         icon: Icons.bloodtype_outlined,
       ),
       DsMetricTile(
         label: 'Oxygen',
-        value: ble.oxygen.spO2 > 0 ? '${ble.oxygen.spO2}' : '--',
-        unit: ble.oxygen.spO2 > 0 ? '%' : null,
+        value: hasOxygen(ble.oxygen.spO2) ? '${ble.oxygen.spO2}' : '--',
+        unit: hasOxygen(ble.oxygen.spO2) ? '%' : null,
         accent: _oxy(context),
-        status: _oxygenStatus(ble.oxygen),
+        status: interpretOxygen(ble.oxygen.spO2),
         icon: Icons.air_rounded,
       ),
       DsMetricTile(
@@ -194,7 +195,7 @@ class _VitalsGrid extends StatelessWidget {
             ? '${ble.heartRate.afibProbability}%'
             : '--',
         accent: _heart(context),
-        status: _afibStatus(ble.heartRate),
+        status: interpretAfib(ble.heartRate.afibProbability),
         icon: Icons.monitor_heart_outlined,
       ),
     ];
@@ -474,46 +475,8 @@ class _RecoveryPanel extends StatelessWidget {
   }
 }
 
-// ── Interpretation ─────────────────────────────────────────────────────
-// Thresholds live here, once. They were previously duplicated across the
-// dashboard and the detail screens, which is how the same reading came to
-// look healthy in one place and alarming in another.
-//
-// These are screening cues, not diagnoses. Anything that suggests a problem
-// is phrased as "worth checking", never as a conclusion.
-
-String _bloodPressureValue(BloodPressureData bp) {
-  if (bp.systolic <= 0 || bp.diastolic <= 0) return '--';
-  return '${bp.systolic}/${bp.diastolic}';
-}
-
-HealthStatus _heartStatus(HeartRateData hr) {
-  if (hr.bpm <= 0) return HealthStatus.unknown;
-  if (hr.bpm < 40 || hr.bpm > 180) return HealthStatus.critical;
-  if (hr.bpm < 50 || hr.bpm > 120) return HealthStatus.high;
-  if (hr.bpm > 100) return HealthStatus.elevated;
-  return HealthStatus.normal;
-}
-
-HealthStatus _bloodPressureStatus(BloodPressureData bp) {
-  if (bp.systolic <= 0 || bp.diastolic <= 0) return HealthStatus.unknown;
-  if (bp.systolic >= 180 || bp.diastolic >= 120) return HealthStatus.critical;
-  if (bp.systolic >= 140 || bp.diastolic >= 90) return HealthStatus.high;
-  if (bp.systolic >= 130 || bp.diastolic >= 85) return HealthStatus.elevated;
-  return HealthStatus.normal;
-}
-
-HealthStatus _oxygenStatus(OxygenData o2) {
-  if (o2.spO2 <= 0) return HealthStatus.unknown;
-  if (o2.spO2 < 90) return HealthStatus.critical;
-  if (o2.spO2 < 94) return HealthStatus.high;
-  if (o2.spO2 < 95) return HealthStatus.elevated;
-  return HealthStatus.normal;
-}
-
-HealthStatus _afibStatus(HeartRateData hr) {
-  if (hr.afibProbability <= 0) return HealthStatus.unknown;
-  if (hr.afibProbability >= 60) return HealthStatus.high;
-  if (hr.afibProbability >= 25) return HealthStatus.elevated;
-  return HealthStatus.normal;
-}
+// ── Interpretation ───────────────────────────────────────────────
+// The thresholds live in lib/utils/health_interpretation.dart, not here.
+// They used to be private to this screen, which meant every other
+// screen either copied them or disagreed with them. A heart rate could
+// read as fine on Today and alarming on Heart; now they cannot.
