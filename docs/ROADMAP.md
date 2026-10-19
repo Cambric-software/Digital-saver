@@ -74,20 +74,21 @@ Nothing below this matters if the product tells lies or has dead controls.
 - [x] **1.2 Digital Saver — download page rebuilt to match Max Tools exactly.**
       Same palette, same shapes, same structure. Currently a different design in
       different fonts.
-- [ ] **1.3 Max Tools — the tool system is remade.** 106 tools were registered and
+- [x] **1.3 Max Tools — the tool system is remade.** 106 tools were registered and
       most were internal plumbing (cache, csv, json, retry, timeout, checksum…)
       dressed up as user tools. **Decided: the approved set is listed at the end
       of this file.** All 106 descriptors, the six catalog files and the 88-file
-      plumbing library are deleted. Rebuilt so far (each a real screen that
-      explains itself, `flutter analyze` clean, 265 tests pass):
-      Antivirus & scan, Wealth, Developer toolkit, Hash & checksum, Unit
-      converter, Text & documents, Notes, Accessibility & reading, File
-      shredder, Colour & design, Disk analyser, Duplicate finder, HTTP / API
-      tester.
-      **Remaining: the other six from the approved set.** The command palette now opens a tool's
-      own screen instead of filling in a generated form, and the palette's
-      plain-English parser is tested against a fixture catalog rather than
-      against whichever tools happen to ship.
+      plumbing library are deleted. **The full approved set is now built** — 19
+      catalog entries covering all 20 approved tools, each a real screen that
+      explains itself, `flutter analyze` clean, 324 tests passing:
+      Antivirus & scan, Password vault, Wealth, Developer toolkit, Hash &
+      checksum, Unit converter, Text & documents, Notes, Accessibility & reading,
+      File shredder, File encryption, Archive (zip), Colour & design, Disk
+      analyser, Duplicate finder, Image resize & convert, QR & barcode, PDF
+      builder, HTTP / API tester.
+      The command palette opens a tool's own screen instead of filling in a
+      generated form, and the palette's plain-English parser is tested against a
+      fixture catalog rather than against whichever tools happen to ship.
 - [x] **1.4 Max Tools — settings rebuilt.** Real settings with real effect, not
       four cards of template text.
 - [x] **1.5 Digital Saver — settings load path** hardened so a failure explains
@@ -171,30 +172,38 @@ plain language, works for any age and any language, and does one job properly.
 Nothing that is not a tool is allowed to look like one: the plumbing library was
 deleted along with the descriptors that dressed it up.
 
-**Done (13 tools):** Antivirus & scan, Hash & checksum verifier, Disk analyser,
-Duplicate finder, HTTP / API tester, Document & text toolkit, Notes,
-Accessibility & reading aid, File shredder, Code/data converters and regex (as
-Developer toolkit), Wealth, Unit converter, Colour & design toolkit.
+**Done (19 catalog entries, all 20 tools):** Antivirus & scan, Hash & checksum
+verifier, Disk analyser, Duplicate finder, HTTP / API tester, Document & text
+toolkit, Notes, Accessibility & reading aid, File shredder, Password vault, File
+encryption, Archive (zip), Colour & design toolkit, Developer toolkit (code
+formatter and data converters in one screen), Wealth, Unit converter, Image
+resize & convert, QR & barcode, PDF builder.
 
-**Still to build (6 tools):**
+**Still to build (none):**
 
 1. ~~Antivirus & scan~~ ✔
-2. Password vault
-3. ~~File shredder~~ —
+2. ~~Password vault~~ ✔ — AES-256-GCM, PBKDF2-HMAC-SHA256 (210,000 rounds), no
+   recovery if the master password is lost, stated on the screen.
+3. ~~File shredder~~ ✔
 4. ~~Disk analyser~~ ✔
 5. ~~Duplicate finder~~ ✔
-6. Archive (zip)
-7. File encryption
+6. ~~Archive (zip)~~ ✔ — zips a file or folder, extracts with absolute-path and
+   `..` entries refused rather than rewritten.
+7. ~~File encryption~~ ✔ — `MTE1` AES-256-GCM format, 128 MB in-memory limit.
 8. ~~Hash & checksum verifier~~ ✔
-9. Image compress / convert / resize
-10. PDF toolkit
+9. ~~Image compress / convert / resize~~ ✔ — JPEG, PNG and WebP, shows the
+   before/after size and says when the result got larger.
+10. ~~PDF toolkit~~ — shipped as **PDF builder**: creates PDFs from text or
+    images. It does not open, merge or edit existing PDFs, and says so.
 11. ~~Document & text toolkit~~ ✔
 12. ~~Code formatter~~ ✔ (folded into Developer toolkit)
 13. ~~Developer data converters (Base64, JSON, CSV, UUID, timestamp, regex)~~ ✔
 14. ~~HTTP / API tester~~ ✔
 15. ~~Wealth (money, budgets, investments, calculators, charts)~~ ✔
 16. ~~Unit converter~~ ✔
-17. QR & barcode toolkit
+17. ~~QR & barcode toolkit~~ ✔ — generates QR, Code 128, EAN-13 and Code 39;
+    reads QR codes. Linear barcodes are generated but not decoded, and the
+    screen says so.
 18. ~~Colour & design toolkit~~ ✔
 19. ~~Notes vault~~ — shipped as **Notes**: plain text, searchable, pinned, and
     explicitly not a vault.
