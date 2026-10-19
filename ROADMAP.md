@@ -79,11 +79,11 @@ Nothing below this matters if the product tells lies or has dead controls.
       dressed up as user tools. **Decided: the approved set is listed at the end
       of this file.** All 106 descriptors, the six catalog files and the 88-file
       plumbing library are deleted. Rebuilt so far (each a real screen that
-      explains itself, `flutter analyze` clean, 263 tests pass):
+      explains itself, `flutter analyze` clean, 265 tests pass):
       Antivirus & scan, Wealth, Developer toolkit, Hash & checksum, Unit
       converter, Text & documents, Colour & design, Disk analyser, Duplicate
-      finder. **Remaining: the other eleven from the approved set.** The command
-      palette now opens a tool's
+      finder, HTTP / API tester. **Remaining: the other ten from the approved
+      set.** The command palette now opens a tool's
       own screen instead of filling in a generated form, and the palette's
       plain-English parser is tested against a fixture catalog rather than
       against whichever tools happen to ship.
@@ -162,11 +162,12 @@ plain language, works for any age and any language, and does one job properly.
 Nothing that is not a tool is allowed to look like one: the plumbing library was
 deleted along with the descriptors that dressed it up.
 
-**Done (9 of 20):** Antivirus & scan, Hash & checksum verifier, Disk analyser,
-Duplicate finder, Document & text toolkit, Code/data converters and regex (as
-Developer toolkit), Wealth, Unit converter, Colour & design toolkit.
+**Done (10 of 20):** Antivirus & scan, Hash & checksum verifier, Disk analyser,
+Duplicate finder, HTTP / API tester, Document & text toolkit, Code/data
+converters and regex (as Developer toolkit), Wealth, Unit converter, Colour &
+design toolkit.
 
-**Still to build (11 of 20):**
+**Still to build (10 of 20):**
 
 1. ~~Antivirus & scan~~ ✔
 2. Password vault
@@ -181,7 +182,7 @@ Developer toolkit), Wealth, Unit converter, Colour & design toolkit.
 11. ~~Document & text toolkit~~ ✔
 12. ~~Code formatter~~ ✔ (folded into Developer toolkit)
 13. ~~Developer data converters (Base64, JSON, CSV, UUID, timestamp, regex)~~ ✔
-14. HTTP / API tester
+14. ~~HTTP / API tester~~ ✔
 15. ~~Wealth (money, budgets, investments, calculators, charts)~~ ✔
 16. ~~Unit converter~~ ✔
 17. QR & barcode toolkit
