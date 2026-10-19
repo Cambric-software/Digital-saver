@@ -98,8 +98,16 @@ Nothing below this matters if the product tells lies or has dead controls.
 - [x] **2.1 Digital Saver — licence rewritten** to the Max Tools proprietary
       structure, plus the extra clauses health data and a wellness device
       require. **Decided: proprietary, matching the Max Tools structure exactly,
-      plus medical, biometric-data and safety clauses.**
-- [ ] **2.2 Max Tools — licence** reviewed against the current app.
+      plus medical, biometric-data and safety clauses.** Rechecked in 2.2: the
+      grant now covers personal use, which the first rewrite did not.
+- [x] **2.2 Max Tools — licence** reviewed against the current app. Found and
+      fixed a real defect: both repositories are public and both apps are
+      downloaded freely, but the grant covered paid clients only, so a person
+      who downloaded the app had no licence to run it. Both licences now grant
+      free personal, educational and internal use; describe the source as
+      publicly readable rather than confidential; and state what the app
+      actually does — local data, no telemetry, a GitHub update check, and the
+      limits of financial, antivirus and shredding results.
 
 ### Phase 3 — Digital Saver interface
 

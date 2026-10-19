@@ -2,7 +2,7 @@
 
 > **Proprietary Smartwatch Hardware, Embedded Firmware & Flutter Companion Application**  
 > Developed by **Cambric** (Lead Architect: Asser Karim)  
-> *Protected under the Cambric Source-Available Commercial-Restricted License 1.0 (2026)*
+> *Protected under the Cambric Proprietary Licence (2026)*
 
 ---
 
@@ -43,7 +43,7 @@ The repository supports two hardware development tiers:
 │   ├── APP_GUIDE.md                  # Flutter app internals
 │   └── FIRMWARE_FEATURES.md          # Prototype firmware feature inventory
 ├── SECURITY.md                       # Threat model, BLE security & vulnerability reporting
-└── LICENSE                           # Cambric Source-Available Commercial-Restricted License
+└── LICENSE                           # Cambric Proprietary Licence
 ```
 
 ---
@@ -89,8 +89,8 @@ pio run --target upload
 Copyright (c) 2026 **Cambric Software & Hardware Systems**. All rights reserved.  
 Author & Proprietor: **Asser Karim**.
 
-This repository is licensed under the **Cambric Source-Available Commercial-Restricted License 1.0**.
-- **Personal & Educational Use**: Free to view, study, test, and evaluate.
+This repository is licensed under the **Cambric Proprietary Licence (2026)**.
+- **Personal & Educational Use**: Free to install, use, study and evaluate on devices you control.
 - **Commercial Use & Manufacturing**: Strictly prohibited without an executed commercial licensing agreement from Cambric. Commercial replication, sale, rebranding, or resale is strictly reserved.
 - **Medical Disclaimer**: Digital Saver is a consumer wellness platform and is **not** a certified medical diagnostic device.
 

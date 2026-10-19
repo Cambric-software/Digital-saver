@@ -5,13 +5,13 @@ Copyright (c) 2026 Cambric Software. All rights reserved.
 
 NOTICE: This software and its source code, firmware, design, architecture,
 algorithms, documentation, assets, and all associated materials (collectively,
-the "Software") are the exclusive confidential property of Cambric Software
-("Cambric"). This Software is NOT open source and is NOT licensed under any
-open-source license.
+the "Software") are the exclusive property of Cambric Software ("Cambric").
+This Software is NOT open source and is NOT licensed under any open-source
+license.
 
-NOTICE: This file intentionally contains no open-source license grant. No
-permission is granted to copy, modify, publish, sublicense, redistribute, or
-create derivative works of this Software.
+NOTICE: The source code is published so that anyone can inspect what the
+Software does. Publication does not make it open source, and it grants no
+rights beyond those in Section 2.
 
 Digital Saver is a companion application for the Veyro smartwatch. It is a
 consumer wellness product. Sections 6 and 7, which govern health data and
@@ -28,29 +28,39 @@ communication protocol, any watch face or interface design, and any hardware
 design files distributed alongside them.
 
 ================================================================================
-2. GRANT OF RIGHTS (CLIENT DELIVERABLES ONLY)
+2. GRANT OF RIGHTS
 ================================================================================
 
-Where Cambric delivers this Software to a client as part of a paid engagement,
-that client receives a non-exclusive, non-transferable, revocable license to use
-the delivered application for its own internal business purposes, subject to the
-engagement agreement between Cambric and that client. All ownership retained by
-Cambric. The underlying template, shared libraries, tooling, firmware, and any
-reusable components remain the property of Cambric and are not licensed to the
-client.
+  (a) Personal and internal use. Cambric grants you a non-exclusive,
+      non-transferable, revocable licence to install and run the Software on
+      devices you control, and to keep backup copies of an installer or
+      firmware image you obtained from Cambric, for personal, educational, or
+      internal business purposes. No fee is required for this licence. This
+      grant does not override Section 3(h), which governs firmware on
+      third-party hardware.
 
-Where a client engagement concerns deployment to end users, the client is
-responsible for ensuring that those end users receive these terms, and that any
-health-related claim made about the deployment complies with Section 7.
+  (b) Client deliverables. Where Cambric delivers this Software to a client as
+      part of a paid engagement, that client receives a non-exclusive,
+      non-transferable, revocable licence to use the delivered application for
+      its own internal business purposes, subject to the engagement agreement
+      between Cambric and that client. All ownership is retained by Cambric.
+      Shared libraries, tooling, firmware, and reusable components remain the
+      property of Cambric and are not licensed to the client except as part of
+      the delivered product.
+
+  (c) No other rights. No right is granted by implication, estoppel, or
+      otherwise. In particular, reading the source code does not grant a
+      licence to reuse it.
 
 ================================================================================
 3. RESTRICTIONS
 ================================================================================
 
-Except as expressly permitted by a written agreement signed by Cambric, you
-may not:
+Except as expressly permitted by this agreement or by a written agreement
+signed by Cambric, you may not:
 
-  (a) copy, reproduce, or republish the Software, in whole or in part;
+  (a) copy, reproduce, or republish the Software for distribution to anyone
+      else, except for the backup copies allowed by Section 2(a);
   (b) modify, adapt, translate, or create derivative works of the Software;
   (c) reverse engineer, decompile, disassemble, or otherwise attempt to derive
       the source code, structure, or design of the Software, except to the
@@ -66,15 +76,17 @@ may not:
       medical device or as suitable for clinical use.
 
 ================================================================================
-4. CONFIDENTIALITY
+4. SOURCE AVAILABILITY AND CONFIDENTIALITY
 ================================================================================
 
-The Software is confidential. You shall not disclose the Software or any
-non-public information about it to any third party without Cambric's prior
-written consent.
+The source code is publicly readable. That visibility is for inspection,
+security review, and education. It does not grant a licence to reuse, modify,
+redistribute, or incorporate any part of it beyond the grant in Section 2.
 
-This includes the Veyro communication protocol, device pairing credentials, and
-any calibration data or sensor characterisation performed by Cambric.
+The Veyro communication protocol, device pairing credentials, calibration data,
+sensor characterisation, unreleased plans, customer information, and private
+communications remain confidential. They must not be disclosed without
+Cambric's prior written consent.
 
 ================================================================================
 5. TERMINATION
