@@ -1,56 +1,190 @@
-CAMBRIC SOURCE-AVAILABLE COMMERCIAL-RESTRICTED LICENSE
-Version 1.0 (2026)
+PROPRIETARY SOFTWARE LICENSE AGREEMENT
 
-Copyright (c) 2026 Cambric Software & Hardware Systems. All rights reserved.
-Primary Author & Proprietor: Asser Karim (Cambric)
+Digital Saver
+Copyright (c) 2026 Cambric Software. All rights reserved.
 
-================================================================================
-1. GRANT OF LICENSE FOR NON-COMMERCIAL PURPOSES
-================================================================================
-Permission is hereby granted, free of charge, to any individual or educational
-entity obtaining a copy of this software, hardware schematics, firmware, and
-associated documentation files (the "Work"), to inspect, review, test, compile,
-and run the Work solely for personal, non-commercial, and educational evaluation,
-subject to the following conditions:
+NOTICE: This software and its source code, firmware, design, architecture,
+algorithms, documentation, assets, and all associated materials (collectively,
+the "Software") are the exclusive confidential property of Cambric Software
+("Cambric"). This Software is NOT open source and is NOT licensed under any
+open-source license.
 
-(a) Attribution: The above copyright notice, this license notice, and the
-    author attribution must be prominently retained in all copies or substantial
-    portions of the Work.
-(b) Trademark & Branding: No right or license is granted to use the names,
-    logos, or trademarks "Cambric", "Digital Saver", or "Veyro" without prior
-    express written permission from Cambric.
-(c) Patent & Design Rights: No license or grant of patent rights, industrial
-    designs, or commercial replication rights is granted under this license.
+NOTICE: This file intentionally contains no open-source license grant. No
+permission is granted to copy, modify, publish, sublicense, redistribute, or
+create derivative works of this Software.
+
+Digital Saver is a companion application for the Veyro smartwatch. It is a
+consumer wellness product. Sections 6 and 7, which govern health data and
+medical safety, are integral to this agreement and are not severable from it.
 
 ================================================================================
-2. COMMERCIAL USE PROHIBITION
+1. OWNERSHIP
 ================================================================================
-Commercial use, redistribution, reproduction, resale, hardware manufacturing
-for sale, or integration into proprietary third-party commercial products is
-STRICTLY PROHIBITED without an express written commercial licensing agreement
-executed with Cambric.
 
-Any unauthorized commercial deployment, sale, or sublicensing will constitute
-willful intellectual property infringement subject to legal remedies and
-statutory damages under applicable international and national copyright laws.
+All right, title, and interest in the Software, including all intellectual
+property rights, are and remain solely and exclusively owned by Cambric. This
+includes the Veyro firmware, the Digital Saver application, the Veyro
+communication protocol, any watch face or interface design, and any hardware
+design files distributed alongside them.
 
 ================================================================================
-3. MEDICAL & SAFETY DISCLAIMER (CRITICAL)
+2. GRANT OF RIGHTS (CLIENT DELIVERABLES ONLY)
 ================================================================================
-THE WORK IS AN EXPERIMENTAL CONSUMER WELLNESS AND PROTOTYPING PLATFORM.
+
+Where Cambric delivers this Software to a client as part of a paid engagement,
+that client receives a non-exclusive, non-transferable, revocable license to use
+the delivered application for its own internal business purposes, subject to the
+engagement agreement between Cambric and that client. All ownership retained by
+Cambric. The underlying template, shared libraries, tooling, firmware, and any
+reusable components remain the property of Cambric and are not licensed to the
+client.
+
+Where a client engagement concerns deployment to end users, the client is
+responsible for ensuring that those end users receive these terms, and that any
+health-related claim made about the deployment complies with Section 7.
+
+================================================================================
+3. RESTRICTIONS
+================================================================================
+
+Except as expressly permitted by a written agreement signed by Cambric, you
+may not:
+
+  (a) copy, reproduce, or republish the Software, in whole or in part;
+  (b) modify, adapt, translate, or create derivative works of the Software;
+  (c) reverse engineer, decompile, disassemble, or otherwise attempt to derive
+      the source code, structure, or design of the Software, except to the
+      extent such restriction is prohibited by applicable law;
+  (d) distribute, sublicense, lease, rent, sell, or otherwise transfer the
+      Software;
+  (e) remove, alter, or obscure any proprietary notice, label, or mark;
+  (f) use the Software to build or train any competing product or service;
+  (g) remove or circumvent any license key, entitlement, or usage limit;
+  (h) flash, install, or distribute the Veyro firmware on any device other than
+      hardware supplied or approved by Cambric;
+  (i) present the Software, or any output of the Software, as a certified
+      medical device or as suitable for clinical use.
+
+================================================================================
+4. CONFIDENTIALITY
+================================================================================
+
+The Software is confidential. You shall not disclose the Software or any
+non-public information about it to any third party without Cambric's prior
+written consent.
+
+This includes the Veyro communication protocol, device pairing credentials, and
+any calibration data or sensor characterisation performed by Cambric.
+
+================================================================================
+5. TERMINATION
+================================================================================
+
+Any unauthorized use, copying, or distribution terminates your rights
+automatically. Upon termination you must immediately cease all use and destroy
+all copies in your possession or control.
+
+You must also, on termination, erase any health data held by a deployment you
+operated, or return it to the individual it describes, in line with Section 6.
+
+================================================================================
+6. HEALTH DATA AND BIOMETRIC INFORMATION
+================================================================================
+
+Digital Saver records health-related measurements, which may include heart rate,
+heart-rate variability, blood oxygen saturation, activity, motion, and sleep
+timing. Such measurements are sensitive personal information. Because that is
+what they are, the following applies in addition to the restrictions above:
+
+  (a) Health data belongs to the person it describes. Cambric claims no
+      ownership of any measurement recorded by, or on behalf of, a user.
+
+  (b) Local by default. The Software stores readings on the user's own device.
+      Running the core application requires no account and transmits no reading
+      to Cambric.
+
+  (c) The optional assistant. If a user chooses to use the built-in assistant,
+      the content of the questions they ask, together with the health context
+      they attach to them, is sent to a third-party language model provider for
+      processing. This is off unless the user uses the feature, and it is
+      disclosed in the Software and its documentation. Deployments must not
+      enable or encourage it without saying so plainly.
+
+  (d) No secondary use. Cambric does not sell health data, and does not use it
+      for advertising, insurance, employment, credit, or any other purpose
+      beyond returning it to the person it came from.
+
+  (e) Your obligations. If you deploy the Software, you are the controller of
+      any health data it collects for the purposes of applicable data-protection
+      law. You must obtain informed consent where required, keep the data
+      secure, provide access and deletion on request, and retain it no longer
+      than necessary.
+
+  (f) Deletion. Uninstalling the Software removes its stored readings. Where a
+      deployment holds data elsewhere, deletion must be honoured there too.
+
+================================================================================
+7. MEDICAL & SAFETY DISCLAIMER (CRITICAL)
+================================================================================
+
+THE SOFTWARE IS AN EXPERIMENTAL CONSUMER WELLNESS AND PROTOTYPING PLATFORM.
 IT IS NOT A CERTIFIED MEDICAL DEVICE AND HAS NOT BEEN EVALUATED BY THE EGYPTIAN
-DRUG AUTHORITY (EDA), FDA, CE, OR ANY RECOGNIZED MEDICAL REGULATORY BODY.
+DRUG AUTHORITY (EDA), THE FDA, THE CE MARKING SYSTEM, OR ANY OTHER RECOGNISED
+MEDICAL REGULATORY BODY.
 
-THE WORK MUST NOT BE USED FOR:
-- Clinical diagnostic purposes, medical treatment, or triage decisions
-- Sole-means emergency alert or life-critical monitoring
-- Substitution for licensed professional medical consultation
+MEASUREMENTS PRODUCED BY THE SOFTWARE ARE ESTIMATES FROM A WRIST-WORN SENSOR.
+THEY ARE AFFECTED BY MOTION, SKIN CONTACT, LIGHT, TEMPERATURE, AND SENSOR
+PLACEMENT. THEY HAVE NOT BEEN VALIDATED AGAINST CLINICAL REFERENCE EQUIPMENT.
+
+THE SOFTWARE MUST NOT BE USED FOR:
+
+  - Clinical diagnostic purposes, medical treatment, or triage decisions
+  - Sole-means emergency alert or life-critical monitoring
+  - Substitution for licensed professional medical consultation
+  - Any decision that could result in injury if a reading were wrong
+
+The emergency and fall-detection features, where present, are conveniences that
+depend on a functioning device, a charged battery, a working radio link, and
+correct configuration by the user. They can fail, and must never be relied on as
+the only way help would be called.
+
+If you are unwell, or a reading concerns you, seek qualified medical advice.
+Do not delay it because of anything the Software showed you.
 
 ================================================================================
-4. NO WARRANTY & LIMITATION OF LIABILITY
+8. DISCLAIMER OF WARRANTY
 ================================================================================
-THE WORK IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
-INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
-PARTICULAR PURPOSE, ACCURACY OF BIOMETRIC DATA, AND NON-INFRINGEMENT. IN NO
-EVENT SHALL CAMBRIC, ASSER KARIM, OR CONTRIBUTORS BE LIABLE FOR ANY CLAIM,
-DAMAGES, OR OTHER LIABILITY ARISING FROM THE USE OF OR INABILITY TO USE THE WORK.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE, ACCURACY OF BIOMETRIC OR HEALTH MEASUREMENTS,
+AND NONINFRINGEMENT. WITHOUT LIMITING THE FOREGOING, CAMBRIC DOES NOT WARRANTY
+THAT ANY MEASUREMENT IS ACCURATE, THAT ANY SENSOR BEHAVES AS DOCUMENTED, OR THAT
+ANY ALERT IS DELIVERED.
+
+================================================================================
+9. LIMITATION OF LIABILITY
+================================================================================
+
+IN NO EVENT SHALL CAMBRIC BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY,
+WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF, OR IN
+CONNECTION WITH THE SOFTWARE OR ITS USE.
+
+THIS INCLUDES, WITHOUT LIMITATION, ANY INJURY, DETERIORATION IN HEALTH, MISSED
+DIAGNOSIS, DELAYED TREATMENT, OR FAILURE OF AN ALERT FEATURE, ARISING FROM
+RELIANCE ON THE SOFTWARE OR ON ANY MEASUREMENT IT REPORTED.
+
+================================================================================
+10. GOVERNING LAW
+================================================================================
+
+This agreement is governed by the laws applicable at Cambric's principal place
+of business, without regard to conflict-of-law provisions.
+
+Where mandatory consumer-protection or health-and-safety law grants the user
+rights that cannot be waived, those rights prevail over any conflicting term
+above.
+
+================================================================================
+
+For licensing enquiries contact Cambric Software.
