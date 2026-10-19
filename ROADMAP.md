@@ -32,31 +32,31 @@ A button that exists must do something. A claim in a document must be true.
 
 Nothing below this matters if the product tells lies or has dead controls.
 
-- [ ] **0.1 Max Tools — dead UI.** The home screen's "Cambric Setup" card opens
+- [x] **0.1 Max Tools — dead UI.** The home screen's "Cambric Setup" card opens
       the first-run wizard as a dialog and does nothing useful on a configured
       machine. **Decided: rebuild it as a real Cambric screen** showing this
       product, the other Cambric products found on the machine, their
       versions and install locations, update status, and the licence.
-- [ ] **0.2 Max Tools — template text.** Settings says "About — Cambric
+- [x] **0.2 Max Tools — template text.** Settings says "About — Cambric
       application template". Also `main.dart` still names the root widget
       `CambricTemplateApp`. Replace with real product information.
-- [ ] **0.3 Max Tools — copyright.** The app credits Cambric nowhere. Add a
+- [x] **0.3 Max Tools — copyright.** The app credits Cambric nowhere. Add a
       visible copyright and licence line.
-- [ ] **0.4 Digital Saver — outstanding fabricated data.** `github_services.dart`
+- [x] **0.4 Digital Saver — outstanding fabricated data.** `github_services.dart`
       returns a hardcoded `'v1.0.3-beta'` version on network failure, and
       `dashboard_screen.dart` / `web_landing_page.dart` display it. A version
       number that was invented is worse than no version number.
 - [ ] **0.5 Digital Saver — the two hanging screens.** `wellness_tools` and
       `ai_assistant` both hang at 390px (they render at 1440px).
-- [ ] **0.6 Both — encoding corruption.** Mojibake (`?`, `�`, `�??`) has been
+- [x] **0.6 Both — encoding corruption.** Mojibake (`?`, `�`, `�??`) has been
       found in Dart source, HTML, Markdown and C comments. Sweep and fix.
 
 ### Phase 1 — Core paths that do not work yet
 
-- [ ] **1.1 Max Tools — download page downloads in place.** Clicking the main
+- [x] **1.1 Max Tools — download page downloads in place.** Clicking the main
       button navigates to GitHub. Downloads must start while the reader stays on
       the page.
-- [ ] **1.2 Digital Saver — download page rebuilt to match Max Tools exactly.**
+- [x] **1.2 Digital Saver — download page rebuilt to match Max Tools exactly.**
       Same palette, same shapes, same structure. Currently a different design in
       different fonts.
 - [ ] **1.3 Max Tools — the tool system is remade.** 106 tools are registered and
@@ -66,14 +66,14 @@ Nothing below this matters if the product tells lies or has dead controls.
       antivirus, developer tools, and one wealth tool that holds everything
       financial in one place with charts. **Decided: the approved set is listed at
       the end of this file.**
-- [ ] **1.4 Max Tools — settings rebuilt.** Real settings with real effect, not
+- [x] **1.4 Max Tools — settings rebuilt.** Real settings with real effect, not
       four cards of template text.
-- [ ] **1.5 Digital Saver — settings load path** hardened so a failure explains
+- [x] **1.5 Digital Saver — settings load path** hardened so a failure explains
       itself. *(done — verify only)*
 
 ### Phase 2 — Licence
 
-- [ ] **2.1 Digital Saver — licence rewritten** to the Max Tools proprietary
+- [x] **2.1 Digital Saver — licence rewritten** to the Max Tools proprietary
       structure, plus the extra clauses health data and a wellness device
       require. **Decided: proprietary, matching the Max Tools structure exactly,
       plus medical, biometric-data and safety clauses.**
@@ -91,7 +91,7 @@ Nothing below this matters if the product tells lies or has dead controls.
 
 ### Phase 4 — Veyro product
 
-- [ ] **4.1 Decide the real firmware target.** Two exist: the ESP32-WROOM-32
+- [ ] **4.1 Document both firmware targets.** Two exist: the ESP32-WROOM-32
       DevKit prototype (v4.1.0, SSD1306, MAX30102/MPU6050) that `docs/`
       describes, and `firmware/esp32s3` (v5.0.0, ESP32-S3, AMOLED, VC31B,
       QMI8658C, BMP581, STTS22H, DRV2605L, BQ25895, FT6336G, ESP-IDF + FreeRTOS
