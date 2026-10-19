@@ -207,22 +207,34 @@ Future<void> _capture(WidgetTester tester, String name) async {
 final List<String> _collectedErrors = <String>[];
 
 /// Installs the collector for the duration of one test.
+///
+/// The binding installs its own FlutterError.onError for each test. The
+/// previous handler is kept here rather than assumed, because restoring
+/// [FlutterError.presentError] instead of the binding's handler makes the
+/// binding assert that the test never put it back — and that assertion leaves
+/// the test hung until its timeout rather than reporting the real failure.
+void Function(FlutterErrorDetails)? _savedHandler;
+
 void _startCollecting() {
   _collectedErrors.clear();
-  final previous = FlutterError.onError;
+  _savedHandler = FlutterError.onError;
   FlutterError.onError = (FlutterErrorDetails details) {
     final text = details.exceptionAsString();
-    _collectedErrors.add(text);
+    // The full details, not just the one-line exception: the details include
+    // the widget and the source line, so a failure names what overflowed
+    // instead of leaving the next person to guess.
+    _collectedErrors.add(details.toString());
     // Anything that is not a layout problem still goes to the original handler,
     // so a genuine error surfaces loudly rather than being swept up.
-    if (!text.contains('overflowed')) previous?.call(details);
+    if (!text.contains('overflowed')) _savedHandler?.call(details);
   };
 }
 
 /// Stops collecting and returns what was seen.
 List<String> _stopCollecting() {
   final found = List<String>.of(_collectedErrors);
-  FlutterError.onError = FlutterError.presentError;
+  final saved = _savedHandler;
+  if (saved != null) FlutterError.onError = saved;
   return found;
 }
 
@@ -283,6 +295,12 @@ void main() {
             final overflows = _collectedErrors
                 .where((String e) => e.contains('overflowed'))
                 .toList();
+
+            // Put the binding's handler back before asserting. Asserting with
+            // a custom handler still installed makes the binding complain that
+            // it was never restored and hang the test until its timeout, which
+            // hides the failure that actually matters.
+            _stopCollecting();
 
             expect(
               thrown,

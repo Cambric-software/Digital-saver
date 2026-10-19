@@ -46,8 +46,23 @@ Nothing below this matters if the product tells lies or has dead controls.
       returns a hardcoded `'v1.0.3-beta'` version on network failure, and
       `dashboard_screen.dart` / `web_landing_page.dart` display it. A version
       number that was invented is worse than no version number.
-- [ ] **0.5 Digital Saver — the two hanging screens.** `wellness_tools` and
-      `ai_assistant` both hang at 390px (they render at 1440px).
+- [x] **0.5 Digital Saver — the two hanging screens.** `wellness_tools` and
+      `ai_assistant` both hung for the full 25s test timeout at 390px (they
+      rendered at 1440px). Two separate faults, both now fixed:
+      - `wellness_tools`: a `Row` of two buttons needed 341px where the card
+        offers 318, so it overflowed by 11px. It is a `Wrap` now, so "Reset
+        Today" drops to its own line on a phone.
+      - `ai_assistant`: the app-bar title row overflowed by 48px because the
+        two title lines were a bare `Column`. It is `Expanded` and ellipsised.
+      - The harness was hiding both faults. It installed a custom
+        `FlutterError.onError`, then asserted *before* restoring it, and restored
+        `FlutterError.presentError` rather than the binding's handler. The
+        binding's own assertion then left the test hung until timeout instead of
+        reporting the overflow. It now saves and restores the real handler, and
+        restores it before asserting, so a failure is reported immediately and
+        names the widget and source line.
+      - All 39 screen checks now pass in 8s; the full Digital Saver suite is 130
+        tests passing in 14s, with zero analyzer errors.
 - [x] **0.6 Both — encoding corruption.** Mojibake (`?`, `�`, `�??`) has been
       found in Dart source, HTML, Markdown and C comments. Sweep and fix.
 

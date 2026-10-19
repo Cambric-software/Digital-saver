@@ -155,15 +155,26 @@ class _AIAssistantScreenState extends State<AIAssistantScreen> with SingleTicker
               child: const Icon(Icons.auto_awesome, color: Colors.white, size: 18),
             ),
             const SizedBox(width: 10),
-            const Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Digital Saver AI', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                Text(
-                  'Cambric Medical & Wellness Relay',
-                  style: TextStyle(fontSize: 10, color: AppColors.success, fontWeight: FontWeight.w500),
-                ),
-              ],
+            // Expanded, not a bare Column: at 390px the two title lines need
+            // 334px and the app bar offers 286, so the row overflowed by 48px.
+            // Letting the column fill the remaining space and ellipsising the
+            // subtitle keeps the screen readable on a phone.
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Digital Saver AI',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  Text(
+                    'Cambric Medical & Wellness Relay',
+                    style: TextStyle(fontSize: 10, color: AppColors.success, fontWeight: FontWeight.w500),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
             ),
           ],
         ),

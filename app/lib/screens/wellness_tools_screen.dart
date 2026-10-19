@@ -161,7 +161,14 @@ class _WellnessToolsScreenState extends State<WellnessToolsScreen> with SingleTi
                 minHeight: 10,
               ),
               const SizedBox(height: 12),
-              Row(
+              // A Wrap rather than a Row: at 390px the two buttons need
+              // 341px and the card offers 318, so a Row overflowed by 11px.
+              // Wrapping lets "Reset Today" drop to its own line on a phone
+              // instead of being clipped.
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
                   ElevatedButton.icon(
                     onPressed: _addWater,
@@ -169,7 +176,6 @@ class _WellnessToolsScreenState extends State<WellnessToolsScreen> with SingleTi
                     label: const Text('+250ml Glass'),
                     style: ElevatedButton.styleFrom(backgroundColor: Colors.blueAccent, foregroundColor: Colors.white),
                   ),
-                  const SizedBox(width: 8),
                   TextButton(
                     onPressed: () {
                       setState(() {
