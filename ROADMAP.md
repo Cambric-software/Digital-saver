@@ -7,7 +7,7 @@ order survives between sessions instead of living only in a conversation.
 start a lower phase while a higher phase has an open item, unless the user says
 otherwise.
 
-The same file is kept in `Max-Tools/ROADMAP.md` so whichever product is open,
+The same file is kept in `Digital-saver/ROADMAP.md` so whichever product is open,
 the plan is visible.
 
 ---
@@ -59,13 +59,18 @@ Nothing below this matters if the product tells lies or has dead controls.
 - [x] **1.2 Digital Saver — download page rebuilt to match Max Tools exactly.**
       Same palette, same shapes, same structure. Currently a different design in
       different fonts.
-- [ ] **1.3 Max Tools — the tool system is remade.** 106 tools are registered and
-      most are internal plumbing (cache, csv, json, retry, timeout, checksum…)
-      dressed up as user tools. Delete and rebuild as ~20 real tools, each of
-      which behaves like a small app and explains itself. Must include an
-      antivirus, developer tools, and one wealth tool that holds everything
-      financial in one place with charts. **Decided: the approved set is listed at
-      the end of this file.**
+- [ ] **1.3 Max Tools — the tool system is remade.** 106 tools were registered and
+      most were internal plumbing (cache, csv, json, retry, timeout, checksum…)
+      dressed up as user tools. **Decided: the approved set is listed at the end
+      of this file.** All 106 descriptors, the six catalog files and the 88-file
+      plumbing library are deleted. Rebuilt so far (each a real screen that
+      explains itself, `flutter analyze` clean, 259 tests pass):
+      Antivirus & scan, Wealth, Developer toolkit, Hash & checksum, Unit
+      converter, Text & documents, Colour & design. **Remaining: the other
+      thirteen from the approved set.** The command palette now opens a tool's
+      own screen instead of filling in a generated form, and the palette's
+      plain-English parser is tested against a fixture catalog rather than
+      against whichever tools happen to ship.
 - [x] **1.4 Max Tools — settings rebuilt.** Real settings with real effect, not
       four cards of template text.
 - [x] **1.5 Digital Saver — settings load path** hardened so a failure explains
@@ -138,26 +143,35 @@ Nothing below this matters if the product tells lies or has dead controls.
 
 Replacing all 106 registered tools. Each is a small app that explains itself in
 plain language, works for any age and any language, and does one job properly.
-The internal plumbing the application itself imports is kept, but moved out of
-the tool namespace so nothing that is not a tool looks like one.
+Nothing that is not a tool is allowed to look like one: the plumbing library was
+deleted along with the descriptors that dressed it up.
 
-1. Antivirus & scan
+**Done (7 of 20):** Antivirus & scan, Hash & checksum verifier, Document & text
+toolkit, Code/data converters and regex (as Developer toolkit), Wealth, Unit
+converter, Colour & design toolkit.
+
+**Still to build (13 of 20):**
+
+1. ~~Antivirus & scan~~ ✔
 2. Password vault
 3. File shredder
 4. Disk analyser
 5. Duplicate finder
-6. Archive (zip / 7z)
+6. Archive (zip)
 7. File encryption
-8. Hash & checksum verifier
+8. ~~Hash & checksum verifier~~ ✔
 9. Image compress / convert / resize
 10. PDF toolkit
-11. Document & text toolkit
-12. Code formatter
-13. Developer data converters (Base64, JSON, CSV, UUID, timestamp, regex)
+11. ~~Document & text toolkit~~ ✔
+12. ~~Code formatter~~ ✔ (folded into Developer toolkit)
+13. ~~Developer data converters (Base64, JSON, CSV, UUID, timestamp, regex)~~ ✔
 14. HTTP / API tester
-15. Wealth (money, budgets, investments, calculators, charts)
-16. Unit converter
+15. ~~Wealth (money, budgets, investments, calculators, charts)~~ ✔
+16. ~~Unit converter~~ ✔
 17. QR & barcode toolkit
-18. Colour & design toolkit
+18. ~~Colour & design toolkit~~ ✔
 19. Notes vault
 20. Accessibility & reading aid
+
+A tool is only listed in the catalog once it works. The catalog therefore grows
+one honest entry at a time rather than returning to a hundred placeholders.
