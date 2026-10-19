@@ -31,16 +31,18 @@ The repository supports two hardware development tiers:
 │   │   └── partitions.csv            # 16MB dual-OTA flash partition table
 │   └── esp32/                        # Evaluation Prototype (Arduino / PlatformIO)
 │       └── DigitalSaverWatch/        # Core WROOM-32 sketches and pinouts
-├── docs/                             # Engineering guides and manufacturing gates
-│   ├── 01_PROJECT_OVERVIEW.md
-│   ├── 02_SYSTEM_ARCHITECTURE.md
-│   ├── 04_BLE_PROTOCOL.md
-│   ├── 05_HARDWARE_BOM.md
-│   ├── 11_PRODUCTION_WATCH_SPEC.md   # Production S3 spec & target unit economics
-│   └── manual.md                     # Step-by-step build and assembly manual
-├── UPGRADE_GUIDE.md                  # Firmware and app migration & rollback protocol
+├── docs/                             # All documentation (see docs/README.md)
+│   ├── README.md                     # Documentation index — start here
+│   ├── ROADMAP.md                    # Authoritative ordered plan
+│   ├── 01_PRODUCT_VISION.md … 11_PRODUCTION_WATCH_SPEC.md
+│   ├── manual.md                     # Step-by-step prototype build and assembly
+│   ├── company-manual.md             # Production-watch manufacturing manual
+│   ├── GUIDE.md                      # Developer and operator quickstart
+│   ├── MASTER_GUIDE.md               # Technical reference
+│   ├── UPGRADE_GUIDE.md              # Firmware and app migration & rollback
+│   ├── APP_GUIDE.md                  # Flutter app internals
+│   └── FIRMWARE_FEATURES.md          # Prototype firmware feature inventory
 ├── SECURITY.md                       # Threat model, BLE security & vulnerability reporting
-├── MASTER_GUIDE.md                   # Documentation index and governance
 └── LICENSE                           # Cambric Source-Available Commercial-Restricted License
 ```
 

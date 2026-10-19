@@ -7,7 +7,7 @@ order survives between sessions instead of living only in a conversation.
 start a lower phase while a higher phase has an open item, unless the user says
 otherwise.
 
-The same file is kept in `Digital-saver/ROADMAP.md` so whichever product is open,
+The same file is kept in `Digital-saver/docs/ROADMAP.md` so whichever product is open,
 the plan is visible.
 
 ---
