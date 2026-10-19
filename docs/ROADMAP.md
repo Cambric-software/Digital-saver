@@ -81,9 +81,10 @@ Nothing below this matters if the product tells lies or has dead controls.
       plumbing library are deleted. Rebuilt so far (each a real screen that
       explains itself, `flutter analyze` clean, 265 tests pass):
       Antivirus & scan, Wealth, Developer toolkit, Hash & checksum, Unit
-      converter, Text & documents, Notes, Accessibility & reading, Colour &
-      design, Disk analyser, Duplicate finder, HTTP / API tester.
-      **Remaining: the other eight from the approved set.** The command palette now opens a tool's
+      converter, Text & documents, Notes, Accessibility & reading, File
+      shredder, Colour & design, Disk analyser, Duplicate finder, HTTP / API
+      tester.
+      **Remaining: the other six from the approved set.** The command palette now opens a tool's
       own screen instead of filling in a generated form, and the palette's
       plain-English parser is tested against a fixture catalog rather than
       against whichever tools happen to ship.
@@ -162,16 +163,16 @@ plain language, works for any age and any language, and does one job properly.
 Nothing that is not a tool is allowed to look like one: the plumbing library was
 deleted along with the descriptors that dressed it up.
 
-**Done (12 of 20):** Antivirus & scan, Hash & checksum verifier, Disk analyser,
+**Done (13 tools):** Antivirus & scan, Hash & checksum verifier, Disk analyser,
 Duplicate finder, HTTP / API tester, Document & text toolkit, Notes,
-Accessibility & reading aid, Code/data converters and regex (as Developer
-toolkit), Wealth, Unit converter, Colour & design toolkit.
+Accessibility & reading aid, File shredder, Code/data converters and regex (as
+Developer toolkit), Wealth, Unit converter, Colour & design toolkit.
 
-**Still to build (8 of 20):**
+**Still to build (6 tools):**
 
 1. ~~Antivirus & scan~~ ✔
 2. Password vault
-3. File shredder
+3. ~~File shredder~~ —
 4. ~~Disk analyser~~ ✔
 5. ~~Duplicate finder~~ ✔
 6. Archive (zip)
