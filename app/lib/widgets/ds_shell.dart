@@ -11,6 +11,8 @@
 /// while a watch is in range, and a real entry point for updates.
 library;
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -19,6 +21,7 @@ import '../theme/app_colors.dart';
 import '../theme/design_tokens.dart';
 import '../widgets/ds_widgets.dart';
 import '../screens/dashboard_screen.dart';
+import '../screens/health_hub_screen.dart';
 import '../screens/insights_screen.dart';
 import '../screens/memory_screen.dart';
 import '../screens/settings_screen.dart';
@@ -38,6 +41,9 @@ enum DsDestination {
 
   /// Coaching.
   coach('Coach', Icons.auto_awesome_outlined, Icons.auto_awesome_rounded),
+
+  /// The tool suites, blood pressure and the watch simulator.
+  hub('Health hub', Icons.grid_view_outlined, Icons.grid_view_rounded),
 
   /// Saved watch data.
   watch('Watch', Icons.watch_outlined, Icons.watch_rounded),
@@ -75,23 +81,93 @@ class _DsShellState extends State<DsShell> {
   /// Bottom bars are unusable past about six items; the rail is not.
   static const List<DsDestination> _railDestinations = DsDestination.values;
 
-  /// The bar shows the most-used five; the rest live in the rail.
-  static final List<DsDestination> _barDestinations = <DsDestination>[
+  /// The bar shows the four most-used, then More.
+  ///
+  /// The previous bar held five of six destinations, which meant the sixth
+  /// could not be opened at all below 1100px, where the rail is hidden. More
+  /// lists everything the bar does not, so every destination has a route at
+  /// every width.
+  static const List<DsDestination> _barDestinations = <DsDestination>[
     DsDestination.dashboard,
     DsDestination.vitals,
     DsDestination.insights,
     DsDestination.coach,
-    DsDestination.settings,
   ];
+
+  /// Destinations reachable through More.
+  List<DsDestination> get _overflowDestinations => DsDestination.values
+      .where((DsDestination d) => !_barDestinations.contains(d))
+      .toList();
 
   Widget _screenFor(DsDestination destination) => switch (destination) {
         DsDestination.dashboard => const DashboardScreen(),
         DsDestination.vitals => const VitalsScreen(),
         DsDestination.insights => const InsightsScreen(),
         DsDestination.coach => const AIAssistantScreen(),
+        DsDestination.hub => const HealthHubScreen(),
         DsDestination.watch => const MemoryScreen(),
         DsDestination.settings => const SettingsScreen(),
       };
+
+  /// Which bar slot to highlight. More stays highlighted when the current
+  /// destination is one of the destinations it lists, because that is where it
+  /// was opened from.
+  int get _barIndex {
+    final int index = _barDestinations.indexOf(_current);
+    return index >= 0 ? index : _barDestinations.length;
+  }
+
+  void _onBarSelected(int index) {
+    if (index < _barDestinations.length) {
+      _select(_barDestinations[index]);
+      return;
+    }
+    unawaited(_showMore());
+  }
+
+  /// Lists every destination the bar cannot hold.
+  Future<void> _showMore() async {
+    final DsDestination? chosen = await showModalBottomSheet<DsDestination>(
+      context: context,
+      showDragHandle: true,
+      builder: (BuildContext sheetContext) {
+        final ThemeData theme = Theme.of(sheetContext);
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  Space.lg,
+                  Space.none,
+                  Space.lg,
+                  Space.sm,
+                ),
+                child: Text('More', style: theme.textTheme.titleMedium),
+              ),
+              for (final DsDestination destination in _overflowDestinations)
+                ListTile(
+                  leading: Icon(
+                    destination == _current
+                        ? destination.selectedIcon
+                        : destination.icon,
+                    color: destination == _current
+                        ? theme.colorScheme.primary
+                        : null,
+                  ),
+                  title: Text(destination.label),
+                  selected: destination == _current,
+                  onTap: () => Navigator.of(sheetContext).pop(destination),
+                ),
+              const SizedBox(height: Space.sm),
+            ],
+          ),
+        );
+      },
+    );
+    if (chosen != null && mounted) _select(chosen);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -129,8 +205,8 @@ class _DsShellState extends State<DsShell> {
       bottomNavigationBar: usesRail
           ? null
           : NavigationBar(
-              selectedIndex: _barDestinations.indexOf(_current),
-              onDestinationSelected: (index) => _select(_barDestinations[index]),
+              selectedIndex: _barIndex,
+              onDestinationSelected: _onBarSelected,
               destinations: <Widget>[
                 for (final destination in _barDestinations)
                   NavigationDestination(
@@ -138,6 +214,10 @@ class _DsShellState extends State<DsShell> {
                     selectedIcon: Icon(destination.selectedIcon),
                     label: destination.label,
                   ),
+                const NavigationDestination(
+                  icon: Icon(Icons.more_horiz_rounded),
+                  label: 'More',
+                ),
               ],
             ),
     );

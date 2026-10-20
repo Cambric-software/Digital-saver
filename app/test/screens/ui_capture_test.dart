@@ -69,6 +69,7 @@ const Set<String> _contentScreens = <String>{
   'heart',
   'activity',
   'sleep',
+  'health_hub',
 };
 
 final Map<String, Widget Function()> _screens = <String, Widget Function()>{
@@ -144,6 +145,13 @@ Future<void> loadRealFonts() async {
 /// that are pages in their own right. Content screens must not provide their own
 /// Scaffold, because DsPage supplies the title bar and the scroll view; giving
 /// one here reproduces a nested scroll that the real shell would not have.
+///
+/// Both are given a Scaffold, because the real shell always has one (DsShell
+/// builds it) and material widgets need it: without one, the first TextField or
+/// button added to a content screen failed with "No Material widget found",
+/// which reads as a broken screen rather than as a gap in the harness. The
+/// Scaffold adds no scroll view of its own, so it does not change what is
+/// captured.
 Widget harness(Widget child, {required bool isContent}) {
   return MultiProvider(
     providers: <ChangeNotifierProvider<ChangeNotifier>>[
@@ -167,7 +175,7 @@ Widget harness(Widget child, {required bool isContent}) {
     child: MaterialApp(
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
-      home: isContent ? DsPage(child: child) : Scaffold(body: child),
+      home: Scaffold(body: isContent ? DsPage(child: child) : child),
     ),
   );
 }

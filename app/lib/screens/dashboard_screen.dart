@@ -24,6 +24,7 @@ import '../theme/app_colors.dart';
 import '../utils/health_interpretation.dart';
 import '../theme/design_tokens.dart';
 import '../widgets/ds_widgets.dart';
+import 'bp_screen.dart';
 
 /// Live overview of the current day.
 class DashboardScreen extends StatelessWidget {
@@ -180,6 +181,10 @@ class _VitalsGrid extends StatelessWidget {
         accent: _bp(context),
         status: interpretBloodPressure(ble.bloodPressure),
         icon: Icons.bloodtype_outlined,
+        // The detail screen explains the bands; the tile only shows the pair.
+        onTap: () => Navigator.of(context).push(
+          MaterialPageRoute<void>(builder: (_) => const BpScreen()),
+        ),
       ),
       DsMetricTile(
         label: 'Oxygen',
