@@ -1,512 +1,286 @@
-import 'dart:math' as math;
+/// Four actions the Today screen can actually perform.
+///
+/// The previous file was a floating emergency button with a speed dial. Nothing
+/// mounted it, and it could not have worked if something had: every action was
+/// an optional callback that no caller supplied, so pressing "Emergency" or
+/// "Call Doctor" would have done exactly nothing. It also shipped two more
+/// unused widgets whose colours and shadows were hard-coded.
+///
+/// The job now is smaller and real. Each action either writes through a service
+/// this app already owns or opens a screen that exists:
+///
+///  * water is saved to [DailyLog] for today and read back before the count is
+///    shown, so the number on screen is stored rather than assumed;
+///  * breathing and mood open the wellness and lifestyle tools;
+///  * pulling watch memory asks [BleService] for a sync and reports whether one
+///    actually started. A disconnected watch is disabled rather than pretending.
+///
+/// There is no snackbar-only action and no success message for a write that was
+/// not read back.
+library;
+
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
-// Floating quick actions widget
-class QuickActionsWidget extends StatefulWidget {
-  final VoidCallback? onEmergency;
-  final VoidCallback? onCallDoctor;
-  final VoidCallback? onCheckVitals;
-  final VoidCallback? onShareLocation;
+import '../screens/lifestyle_tools_screen.dart';
+import '../screens/wellness_tools_screen.dart';
+import '../services/ble_service.dart';
+import '../services/daily_log.dart';
+import '../theme/design_tokens.dart';
+import 'ds_widgets.dart';
 
-  const QuickActionsWidget({
-    super.key,
-    this.onEmergency,
-    this.onCallDoctor,
-    this.onCheckVitals,
-    this.onShareLocation,
-  });
+/// The quick-action panel used on the Today screen.
+class QuickActionsCard extends StatefulWidget {
+  /// Create the panel.
+  const QuickActionsCard({super.key});
 
   @override
-  State<QuickActionsWidget> createState() => _QuickActionsWidgetState();
+  State<QuickActionsCard> createState() => _QuickActionsCardState();
 }
 
-class _QuickActionsWidgetState extends State<QuickActionsWidget>
-    with SingleTickerProviderStateMixin {
-  bool _isExpanded = false;
-  late AnimationController _controller;
-  late Animation<double> _expandAnimation;
+class _QuickActionsCardState extends State<QuickActionsCard> {
+  int _glasses = 0;
+  bool _loadingWater = true;
+  bool _savingWater = false;
+  String? _waterMessage;
+
+  bool _memoryBusy = false;
+  String? _memoryMessage;
 
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(
-      duration: const Duration(milliseconds: 300),
-      vsync: this,
-    );
-    _expandAnimation = CurvedAnimation(
-      parent: _controller,
-      curve: Curves.easeOutBack,
-    );
+    _loadWater();
   }
 
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  void _toggle() {
+  Future<void> _loadWater() async {
+    int stored = 0;
+    try {
+      stored = await DailyLog.counter(DailyLog.hydrationGlasses);
+    } catch (_) {
+      // A store that cannot be opened means "nothing logged", not a crash and
+      // not an invented count.
+      stored = 0;
+    }
+    if (!mounted) return;
     setState(() {
-      _isExpanded = !_isExpanded;
-      if (_isExpanded) {
-        _controller.forward();
-      } else {
-        _controller.reverse();
-      }
+      _glasses = stored;
+      _loadingWater = false;
     });
   }
 
+  Future<void> _logWater() async {
+    if (_savingWater) return;
+    setState(() {
+      _savingWater = true;
+      _waterMessage = null;
+    });
+
+    try {
+      final int before = await DailyLog.counter(DailyLog.hydrationGlasses);
+      await DailyLog.setCounter(DailyLog.hydrationGlasses, before + 1);
+      // Read it back. The count is only reported once the store agrees.
+      final int after = await DailyLog.counter(DailyLog.hydrationGlasses);
+      if (!mounted) return;
+      setState(() {
+        _glasses = after;
+        _savingWater = false;
+        _waterMessage = after > before
+            ? 'Saved for today.'
+            : 'The glass could not be saved.';
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _savingWater = false;
+        _waterMessage = 'The glass could not be saved on this device.';
+      });
+    }
+  }
+
+  Future<void> _pullMemory() async {
+    final BleService ble = context.read<BleService>();
+    if (!ble.canSendRawCommand) {
+      setState(() {
+        _memoryMessage = 'Connect the watch before pulling its memory.';
+      });
+      return;
+    }
+    if (ble.syncingMemory) {
+      setState(() {
+        _memoryMessage = 'A memory sync is already running.';
+      });
+      return;
+    }
+
+    setState(() {
+      _memoryBusy = true;
+      _memoryMessage = 'Asking the watch to start a sync…';
+    });
+
+    await ble.startMemorySync();
+
+    if (!mounted) return;
+    final bool started = ble.syncingMemory;
+    setState(() {
+      _memoryBusy = false;
+      _memoryMessage = started
+          ? 'The watch is sending its stored samples now.'
+          : 'No sync started. The watch may be out of range or already '
+              'syncing.';
+    });
+  }
+
+  void _open(Widget screen) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(builder: (_) => screen),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Positioned(
-      bottom: 100,
-      right: 20,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          // Expanded actions
-          SizeTransition(
-            sizeFactor: _expandAnimation,
-            axisAlignment: 1,
-            child: Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  _buildAction(
-                    icon: Icons.location_on,
-                    label: 'Share Location',
-                    color: const Color(0xFF3B82F6),
-                    onTap: () {
-                      _toggle();
-                      widget.onShareLocation?.call();
-                    },
-                  ),
-                  const SizedBox(height: 10),
-                  _buildAction(
-                    icon: Icons.monitor_heart,
-                    label: 'Check Vitals',
-                    color: const Color(0xFF10B981),
-                    onTap: () {
-                      _toggle();
-                      widget.onCheckVitals?.call();
-                    },
-                  ),
-                  const SizedBox(height: 10),
-                  _buildAction(
-                    icon: Icons.phone,
-                    label: 'Call Doctor',
-                    color: const Color(0xFF8B5CF6),
-                    onTap: () {
-                      _toggle();
-                      widget.onCallDoctor?.call();
-                    },
-                  ),
-                  const SizedBox(height: 10),
-                  _buildAction(
-                    icon: Icons.emergency,
-                    label: 'Emergency',
-                    color: Colors.red,
-                    isEmergency: true,
-                    onTap: () {
-                      _toggle();
-                      widget.onEmergency?.call();
-                    },
-                  ),
-                ],
-              ),
-            ),
-          ),
-          // Main button
-          _buildMainButton(),
-        ],
-      ),
+    final BleService ble = context.watch<BleService>();
+    final ThemeData theme = Theme.of(context);
+    final bool memoryReady = ble.canSendRawCommand && !ble.syncingMemory;
+
+    return DsGrid(
+      minTileWidth: 180,
+      children: <Widget>[
+        _QuickAction(
+          icon: Icons.water_drop_outlined,
+          label: 'Log water',
+          detail: _waterDetail(),
+          accent: theme.colorScheme.primary,
+          busy: _savingWater,
+          onTap: _savingWater ? null : _logWater,
+        ),
+        _QuickAction(
+          icon: Icons.air_rounded,
+          label: 'Breathe',
+          detail: 'Opens the guided breathing tools.',
+          accent: theme.colorScheme.secondary,
+          onTap: () => _open(const WellnessToolsScreen()),
+        ),
+        _QuickAction(
+          icon: Icons.mood_outlined,
+          label: 'Log mood',
+          detail: 'Opens the mood and lifestyle tools.',
+          accent: theme.colorScheme.tertiary,
+          onTap: () => _open(const LifestyleToolsScreen()),
+        ),
+        _QuickAction(
+          icon: Icons.sync_rounded,
+          label: 'Pull watch memory',
+          detail: _memoryDetail(memoryReady, ble),
+          accent: _memoryMessage != null && ble.canSendRawCommand
+              ? theme.colorScheme.secondary
+              : theme.colorScheme.onSurfaceVariant,
+          busy: _memoryBusy,
+          onTap: memoryReady && !_memoryBusy ? _pullMemory : null,
+        ),
+      ],
     );
   }
 
-  Widget _buildMainButton() {
-    return GestureDetector(
-      onTap: _toggle,
-      child: AnimatedBuilder(
-        animation: _controller,
-        builder: (context, child) {
-          return Transform.rotate(
-            angle: _controller.value * math.pi / 4,
-            child: Container(
-              width: 60,
-              height: 60,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: const LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [Color(0xFF2563EB), Color(0xFF7C3AED)],
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFF2563EB).withValues(alpha: 0.4),
-                    blurRadius: 20,
-                    spreadRadius: 2,
-                  ),
-                ],
-              ),
-              child: Icon(
-                _isExpanded ? Icons.close : Icons.add,
-                color: Colors.white,
-                size: 28,
-              ),
-            ),
-          );
-        },
-      ),
-    );
+  String _waterDetail() {
+    if (_loadingWater) return 'Reading today’s log…';
+    if (_waterMessage != null) {
+      if (_glasses == 1) return '$_waterMessage 1 glass today.';
+      return '$_waterMessage $_glasses glasses today.';
+    }
+    if (_glasses == 0) return 'No glasses logged today.';
+    if (_glasses == 1) return '1 glass logged today.';
+    return '$_glasses glasses logged today.';
   }
 
-  Widget _buildAction({
-    required IconData icon,
-    required String label,
-    required Color color,
-    required VoidCallback onTap,
-    bool isEmergency = false,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            decoration: BoxDecoration(
-              color: isEmergency ? color : Colors.white.withValues(alpha: 0.95),
-              borderRadius: BorderRadius.circular(25),
-              boxShadow: [
-                BoxShadow(
-                  color: color.withValues(alpha: 0.3),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  icon,
-                  color: isEmergency ? Colors.white : color,
-                  size: 20,
-                ),
-                const SizedBox(width: 10),
-                Text(
-                  label,
-                  style: TextStyle(
-                    color: isEmergency ? Colors.white : const Color(0xFF1E293B),
-                    fontWeight: FontWeight.w600,
-                    fontSize: 14,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 12),
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: color,
-              boxShadow: [
-                BoxShadow(
-                  color: color.withValues(alpha: 0.4),
-                  blurRadius: 12,
-                  spreadRadius: 1,
-                ),
-              ],
-            ),
-            child: Icon(icon, color: Colors.white, size: 22),
-          ),
-        ],
-      ),
-    );
+  String _memoryDetail(bool ready, BleService ble) {
+    if (_memoryMessage != null) return _memoryMessage!;
+    if (!ble.isConnected) return 'Connect the watch to pull its memory.';
+    if (ble.syncingMemory) return 'A memory sync is already running.';
+    if (!ble.canSendRawCommand) {
+      return 'The watch is connected but its command channel is not ready.';
+    }
+    return ready
+        ? 'Asks the watch to send the samples it has stored.'
+        : 'Memory sync is not available right now.';
   }
 }
 
-// Animated stat card
-class AnimatedStatCard extends StatelessWidget {
-  final String title;
-  final String value;
-  final String? unit;
-  final IconData icon;
-  final Color color;
-  final double? progress;
-  final String? trend;
-  final bool isPositive;
-
-  const AnimatedStatCard({
-    super.key,
-    required this.title,
-    required this.value,
-    this.unit,
+/// One action inside the panel.
+class _QuickAction extends StatelessWidget {
+  const _QuickAction({
     required this.icon,
-    required this.color,
-    this.progress,
-    this.trend,
-    this.isPositive = true,
+    required this.label,
+    required this.detail,
+    required this.accent,
+    required this.onTap,
+    this.busy = false,
   });
+
+  final IconData icon;
+  final String label;
+  final String detail;
+  final Color accent;
+  final VoidCallback? onTap;
+  final bool busy;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: color.withValues(alpha: 0.2),
-          width: 1,
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(icon, color: color, size: 24),
-              ),
-              const Spacer(),
-              if (trend != null)
+    final ThemeData theme = Theme.of(context);
+    final bool enabled = onTap != null;
+    final Color foreground =
+        enabled ? theme.colorScheme.onSurface : theme.colorScheme.onSurfaceVariant;
+
+    return Semantics(
+      button: true,
+      enabled: enabled,
+      label: label,
+      child: DsCard(
+        onTap: onTap,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            Row(
+              children: <Widget>[
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.all(Space.sm),
                   decoration: BoxDecoration(
-                    color: (isPositive ? Colors.green : Colors.red).withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(8),
+                    color: accent.withValues(alpha: enabled ? 0.12 : 0.06),
+                    borderRadius: BorderRadius.circular(Radii.sm),
                   ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        isPositive ? Icons.trending_up : Icons.trending_down,
-                        color: isPositive ? Colors.green : Colors.red,
-                        size: 14,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        trend!,
-                        style: TextStyle(
-                          color: isPositive ? Colors.green : Colors.red,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
+                  child: busy
+                      ? SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: accent,
+                          ),
+                        )
+                      : Icon(icon, size: 18, color: accent),
                 ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                value,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 32,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              if (unit != null) ...[
-                const SizedBox(width: 4),
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 4),
+                const SizedBox(width: Space.md),
+                Expanded(
                   child: Text(
-                    unit!,
-                    style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.5),
-                      fontSize: 16,
-                    ),
+                    label,
+                    style: theme.textTheme.titleSmall?.copyWith(color: foreground),
                   ),
                 ),
               ],
-            ],
-          ),
-          const SizedBox(height: 4),
-          Text(
-            title,
-            style: TextStyle(
-              color: Colors.white.withValues(alpha: 0.5),
-              fontSize: 13,
             ),
-          ),
-          if (progress != null) ...[
-            const SizedBox(height: 12),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(4),
-              child: LinearProgressIndicator(
-                value: progress!,
-                backgroundColor: Colors.white.withValues(alpha: 0.1),
-                valueColor: AlwaysStoppedAnimation(color),
-                minHeight: 6,
+            const SizedBox(height: Space.sm),
+            Text(
+              detail,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: enabled
+                    ? theme.colorScheme.onSurfaceVariant
+                    : theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
               ),
             ),
           ],
-        ],
+        ),
       ),
     );
-  }
-}
-
-// Circular timer widget
-class CircularTimer extends StatefulWidget {
-  final int seconds;
-  final VoidCallback? onComplete;
-  final Color? color;
-
-  const CircularTimer({
-    super.key,
-    required this.seconds,
-    this.onComplete,
-    this.color,
-  });
-
-  @override
-  State<CircularTimer> createState() => _CircularTimerState();
-}
-
-class _CircularTimerState extends State<CircularTimer>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  int _remainingSeconds = 0;
-
-  @override
-  void initState() {
-    super.initState();
-    _remainingSeconds = widget.seconds;
-    _controller = AnimationController(
-      duration: Duration(seconds: widget.seconds),
-      vsync: this,
-    );
-
-    _controller.addStatusListener((status) {
-      if (status == AnimationStatus.completed) {
-        widget.onComplete?.call();
-      }
-    });
-
-    _controller.addListener(() {
-      setState(() {
-        _remainingSeconds = (widget.seconds * (1 - _controller.value)).ceil();
-      });
-    });
-
-    _controller.forward();
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  String _formatTime(int seconds) {
-    final minutes = seconds ~/ 60;
-    final secs = seconds % 60;
-    return '${minutes.toString().padLeft(2, '0')}:${secs.toString().padLeft(2, '0')}';
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final color = widget.color ?? const Color(0xFF2563EB);
-
-    return AnimatedBuilder(
-      animation: _controller,
-      builder: (context, child) {
-        return SizedBox(
-          width: 120,
-          height: 120,
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              CustomPaint(
-                size: const Size(120, 120),
-                painter: _TimerPainter(
-                  progress: _controller.value,
-                  color: color,
-                ),
-              ),
-              Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    _formatTime(_remainingSeconds),
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  Text(
-                    'remaining',
-                    style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.5),
-                      fontSize: 12,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-}
-
-class _TimerPainter extends CustomPainter {
-  final double progress;
-  final Color color;
-
-  _TimerPainter({required this.progress, required this.color});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final center = Offset(size.width / 2, size.height / 2);
-    final radius = size.width / 2 - 8;
-
-    // Background
-    final bgPaint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.1)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 8
-      ..strokeCap = StrokeCap.round;
-
-    canvas.drawCircle(center, radius, bgPaint);
-
-    // Progress
-    final progressPaint = Paint()
-      ..color = color
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 8
-      ..strokeCap = StrokeCap.round;
-
-    canvas.drawArc(
-      Rect.fromCircle(center: center, radius: radius),
-      -math.pi / 2,
-      2 * math.pi * (1 - progress),
-      false,
-      progressPaint,
-    );
-  }
-
-  @override
-  bool shouldRepaint(_TimerPainter oldDelegate) {
-    return oldDelegate.progress != progress;
   }
 }

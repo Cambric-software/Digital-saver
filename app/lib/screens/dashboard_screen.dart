@@ -24,6 +24,7 @@ import '../theme/app_colors.dart';
 import '../utils/health_interpretation.dart';
 import '../theme/design_tokens.dart';
 import '../widgets/ds_widgets.dart';
+import '../widgets/quick_actions_widget.dart';
 import 'bp_screen.dart';
 
 /// Live overview of the current day.
@@ -61,6 +62,12 @@ class DashboardScreen extends StatelessWidget {
           else
             _ConnectedBanner(batteryLevel: ble.batteryLevel),
           const SizedBox(height: Space.xl),
+          const DsSection(
+            title: 'Quick actions',
+            subtitle: 'Things you can do without leaving Today',
+            child: QuickActionsCard(),
+          ),
+          const SizedBox(height: Space.xxl),
           DsSection(
             title: 'Vitals',
             subtitle: 'Live from your watch',

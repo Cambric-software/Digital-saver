@@ -1,3 +1,19 @@
+/// Glass panels, glow buttons and pulsing dots that this app does not use.
+///
+/// These widgets were written for a different visual language: translucent
+/// white over a blurred backdrop, coloured glow shadows and a fixed six-colour
+/// gradient. The web landing page is the one surface they might have suited,
+/// but that page is required to match the Max Tools stylesheet exactly, where
+/// cards are opaque `surface` panels with a hairline border and a fixed radius.
+/// A translucent card would change those published colours, so mounting these
+/// here would be decoration pretending to be the design.
+///
+/// The rest of the app uses [DsCard] and the semantic roles in `app_colors.dart`
+/// instead. This file is kept for inspection rather than mounted; if it is ever
+/// adopted, it should be rebuilt on those tokens rather than the literal values
+/// below.
+library;
+
 import 'dart:ui';
 import 'package:flutter/material.dart';
 
@@ -27,7 +43,7 @@ class GlassCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+
     return Container(
       margin: margin,
       child: ClipRRect(
@@ -42,15 +58,16 @@ class GlassCard extends StatelessWidget {
               child: Container(
                 padding: padding ?? const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: backgroundColor ?? 
-                    (isDark 
-                      ? Colors.white.withValues(alpha: 0.1) 
-                      : Colors.white.withValues(alpha: 0.2)),
+                  color: backgroundColor ??
+                      (isDark
+                          ? Colors.white.withValues(alpha: 0.1)
+                          : Colors.white.withValues(alpha: 0.2)),
                   borderRadius: BorderRadius.circular(borderRadius),
-                  border: border ?? Border.all(
-                    color: Colors.white.withValues(alpha: 0.2),
-                    width: 1.5,
-                  ),
+                  border: border ??
+                      Border.all(
+                        color: Colors.white.withValues(alpha: 0.2),
+                        width: 1.5,
+                      ),
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black.withValues(alpha: 0.1),
@@ -90,10 +107,11 @@ class GradientGlassCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = gradientColors ?? [
-      const Color(0xFF2563EB).withValues(alpha: 0.3),
-      const Color(0xFF7C3AED).withValues(alpha: 0.3),
-    ];
+    final colors = gradientColors ??
+        [
+          const Color(0xFF2563EB).withValues(alpha: 0.3),
+          const Color(0xFF7C3AED).withValues(alpha: 0.3),
+        ];
 
     return Container(
       margin: margin,
@@ -187,10 +205,11 @@ class _GlowButtonState extends State<GlowButton>
 
   @override
   Widget build(BuildContext context) {
-    final colors = widget.gradientColors ?? [
-      const Color(0xFF2563EB),
-      const Color(0xFF7C3AED),
-    ];
+    final colors = widget.gradientColors ??
+        [
+          const Color(0xFF2563EB),
+          const Color(0xFF7C3AED),
+        ];
 
     return GestureDetector(
       onTapDown: (_) => setState(() => _isPressed = true),
@@ -206,7 +225,13 @@ class _GlowButtonState extends State<GlowButton>
             duration: const Duration(milliseconds: 150),
             width: widget.width,
             height: widget.height,
-            transform: Matrix4.identity()..scale(_isPressed ? 0.95 : 1.0),
+            transform: Matrix4.identity()
+              ..scaleByDouble(
+                _isPressed ? 0.95 : 1.0,
+                _isPressed ? 0.95 : 1.0,
+                1,
+                1,
+              ),
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: colors,
@@ -314,7 +339,8 @@ class _GlowIconButtonState extends State<GlowIconButton>
               width: widget.size,
               height: widget.size,
               decoration: BoxDecoration(
-                color: widget.backgroundColor ?? Colors.white.withValues(alpha: 0.1),
+                color: widget.backgroundColor ??
+                    Colors.white.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
                 border: Border.all(
                   color: color.withValues(alpha: 0.3),
@@ -410,7 +436,8 @@ class _StatusIndicatorState extends State<StatusIndicator>
             boxShadow: widget.isActive
                 ? [
                     BoxShadow(
-                      color: color.withValues(alpha: 0.5 + _controller.value * 0.5),
+                      color: color.withValues(
+                          alpha: 0.5 + _controller.value * 0.5),
                       blurRadius: 8 + _controller.value * 8,
                       spreadRadius: _controller.value * 4,
                     ),

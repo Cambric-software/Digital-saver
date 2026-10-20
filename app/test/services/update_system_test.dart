@@ -1,7 +1,7 @@
 import 'dart:io';
 
 import 'package:crypto/crypto.dart';
-import 'package:digital_saver/services/app_version.dart';
+import 'package:digital_saver/services/auto_update_service.dart';
 import 'package:digital_saver/services/release_assets.dart';
 import 'package:digital_saver/services/update_service.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -34,7 +34,8 @@ void main() {
     });
 
     test('the releases page is a real repository URL', () {
-      expect(AppVersion.releasesPage, contains('Cambric-software/Digital-saver'));
+      expect(
+          AppVersion.releasesPage, contains('Cambric-software/Digital-saver'));
       expect(AppVersion.releasesPage, startsWith('https://'));
     });
 
@@ -53,7 +54,8 @@ void main() {
     test('newer versions are detected', () {
       expect(ReleaseService.compareVersions('1.0.4', '1.0.3'), greaterThan(0));
       expect(ReleaseService.compareVersions('1.1.0', '1.0.9'), greaterThan(0));
-      expect(ReleaseService.compareVersions('2.0.0', '1.99.99'), greaterThan(0));
+      expect(
+          ReleaseService.compareVersions('2.0.0', '1.99.99'), greaterThan(0));
     });
 
     test('older versions are detected', () {
@@ -108,7 +110,8 @@ void main() {
 
     test('is case insensitive', () {
       expect(
-        ReleaseAsset.parseChecksum('44F8D2C7B2251C07C997B49C0719C59987A0CC7D2591D2268D7EF2F7FD669A4D'),
+        ReleaseAsset.parseChecksum(
+            '44F8D2C7B2251C07C997B49C0719C59987A0CC7D2591D2268D7EF2F7FD669A4D'),
         '44f8d2c7b2251c07c997b49c0719c59987a0cc7d2591d2268d7ef2f7fd669a4d',
       );
     });
@@ -120,12 +123,38 @@ void main() {
     });
   });
 
+  group('release digest', () {
+    test('reads the sha256 prefix GitHub publishes', () {
+      expect(
+        AutoUpdateService.parseDigest('sha256:$hashA'),
+        hashA,
+      );
+    });
+
+    test('accepts a bare hash and normalises case', () {
+      expect(
+        AutoUpdateService.parseDigest(hashA.toUpperCase()),
+        hashA,
+      );
+    });
+
+    test('rejects another algorithm or junk', () {
+      expect(AutoUpdateService.parseDigest('sha512:$hashA'), isNull);
+      expect(AutoUpdateService.parseDigest('sha256:deadbeef'), isNull);
+      expect(AutoUpdateService.parseDigest(null), isNull);
+      expect(AutoUpdateService.parseDigest(42), isNull);
+    });
+  });
+
   group('asset selection', () {
     final assets = <ReleaseAsset>[
-      ReleaseAsset(name: 'windows.zip', url: 'u', sizeBytes: 1, checksum: hashA),
+      ReleaseAsset(
+          name: 'windows.zip', url: 'u', sizeBytes: 1, checksum: hashA),
       const ReleaseAsset(name: 'windows.zip.sha256', url: 'u', sizeBytes: 1),
-      ReleaseAsset(name: 'linux.tar.gz', url: 'u', sizeBytes: 1, checksum: hashB),
-      ReleaseAsset(name: 'android.apk', url: 'u', sizeBytes: 1, checksum: hashC),
+      ReleaseAsset(
+          name: 'linux.tar.gz', url: 'u', sizeBytes: 1, checksum: hashB),
+      ReleaseAsset(
+          name: 'android.apk', url: 'u', sizeBytes: 1, checksum: hashC),
     ];
 
     test('sidecars are paired with the file they describe', () {
@@ -209,10 +238,8 @@ void main() {
     test('uppercase hex from a publisher still verifies', () async {
       final file = File('${temp.path}/pkg.bin');
       await file.writeAsString('hello world');
-      final upper = sha256
-          .convert(await file.readAsBytes())
-          .toString()
-          .toUpperCase();
+      final upper =
+          sha256.convert(await file.readAsBytes()).toString().toUpperCase();
       expect(await PackageVerifier.matches(file, upper), isTrue);
     });
   });

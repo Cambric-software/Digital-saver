@@ -33,6 +33,7 @@ import '../models/health_models.dart';
 import '../services/app_lock.dart';
 import '../services/auto_update_service.dart';
 import '../services/ble_service.dart';
+import '../services/dynamic_theme_service.dart';
 import '../services/local_store.dart';
 import '../services/locale_service.dart';
 import '../services/storage_service.dart';
@@ -665,6 +666,33 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       onChanged: (bool value) => themeService.setTheme(
                         value ? AppThemeMode.dark : AppThemeMode.light,
                       ),
+                    ),
+                  ),
+                  Divider(color: theme.colorScheme.outlineVariant),
+                  Material(
+                    type: MaterialType.transparency,
+                    child: SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      secondary: Icon(
+                        themeService.isDimmed
+                            ? Icons.nights_stay_outlined
+                            : Icons.brightness_4_outlined,
+                      ),
+                      title: const Text('Dim after dark'),
+                      subtitle: Text(
+                        themeService.dimAfterDark
+                            ? 'On. The dark theme is used from '
+                                '${DynamicThemeService.dimStartHour}:00 to '
+                                '${DynamicThemeService.dimEndHour.toString().padLeft(2, '0')}:00. '
+                                '${themeService.isDimmed ? 'It is after dark now, so the dark theme is active.' : 'It is daytime now, so the theme you picked is used.'}'
+                            : 'Off. The theme you picked is used all day. When '
+                                'on, the dark theme is used from '
+                                '${DynamicThemeService.dimStartHour}:00 to '
+                                '${DynamicThemeService.dimEndHour.toString().padLeft(2, '0')}:00.',
+                      ),
+                      value: themeService.dimAfterDark,
+                      onChanged: (bool value) =>
+                          themeService.setDimAfterDark(value),
                     ),
                   ),
                   Divider(color: theme.colorScheme.outlineVariant),
@@ -1398,6 +1426,59 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       updates.isChecking ? 'Checking…' : 'Check for updates',
                     ),
                   ),
+                  if (updates.latestUpdate != null &&
+                      updates.latestUpdate!.isNewer) ...<Widget>[
+                    const SizedBox(height: Space.lg),
+                    Text(
+                      _installAvailability(updates.latestUpdate!),
+                      style: theme.textTheme.bodySmall,
+                    ),
+                    if (updates.isAutoUpdating) ...<Widget>[
+                      const SizedBox(height: Space.sm),
+                      LinearProgressIndicator(
+                        value: updates.downloadProgress > 0
+                            ? updates.downloadProgress
+                            : null,
+                      ),
+                    ],
+                    if (updates.autoUpdateMessage != null) ...<Widget>[
+                      const SizedBox(height: Space.sm),
+                      Text(
+                        updates.autoUpdateMessage!,
+                        style: theme.textTheme.bodySmall,
+                      ),
+                    ],
+                    const SizedBox(height: Space.md),
+                    FilledButton.icon(
+                      onPressed: updates.isAutoUpdating ||
+                              !updates.latestUpdate!.canVerify
+                          ? null
+                          : () => updates.installUpdate(),
+                      icon: updates.isAutoUpdating
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.verified_outlined, size: 18),
+                      label: Text(
+                        updates.isAutoUpdating
+                            ? 'Downloading and verifying…'
+                            : 'Download and verify update',
+                      ),
+                    ),
+                    if (updates.latestUpdate!.asset != null &&
+                        !updates.latestUpdate!.canVerify) ...<Widget>[
+                      const SizedBox(height: Space.xs),
+                      Text(
+                        'This build will not install a package that has no '
+                        'published checksum.',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.error,
+                        ),
+                      ),
+                    ],
+                  ],
                 ],
               ),
             ),
@@ -1438,6 +1519,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ],
       ),
     );
+  }
+
+  static String _installAvailability(UpdateInfo update) {
+    final asset = update.asset;
+    if (asset == null) {
+      return 'This release did not publish a package for this platform, so '
+          'there is nothing this build can verify or apply.';
+    }
+    if (!update.canVerify) {
+      return 'The release does not publish a SHA-256 for ${asset.name}, so '
+          'this build will not download it.';
+    }
+    return 'The release publishes a SHA-256 for ${asset.name}. The download '
+        'is checked before anything is opened or staged.';
   }
 
   static String _updateStatus(AutoUpdateService updates) {

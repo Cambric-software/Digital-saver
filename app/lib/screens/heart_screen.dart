@@ -33,6 +33,7 @@ import '../theme/app_colors.dart';
 import '../theme/design_tokens.dart';
 import '../utils/health_interpretation.dart';
 import '../widgets/ds_widgets.dart';
+import '../widgets/enhanced_animations.dart';
 
 /// Live heart rate and the detail behind it.
 class HeartScreen extends StatelessWidget {
@@ -86,7 +87,15 @@ class _LiveReading extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: <Widget>[
-              Icon(Icons.favorite_rounded, color: accent, size: 20),
+              if (live)
+                HeartPulseRing(
+                  bpm: bpm.toDouble(),
+                  size: 32,
+                  color: accent,
+                  child: Icon(Icons.favorite_rounded, color: accent, size: 16),
+                )
+              else
+                Icon(Icons.favorite_rounded, color: accent, size: 20),
               const SizedBox(width: Space.sm),
               Expanded(
                 child: Text('Heart rate', style: theme.textTheme.titleSmall),

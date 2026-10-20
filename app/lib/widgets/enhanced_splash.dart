@@ -1,8 +1,29 @@
-import 'dart:math' as math;
-import 'package:flutter/material.dart';
-import '../main.dart' show MainNav;
+/// The opening screen: the product mark, the medical disclosure and one route
+/// into the app.
+///
+/// The previous version hand-painted its own background: a wave, 25 drifting
+/// particles, two glow rings and a neon title, all in hard-coded hex values and
+/// all outside the theme. It also carried two more animation controllers than
+/// the screen used, so the splash kept repainting particles while the person
+/// was reading the disclaimer.
+///
+/// The background is now the shared static [WaveBackdrop], coloured from the
+/// active theme. There are no shadows and no separate palette, so the screen
+/// follows light and dark mode like every other page. The animation that
+/// remains is the entrance - fade, scale and text slide - and the small icon
+/// breath; each controller is disposed.
+library;
 
+import 'package:flutter/material.dart';
+
+import '../main.dart' show MainNav;
+import '../theme/app_colors.dart';
+import '../theme/design_tokens.dart';
+import 'creative_effects.dart';
+
+/// The app's opening screen.
 class EnhancedSplashScreen extends StatefulWidget {
+  /// Create the splash.
   const EnhancedSplashScreen({super.key});
 
   @override
@@ -11,18 +32,14 @@ class EnhancedSplashScreen extends StatefulWidget {
 
 class _EnhancedSplashScreenState extends State<EnhancedSplashScreen>
     with TickerProviderStateMixin {
-  late AnimationController _mainController;
-  late AnimationController _iconController;
-  late AnimationController _textController;
-  late AnimationController _glowController;
-  late AnimationController _particlesController;
-  late AnimationController _waveController;
+  late final AnimationController _mainController;
+  late final AnimationController _iconController;
+  late final AnimationController _textController;
 
-  late Animation<double> _fadeAnimation;
-  late Animation<double> _scaleAnimation;
-  late Animation<double> _textOpacity;
-  late Animation<Offset> _textSlide;
-  late Animation<double> _glowAnimation;
+  late final Animation<double> _fadeAnimation;
+  late final Animation<double> _scaleAnimation;
+  late final Animation<double> _textOpacity;
+  late final Animation<Offset> _textSlide;
 
   bool _showDisclaimer = false;
   bool _disclaimerExpanded = false;
@@ -31,44 +48,46 @@ class _EnhancedSplashScreenState extends State<EnhancedSplashScreen>
   void initState() {
     super.initState();
 
-    _mainController = AnimationController(vsync: this, duration: const Duration(milliseconds: 1200));
-    _iconController = AnimationController(vsync: this, duration: const Duration(milliseconds: 2000));
-    _textController = AnimationController(vsync: this, duration: const Duration(milliseconds: 800));
-    _glowController = AnimationController(vsync: this, duration: const Duration(milliseconds: 2500))..repeat(reverse: true);
-    _particlesController = AnimationController(vsync: this, duration: const Duration(seconds: 10))..repeat();
-    _waveController = AnimationController(vsync: this, duration: const Duration(seconds: 4))..repeat();
+    _mainController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    );
+    _iconController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2000),
+    );
+    _textController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
 
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+    _fadeAnimation = Tween<double>(begin: 0, end: 1).animate(
       CurvedAnimation(parent: _mainController, curve: Curves.easeOut),
     );
-
-    _scaleAnimation = Tween<double>(begin: 0.3, end: 1.0).animate(
+    _scaleAnimation = Tween<double>(begin: 0.3, end: 1).animate(
       CurvedAnimation(parent: _mainController, curve: Curves.elasticOut),
     );
-
-    _textOpacity = Tween<double>(begin: 0.0, end: 1.0).animate(
+    _textOpacity = Tween<double>(begin: 0, end: 1).animate(
       CurvedAnimation(parent: _textController, curve: Curves.easeOut),
     );
-
-    _textSlide = Tween<Offset>(begin: const Offset(0, 0.5), end: Offset.zero).animate(
+    _textSlide = Tween<Offset>(
+      begin: const Offset(0, 0.5),
+      end: Offset.zero,
+    ).animate(
       CurvedAnimation(parent: _textController, curve: Curves.easeOutCubic),
     );
 
-    _glowAnimation = Tween<double>(begin: 0.3, end: 0.8).animate(
-      CurvedAnimation(parent: _glowController, curve: Curves.easeInOut),
-    );
-
     _mainController.forward();
-    Future.delayed(const Duration(milliseconds: 800), () {
+    Future<void>.delayed(const Duration(milliseconds: 800), () {
       if (mounted) _iconController.repeat(reverse: true);
     });
-    Future.delayed(const Duration(milliseconds: 600), () {
+    Future<void>.delayed(const Duration(milliseconds: 600), () {
       if (mounted) _textController.forward();
     });
-    Future.delayed(const Duration(milliseconds: 1800), () {
+    Future<void>.delayed(const Duration(milliseconds: 1800), () {
       if (mounted) setState(() => _showDisclaimer = true);
     });
-    Future.delayed(const Duration(milliseconds: 2200), () {
+    Future<void>.delayed(const Duration(milliseconds: 2200), () {
       if (mounted) setState(() => _disclaimerExpanded = true);
     });
   }
@@ -78,316 +97,371 @@ class _EnhancedSplashScreenState extends State<EnhancedSplashScreen>
     _mainController.dispose();
     _iconController.dispose();
     _textController.dispose();
-    _glowController.dispose();
-    _particlesController.dispose();
-    _waveController.dispose();
     super.dispose();
   }
 
   void _acceptAndContinue() {
-    Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const MainNav()));
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute<void>(builder: (_) => const MainNav()),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    final Color accent = AppColors.of(
+      AppColors.primary,
+      AppColors.darkPrimary,
+      context,
+    );
+    final Color second = AppColors.of(
+      AppColors.sleepPurple,
+      AppColors.darkSleep,
+      context,
+    );
+    final Color warning = AppColors.of(
+      AppColors.warning,
+      AppColors.darkWarning,
+      context,
+    );
+
     return Scaffold(
+      backgroundColor: theme.scaffoldBackgroundColor,
       body: Stack(
-        children: [
-          // Animated wave background
+        children: <Widget>[
           Positioned.fill(
-            child: AnimatedBuilder(
-              animation: _waveController,
-              builder: (context, child) {
-                return CustomPaint(
-                  painter: _SplashWavePainter(_waveController.value),
-                  size: Size.infinite,
-                );
-              },
-            ),
-          ),
-          
-          // Floating particles
-          Positioned.fill(
-            child: AnimatedBuilder(
-              animation: _particlesController,
-              builder: (context, child) {
-                return CustomPaint(
-                  painter: _SplashParticlePainter(_particlesController.value),
-                  size: Size.infinite,
-                );
-              },
-            ),
-          ),
-          
-          // Main content
-          Container(
-            width: double.infinity,
-            height: double.infinity,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  const Color(0xFF1E3A5F).withValues(alpha: 0.8),
-                  const Color(0xFF0F172A).withValues(alpha: 0.9),
-                ],
+            child: IgnorePointer(
+              child: WaveBackdrop(
+                color: accent,
+                opacity: 0.18,
               ),
             ),
-            child: SafeArea(
-              child: AnimatedBuilder(
-                animation: _mainController,
-                builder: (context, child) => Opacity(opacity: _fadeAnimation.value, child: child),
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(24),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const SizedBox(height: 40),
-
-                      // Animated App Icon with glow and particles
-                      AnimatedBuilder(
-                        animation: _mainController,
-                        builder: (context, child) => Transform.scale(
-                          scale: _scaleAnimation.value,
-                          child: Stack(
-                            alignment: Alignment.center,
-                            children: [
-                              // Outer glow ring
-                              AnimatedBuilder(
-                                animation: _glowController,
-                                builder: (context, _) {
-                                  return Container(
-                                    width: 160,
-                                    height: 160,
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: const Color(0xFF2563EB).withValues(alpha: _glowAnimation.value * 0.3),
-                                          blurRadius: 60,
-                                          spreadRadius: 20,
-                                        ),
-                                        BoxShadow(
-                                          color: const Color(0xFF7C3AED).withValues(alpha: _glowAnimation.value * 0.2),
-                                          blurRadius: 80,
-                                          spreadRadius: 30,
-                                        ),
-                                      ],
-                                    ),
-                                  );
-                                },
+          ),
+          SafeArea(
+            child: AnimatedBuilder(
+              animation: _mainController,
+              builder: (BuildContext context, Widget? child) => Opacity(
+                opacity: _fadeAnimation.value,
+                child: child,
+              ),
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(Space.xl),
+                child: Column(
+                  children: <Widget>[
+                    const SizedBox(height: Space.xxl),
+                    AnimatedBuilder(
+                      animation: _mainController,
+                      builder: (BuildContext context, Widget? child) =>
+                          Transform.scale(
+                        scale: _scaleAnimation.value,
+                        child: child,
+                      ),
+                      child: Container(
+                        width: 130,
+                        height: 130,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: <Color>[accent, second],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          borderRadius: BorderRadius.circular(Radii.xl),
+                          border: Border.all(
+                            color: theme.colorScheme.outlineVariant,
+                          ),
+                        ),
+                        child: AnimatedBuilder(
+                          animation: _iconController,
+                          builder: (BuildContext context, Widget? child) =>
+                              Transform.scale(
+                            scale: 1 + _iconController.value * 0.06,
+                            child: child,
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(Radii.xl),
+                            child: Image.asset(
+                              'assets/digital-saver-icon-transparent.png',
+                              width: 130,
+                              height: 130,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => Icon(
+                                Icons.favorite_rounded,
+                                color: theme.colorScheme.onPrimary,
+                                size: 70,
                               ),
-                              // Main icon
-                              AnimatedBuilder(
-                                animation: _iconController,
-                                builder: (context, child) => AnimatedBuilder(
-                                  animation: _glowController,
-                                  builder: (context, child) {
-                                    return Container(
-                                      width: 130,
-                                      height: 130,
-                                      decoration: BoxDecoration(
-                                        gradient: const LinearGradient(
-                                          colors: [Color(0xFF2563EB), Color(0xFF7C3AED)],
-                                          begin: Alignment.topLeft,
-                                          end: Alignment.bottomRight,
-                                        ),
-                                        borderRadius: BorderRadius.circular(32),
-                                        boxShadow: [
-                                          BoxShadow(color: const Color(0xFF2563EB).withValues(alpha: _glowAnimation.value), blurRadius: 30, spreadRadius: 5),
-                                          BoxShadow(color: const Color(0xFF7C3AED).withValues(alpha: _glowAnimation.value * 0.5), blurRadius: 50, spreadRadius: 10),
-                                        ],
-                                      ),
-                                      child: child,
-                                    );
-                                  },
-                                  child: Transform.scale(
-                                    scale: 1.0 + (_iconController.value * 0.08),
-                                    child: ClipRRect(
-                                      borderRadius: BorderRadius.circular(32),
-                                      child: Image.asset('assets/digital-saver-icon-transparent.png', width: 130, height: 130, fit: BoxFit.cover, errorBuilder: (_, __, ___) => const Icon(Icons.favorite, color: Colors.white, size: 70)),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
+                            ),
                           ),
                         ),
                       ),
-
-                      const SizedBox(height: 36),
-
-                      // Animated Title with neon effect
-                      AnimatedBuilder(
-                        animation: _textController,
-                        builder: (context, child) => Opacity(
-                          opacity: _textOpacity.value,
-                          child: SlideTransition(position: _textSlide, child: child),
-                        ),
-                        child: Column(
-                          children: [
-                            // Neon glow text
-                            ShaderMask(
-                              shaderCallback: (bounds) => const LinearGradient(
-                                colors: [Colors.white, Color(0xFF60A5FA), Colors.white],
-                              ).createShader(bounds),
-                              child: AnimatedBuilder(
-                                animation: _glowController,
-                                builder: (context, _) {
-                                  return Text(
-                                    'Digital Saver',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 42,
-                                      fontWeight: FontWeight.bold,
-                                      letterSpacing: 3,
-                                      shadows: [
-                                        Shadow(color: const Color(0xFF2563EB).withValues(alpha: _glowAnimation.value), blurRadius: 20),
-                                        Shadow(color: const Color(0xFF7C3AED).withValues(alpha: _glowAnimation.value * 0.5), blurRadius: 40),
-                                      ],
-                                    ),
-                                  );
-                                },
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            // Subtitle
-                            AnimatedBuilder(
-                              animation: _glowController,
-                              builder: (context, _) {
-                                return ShaderMask(
-                                  shaderCallback: (bounds) => LinearGradient(
-                                    colors: [
-                                      Colors.white.withValues(alpha: 0.7 + _glowAnimation.value * 0.3),
-                                      Colors.white.withValues(alpha: 0.5),
-                                      Colors.white.withValues(alpha: 0.7 + _glowAnimation.value * 0.3),
-                                    ],
-                                  ).createShader(bounds),
-                                  child: const Text('Health Monitoring System', style: TextStyle(color: Colors.white, fontSize: 16, letterSpacing: 1)),
-                                );
-                              },
-                            ),
-                          ],
+                    ),
+                    const SizedBox(height: Space.xxl),
+                    AnimatedBuilder(
+                      animation: _textController,
+                      builder: (BuildContext context, Widget? child) => Opacity(
+                        opacity: _textOpacity.value,
+                        child: SlideTransition(
+                          position: _textSlide,
+                          child: child,
                         ),
                       ),
-
-                      const SizedBox(height: 20),
-
-                      // Cambric Badge with pulse
-                      AnimatedBuilder(
-                        animation: _textController,
-                        builder: (context, child) => Opacity(opacity: _textOpacity.value, child: child),
-                        child: AnimatedBuilder(
-                          animation: _glowController,
-                          builder: (context, _) {
-                            return Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.1 + _glowAnimation.value * 0.1),
-                                borderRadius: BorderRadius.circular(30),
-                                border: Border.all(color: Colors.white.withValues(alpha: 0.2 + _glowAnimation.value * 0.1)),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: const Color(0xFF2563EB).withValues(alpha: _glowAnimation.value * 0.2),
-                                    blurRadius: 20,
-                                    spreadRadius: 2,
-                                  ),
-                                ],
+                      child: Column(
+                        children: <Widget>[
+                          ShaderMask(
+                            shaderCallback: (Rect bounds) => LinearGradient(
+                              colors: <Color>[
+                                theme.colorScheme.onSurface,
+                                accent,
+                                theme.colorScheme.onSurface,
+                              ],
+                            ).createShader(bounds),
+                            child: Text(
+                              'Digital Saver',
+                              style: theme.textTheme.displaySmall?.copyWith(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 3,
                               ),
-                              child: Row(mainAxisSize: MainAxisSize.min, children: [
-                                Container(
-                                  width: 28, height: 28,
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withValues(alpha: 0.15 + _glowAnimation.value * 0.1),
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: const Icon(Icons.shield, color: Colors.white, size: 16),
-                                ),
-                                const SizedBox(width: 10),
-                                Text('Made by Cambric', style: TextStyle(color: Colors.white.withValues(alpha: 0.8), fontSize: 14, fontWeight: FontWeight.w500)),
-                              ]),
-                            );
-                          },
-                        ),
+                            ),
+                          ),
+                          const SizedBox(height: Space.sm),
+                          Text(
+                            'Health Monitoring System',
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
+                              letterSpacing: 1,
+                            ),
+                          ),
+                        ],
                       ),
-
-                      const SizedBox(height: 50),
-
-                      // Stats row
-                      AnimatedBuilder(
-                        animation: _textController,
-                        builder: (context, child) => Opacity(opacity: _textOpacity.value, child: child),
+                    ),
+                    const SizedBox(height: Space.xl),
+                    AnimatedBuilder(
+                      animation: _textController,
+                      builder: (BuildContext context, Widget? child) => Opacity(
+                        opacity: _textOpacity.value,
+                        child: child,
+                      ),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: Space.xl,
+                          vertical: Space.sm,
+                        ),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.surfaceContainerHighest,
+                          borderRadius: BorderRadius.circular(Radii.pill),
+                          border: Border.all(
+                            color: theme.colorScheme.outlineVariant,
+                          ),
+                        ),
                         child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                          children: [
-                            _buildStatItem('❤️', 'Heart Rate', 'Real-time'),
-                            _buildStatItem('💨', 'SpO2', 'Monitoring'),
-                            _buildStatItem('🚨', 'Fall Detection', 'Alert'),
+                          mainAxisSize: MainAxisSize.min,
+                          children: <Widget>[
+                            Container(
+                              width: 28,
+                              height: 28,
+                              decoration: BoxDecoration(
+                                color: theme.colorScheme.surface,
+                                borderRadius: BorderRadius.circular(Radii.sm),
+                              ),
+                              child: Icon(
+                                Icons.shield_outlined,
+                                color: accent,
+                                size: 16,
+                              ),
+                            ),
+                            const SizedBox(width: Space.sm),
+                            Text(
+                              'Made by Cambric',
+                              style: theme.textTheme.labelMedium,
+                            ),
                           ],
                         ),
                       ),
-
-                      const SizedBox(height: 40),
-
-                      // Disclaimer Section
-                      AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 500),
-                        child: _showDisclaimer
+                    ),
+                    const SizedBox(height: Space.xxl),
+                    AnimatedBuilder(
+                      animation: _textController,
+                      builder: (BuildContext context, Widget? child) => Opacity(
+                        opacity: _textOpacity.value,
+                        child: child,
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: <Widget>[
+                          _buildStatItem(
+                            theme,
+                            Icons.favorite_rounded,
+                            'Heart Rate',
+                            'Real-time',
+                          ),
+                          _buildStatItem(
+                            theme,
+                            Icons.air_rounded,
+                            'SpO2',
+                            'Monitoring',
+                          ),
+                          _buildStatItem(
+                            theme,
+                            Icons.warning_amber_rounded,
+                            'Fall Detection',
+                            'Alert',
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: Space.xxl),
+                    AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 500),
+                      child: _showDisclaimer
                           ? AnimatedContainer(
                               duration: const Duration(milliseconds: 500),
                               curve: Curves.easeOutCubic,
-                              padding: const EdgeInsets.all(20),
+                              padding: const EdgeInsets.all(Space.xl),
                               decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.08),
-                                borderRadius: BorderRadius.circular(24),
-                                border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withValues(alpha: 0.2),
-                                    blurRadius: 30,
-                                    offset: const Offset(0, 10),
+                                color:
+                                    theme.colorScheme.surfaceContainerHighest,
+                                borderRadius: BorderRadius.circular(Radii.xl),
+                                border: Border.all(
+                                  color: theme.colorScheme.outlineVariant,
+                                ),
+                              ),
+                              child: Column(
+                                children: <Widget>[
+                                  Row(
+                                    children: <Widget>[
+                                      Container(
+                                        padding: const EdgeInsets.all(Space.sm),
+                                        decoration: BoxDecoration(
+                                          color:
+                                              warning.withValues(alpha: 0.16),
+                                          borderRadius:
+                                              BorderRadius.circular(Radii.sm),
+                                        ),
+                                        child: Icon(
+                                          Icons.warning_amber_rounded,
+                                          color: warning,
+                                          size: 24,
+                                        ),
+                                      ),
+                                      const SizedBox(width: Space.md),
+                                      Expanded(
+                                        child: Text(
+                                          'Medical Disclaimer',
+                                          style: theme.textTheme.titleMedium,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: Space.lg),
+                                  AnimatedCrossFade(
+                                    firstChild: const SizedBox.shrink(),
+                                    secondChild: Column(
+                                      children: <Widget>[
+                                        Text(
+                                          'Digital Saver is for informational '
+                                          'purposes only. Always consult a '
+                                          'qualified healthcare professional '
+                                          'for medical concerns.',
+                                          style: theme.textTheme.bodySmall,
+                                        ),
+                                        const SizedBox(height: Space.md),
+                                        Container(
+                                          padding:
+                                              const EdgeInsets.all(Space.md),
+                                          decoration: BoxDecoration(
+                                            color:
+                                                warning.withValues(alpha: 0.1),
+                                            borderRadius: BorderRadius.circular(
+                                              Radii.md,
+                                            ),
+                                            border: Border.all(
+                                              color: warning.withValues(
+                                                  alpha: 0.3),
+                                            ),
+                                          ),
+                                          child: Row(
+                                            children: <Widget>[
+                                              Icon(
+                                                Icons.info_outline_rounded,
+                                                color: warning,
+                                                size: 18,
+                                              ),
+                                              const SizedBox(width: Space.sm),
+                                              Expanded(
+                                                child: Text(
+                                                  'This app is NOT a certified '
+                                                  'medical device.',
+                                                  style: theme
+                                                      .textTheme.bodySmall
+                                                      ?.copyWith(
+                                                    color: warning,
+                                                    fontWeight: FontWeight.w500,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        const SizedBox(height: Space.xl),
+                                        SizedBox(
+                                          width: double.infinity,
+                                          child: FilledButton(
+                                            onPressed: _acceptAndContinue,
+                                            style: FilledButton.styleFrom(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                vertical: Space.lg,
+                                              ),
+                                            ),
+                                            child: const Row(
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment.center,
+                                              children: <Widget>[
+                                                Text(
+                                                  'I Understand & Continue',
+                                                  style: TextStyle(
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                ),
+                                                SizedBox(width: Space.sm),
+                                                Icon(
+                                                  Icons.arrow_forward_rounded,
+                                                  size: 20,
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    crossFadeState: _disclaimerExpanded
+                                        ? CrossFadeState.showSecond
+                                        : CrossFadeState.showFirst,
+                                    duration: const Duration(milliseconds: 400),
                                   ),
                                 ],
                               ),
-                              child: Column(children: [
-                                Row(children: [
-                                  Container(padding: const EdgeInsets.all(10), decoration: BoxDecoration(color: Colors.amber.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(12)), child: const Icon(Icons.warning_amber_rounded, color: Colors.amber, size: 24)),
-                                  const SizedBox(width: 12),
-                                  const Expanded(child: Text('Medical Disclaimer', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold))),
-                                ]),
-                                const SizedBox(height: 16),
-                                AnimatedCrossFade(
-                                  firstChild: const SizedBox.shrink(),
-                                  secondChild: Column(children: [
-                                    const Text('Digital Saver is for informational purposes only. Always consult a qualified healthcare professional for medical concerns.', style: TextStyle(color: Colors.white70, fontSize: 13, height: 1.5)),
-                                    const SizedBox(height: 12),
-                                    Container(padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: Colors.amber.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.amber.withValues(alpha: 0.3))), child: const Row(children: [
-                                      Icon(Icons.info_outline, color: Colors.amber, size: 18),
-                                      SizedBox(width: 8),
-                                      Expanded(child: Text('This app is NOT a certified medical device.', style: TextStyle(color: Colors.amber, fontSize: 12, fontWeight: FontWeight.w500))),
-                                    ])),
-                                    const SizedBox(height: 20),
-                                    SizedBox(width: double.infinity, child: ElevatedButton(
-                                      onPressed: _acceptAndContinue,
-                                      style: ElevatedButton.styleFrom(backgroundColor: Colors.white, foregroundColor: const Color(0xFF2563EB), padding: const EdgeInsets.symmetric(vertical: 16), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)), elevation: 4),
-                                      child: const Row(mainAxisAlignment: MainAxisAlignment.center, children: [Text('I Understand & Continue', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)), SizedBox(width: 8), Icon(Icons.arrow_forward, size: 20)]),
-                                    )),
-                                  ]),
-                                  crossFadeState: _disclaimerExpanded ? CrossFadeState.showSecond : CrossFadeState.showFirst,
-                                  duration: const Duration(milliseconds: 400),
-                                ),
-                              ]),
                             )
-                          : Column(children: [
-                              SizedBox(width: 50, height: 50, child: CircularProgressIndicator(strokeWidth: 3, color: Colors.white.withValues(alpha: 0.8))),
-                              const SizedBox(height: 16),
-                              const Text('Loading...', style: TextStyle(color: Colors.white70, fontSize: 14)),
-                            ]),
-                      ),
-
-                      const SizedBox(height: 40),
-                    ],
-                  ),
+                          : Column(
+                              children: <Widget>[
+                                SizedBox(
+                                  width: 50,
+                                  height: 50,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 3,
+                                    color: accent,
+                                  ),
+                                ),
+                                const SizedBox(height: Space.lg),
+                                Text(
+                                  'Loading…',
+                                  style: theme.textTheme.bodySmall,
+                                ),
+                              ],
+                            ),
+                    ),
+                    const SizedBox(height: Space.xxl),
+                  ],
                 ),
               ),
             ),
@@ -397,114 +471,24 @@ class _EnhancedSplashScreenState extends State<EnhancedSplashScreen>
     );
   }
 
-  Widget _buildStatItem(String emoji, String title, String subtitle) {
+  Widget _buildStatItem(
+    ThemeData theme,
+    IconData icon,
+    String title,
+    String subtitle,
+  ) {
     return Column(
-      children: [
-        Text(emoji, style: const TextStyle(fontSize: 28)),
-        const SizedBox(height: 4),
-        Text(title, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600)),
-        Text(subtitle, style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 10)),
+      children: <Widget>[
+        Icon(icon, size: 22, color: theme.colorScheme.primary),
+        const SizedBox(height: Space.xs),
+        Text(title, style: theme.textTheme.labelMedium),
+        Text(
+          subtitle,
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+        ),
       ],
     );
   }
-}
-
-class _SplashWavePainter extends CustomPainter {
-  final double animation;
-  
-  _SplashWavePainter(this.animation);
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final colors = [
-      const Color(0xFF2563EB).withValues(alpha: 0.1),
-      const Color(0xFF7C3AED).withValues(alpha: 0.1),
-      const Color(0xFF06B6D4).withValues(alpha: 0.05),
-    ];
-
-    for (int i = 0; i < colors.length; i++) {
-      final path = Path();
-      final paint = Paint()
-        ..color = colors[i]
-        ..style = PaintingStyle.fill;
-
-      final offset = i * 0.3;
-      final amplitude = 30.0 - i * 8.0;
-      final frequency = 0.8 + i * 0.2;
-
-      path.moveTo(0, size.height);
-
-      for (double x = 0; x <= size.width; x += 5) {
-        final y = size.height * (0.6 + i * 0.1) +
-            amplitude * math.sin((x / size.width * frequency * 2 * math.pi) + (animation + offset) * 2 * math.pi);
-        path.lineTo(x, y);
-      }
-
-      path.lineTo(size.width, size.height);
-      path.close();
-
-      canvas.drawPath(path, paint);
-    }
-  }
-
-  @override
-  bool shouldRepaint(_SplashWavePainter oldDelegate) {
-    return oldDelegate.animation != animation;
-  }
-}
-
-class _SplashParticlePainter extends CustomPainter {
-  final double animation;
-  final _random = math.Random(42);
-  late final List<_Particle> _particles;
-
-  _SplashParticlePainter(this.animation) {
-    _particles = List.generate(25, (_) => _Particle(_random));
-  }
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    for (final particle in _particles) {
-      final yOffset = (animation * particle.speed * size.height) % size.height;
-      final xWobble = math.sin(animation * particle.wobbleSpeed * 2 * math.pi) * 30;
-      
-      final x = particle.x * size.width + xWobble;
-      final y = (particle.y * size.height + yOffset) % size.height;
-
-      final paint = Paint()
-        ..color = particle.color.withValues(alpha: particle.opacity)
-        ..style = PaintingStyle.fill;
-
-      canvas.drawCircle(Offset(x, y), particle.size, paint);
-    }
-  }
-
-  @override
-  bool shouldRepaint(_SplashParticlePainter oldDelegate) {
-    return oldDelegate.animation != animation;
-  }
-}
-
-class _Particle {
-  final double x;
-  final double y;
-  final double size;
-  final double speed;
-  final double opacity;
-  final double wobbleSpeed;
-  final Color color;
-
-  _Particle(math.Random random)
-      : x = random.nextDouble(),
-        y = random.nextDouble(),
-        size = 2 + random.nextDouble() * 3,
-        speed = 0.1 + random.nextDouble() * 0.2,
-        opacity = 0.1 + random.nextDouble() * 0.3,
-        wobbleSpeed = 0.5 + random.nextDouble(),
-        color = [
-          const Color(0xFF2563EB),
-          const Color(0xFF7C3AED),
-          const Color(0xFF06B6D4),
-          const Color(0xFF10B981),
-        ][random.nextInt(4)];
 }

@@ -20,6 +20,12 @@
 /// only the samples that exist. A window with no samples says so, and the
 /// interpretation of the latest reading comes from
 /// [health_interpretation.dart] rather than from words chosen here.
+///
+/// The "Patterns" panel is the measured half of that idea. Its three statements
+/// - a resting estimate, a direction and the lowest oxygen reading - come from
+/// [HealthPatternsService], which needs a stated minimum before it will answer.
+/// When that minimum is not met the panel shows `--` and says how much data is
+/// missing rather than filling the gap with a guess.
 library;
 
 import 'dart:math' as math;
@@ -27,6 +33,7 @@ import 'dart:math' as math;
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 
+import '../services/health_analysis_service_v2.dart';
 import '../services/local_store.dart';
 import '../services/veyro_protocol.dart';
 import '../theme/app_colors.dart';
@@ -233,7 +240,8 @@ List<TrendPoint> trendPoints(
   if (measured.isEmpty) return <TrendPoint>[];
 
   final int limit = maxPoints < 1 ? 1 : maxPoints;
-  final int bucketSize = (measured.length / limit).ceil().clamp(1, measured.length);
+  final int bucketSize =
+      (measured.length / limit).ceil().clamp(1, measured.length);
   final List<TrendPoint> points = <TrendPoint>[];
 
   for (var start = 0; start < measured.length; start += bucketSize) {
@@ -258,7 +266,13 @@ List<TrendPoint> trendPoints(
 /// What the stored history can say about the last [TrendPeriod].
 class HealthTrendsScreen extends StatefulWidget {
   /// Create the trends view.
-  const HealthTrendsScreen({super.key});
+  ///
+  /// [samples] exists for tests and previews: when supplied, the screen uses
+  /// them instead of opening the on-device history. The app always omits it.
+  const HealthTrendsScreen({super.key, this.samples});
+
+  /// Pre-supplied stored samples, or null to read [LocalStore].
+  final List<WatchSample>? samples;
 
   @override
   State<HealthTrendsScreen> createState() => _HealthTrendsScreenState();
@@ -273,7 +287,13 @@ class _HealthTrendsScreenState extends State<HealthTrendsScreen> {
   @override
   void initState() {
     super.initState();
-    _load();
+    final List<WatchSample>? supplied = widget.samples;
+    if (supplied != null) {
+      _samples = supplied;
+      _loading = false;
+    } else {
+      _load();
+    }
   }
 
   Future<void> _load() async {
@@ -333,6 +353,7 @@ class _HealthTrendsScreenState extends State<HealthTrendsScreen> {
     );
     final WatchSample? latest = _latestReading(window);
     final List<DailyTrend> days = dailyTrends(window);
+    final HealthPatterns patterns = HealthPatternsService.analyze(window);
 
     return DsSection(
       title: 'Health trends',
@@ -390,8 +411,9 @@ class _HealthTrendsScreenState extends State<HealthTrendsScreen> {
                               ),
                               DsMetricTile(
                                 label: 'Average oxygen',
-                                value:
-                                    summary.hasOxygen ? '${summary.averageSpO2}' : '--',
+                                value: summary.hasOxygen
+                                    ? '${summary.averageSpO2}'
+                                    : '--',
                                 unit: summary.hasOxygen ? '%' : null,
                                 accent: oxygen,
                                 icon: Icons.air_rounded,
@@ -408,6 +430,8 @@ class _HealthTrendsScreenState extends State<HealthTrendsScreen> {
                             ],
                           ),
                           const SizedBox(height: Space.xxl),
+                          _PatternsCard(patterns: patterns),
+                          const SizedBox(height: Space.xl),
                           _ChartCard(
                             title: 'Heart rate',
                             icon: Icons.favorite_rounded,
@@ -473,19 +497,18 @@ const List<String> _monthNames = <String>[
   'Dec',
 ];
 
-String _dayLabel(DateTime time) =>
-    '${time.day} ${_monthNames[time.month - 1]}';
+String _dayLabel(DateTime time) => '${time.day} ${_monthNames[time.month - 1]}';
 
-String _clockLabel(DateTime time) =>
-    '${time.hour.toString().padLeft(2, '0')}:'
+String _clockLabel(DateTime time) => '${time.hour.toString().padLeft(2, '0')}:'
     '${time.minute.toString().padLeft(2, '0')}';
 
 String _rangeLabel(List<WatchSample> window) {
   if (window.isEmpty) return 'no stored samples';
   final DateTime first = window.first.at;
   final DateTime last = window.last.at;
-  final bool sameDay =
-      first.year == last.year && first.month == last.month && first.day == last.day;
+  final bool sameDay = first.year == last.year &&
+      first.month == last.month &&
+      first.day == last.day;
   if (sameDay) {
     return '${_dayLabel(first)}, ${_clockLabel(first)} to ${_clockLabel(last)}';
   }
@@ -577,6 +600,166 @@ class _NothingInWindow extends StatelessWidget {
   }
 }
 
+/// The measured patterns in the current window, or an honest empty state.
+///
+/// Every number here is derived from [HealthPatternsService.analyze]; nothing
+/// is a target, a score or a comparison with another person. A statement that
+/// the samples cannot support is shown as `--` with the reason, never as a
+/// plausible-looking default.
+class _PatternsCard extends StatelessWidget {
+  const _PatternsCard({required this.patterns});
+
+  final HealthPatterns patterns;
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+
+    return DsCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              Icon(
+                Icons.insights_outlined,
+                size: 18,
+                color: theme.colorScheme.primary,
+              ),
+              const SizedBox(width: Space.sm),
+              Expanded(
+                child: Text('Patterns', style: theme.textTheme.titleSmall),
+              ),
+            ],
+          ),
+          const SizedBox(height: Space.xxs),
+          Text(
+            'What the stored samples in this window can support. A pattern is '
+            'shown only once there are enough measurements for it to mean '
+            'something.',
+            style: theme.textTheme.bodySmall,
+          ),
+          const SizedBox(height: Space.md),
+          if (!patterns.hasAnyReading)
+            const DsEmptyState(
+              icon: Icons.insights_outlined,
+              title: 'No patterns in this window',
+              message: 'None of the samples stored in this window carried a '
+                  'heart rate or oxygen reading. Patterns appear only after '
+                  'the watch stores measurements; nothing is inferred from an '
+                  'empty window.',
+            )
+          else ...<Widget>[
+            _PatternRow(
+              label: 'Resting heart rate',
+              value: patterns.hasRestingHeartRate
+                  ? '${patterns.restingHeartRate} BPM'
+                  : '--',
+              detail: patterns.hasRestingHeartRate
+                  ? 'Mean of the lowest quarter of '
+                      '${patterns.heartRateSamples} measured readings across '
+                      '${patterns.daysWithHeartRate} '
+                      '${patterns.daysWithHeartRate == 1 ? 'day' : 'days'}.'
+                  : 'Needs at least '
+                      '${HealthPatternsService.minimumHeartRateSamples} measured '
+                      'readings on '
+                      '${HealthPatternsService.minimumDays} different days. This '
+                      'window has ${patterns.heartRateSamples} on '
+                      '${patterns.daysWithHeartRate} '
+                      '${patterns.daysWithHeartRate == 1 ? 'day' : 'days'}.',
+            ),
+            Divider(color: theme.colorScheme.outlineVariant),
+            _PatternRow(
+              label: 'Heart rate direction',
+              value: patterns.hasDirection
+                  ? '${patterns.direction.label} '
+                      '${_changeLabel(patterns.changeBpm)}'
+                  : '--',
+              detail: patterns.hasDirection
+                  ? _directionDetail(patterns)
+                  : 'Not enough measured readings to compare the first and '
+                      'second halves of the window.',
+            ),
+            Divider(color: theme.colorScheme.outlineVariant),
+            _PatternRow(
+              label: 'Lowest oxygen',
+              value: patterns.hasOxygen ? '${patterns.lowestOxygen}%' : '--',
+              detail: patterns.hasOxygen
+                  ? 'Lowest of ${patterns.oxygenSamples} measured oxygen '
+                      '${patterns.oxygenSamples == 1 ? 'reading' : 'readings'}.'
+                  : 'No sample in this window carried an oxygen reading.',
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  static String _changeLabel(int changeBpm) {
+    if (changeBpm > 0) return '(+$changeBpm BPM)';
+    if (changeBpm < 0) return '($changeBpm BPM)';
+    return '(no change)';
+  }
+
+  static String _directionDetail(HealthPatterns patterns) {
+    final int change = patterns.changeBpm;
+    if (change == 0) {
+      return 'The later half averaged the same as the earlier half, within '
+          '${HealthPatternsService.trendThresholdBpm} BPM.';
+    }
+    final String amount = change.abs().toString();
+    if (change > 0) {
+      return 'The later half averaged $amount BPM higher than the earlier '
+          'half. A difference of at least '
+          '${HealthPatternsService.trendThresholdBpm} BPM is called rising.';
+    }
+    return 'The later half averaged $amount BPM lower than the earlier half. '
+        'A difference of at least '
+        '${HealthPatternsService.trendThresholdBpm} BPM is called falling.';
+  }
+}
+
+/// One statement in the Patterns card.
+class _PatternRow extends StatelessWidget {
+  const _PatternRow({
+    required this.label,
+    required this.value,
+    required this.detail,
+  });
+
+  final String label;
+  final String value;
+  final String detail;
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: Space.sm),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Wrap(
+            spacing: Space.sm,
+            runSpacing: Space.xs,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: <Widget>[
+              Text(label, style: theme.textTheme.bodyMedium),
+              Text(
+                value,
+                style: theme.textTheme.titleSmall,
+              ),
+            ],
+          ),
+          const SizedBox(height: Space.xxs),
+          Text(detail, style: theme.textTheme.bodySmall),
+        ],
+      ),
+    );
+  }
+}
+
 /// A line chart drawn only from stored samples.
 class _ChartCard extends StatelessWidget {
   const _ChartCard({
@@ -647,18 +830,16 @@ class _ChartCard extends StatelessWidget {
   }
 
   LineChartData _data(ThemeData theme) {
-    final List<double> values = points
-        .map((TrendPoint point) => point.value.toDouble())
-        .toList();
+    final List<double> values =
+        points.map((TrendPoint point) => point.value.toDouble()).toList();
     final double lowest = values.reduce(math.min);
     final double highest = values.reduce(math.max);
     final double padding = math.max(2, (highest - lowest) * 0.15);
     final double minY = math.max(0, lowest - padding);
     final double maxY = highest + padding;
     final double minX = points.first.minute;
-    final double maxX = points.length == 1
-        ? minX + 1
-        : math.max(points.last.minute, minX + 1);
+    final double maxX =
+        points.length == 1 ? minX + 1 : math.max(points.last.minute, minX + 1);
     // A time of day is ambiguous once the window runs over more than a day, so
     // a multi-day axis also names the day.
     final bool spansDays = maxX - minX > 24 * 60;
@@ -702,8 +883,7 @@ class _ChartCard extends StatelessWidget {
             reservedSize: spansDays ? 30 : 24,
             interval: math.max(1, (maxX - minX) / 2),
             getTitlesWidget: (double value, TitleMeta meta) {
-              final DateTime at =
-                  origin.add(Duration(minutes: value.round()));
+              final DateTime at = origin.add(Duration(minutes: value.round()));
               final String label = spansDays
                   ? '${_dayLabel(at)}\n${_clockLabel(at)}'
                   : _clockLabel(at);

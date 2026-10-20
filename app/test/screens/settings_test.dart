@@ -125,6 +125,33 @@ void main() {
     );
   });
 
+  testWidgets('the dim-after-dark switch saves and explains the hours',
+      (WidgetTester tester) async {
+    await pumpSettings(tester, const Size(390, 844));
+
+    expect(await StorageService.dimAfterDark(), isFalse);
+    final Finder tile = find.widgetWithText(SwitchListTile, 'Dim after dark');
+    await tester.ensureVisible(tile);
+    await tester.pumpAndSettle();
+
+    expect(
+      find.textContaining('Off. The theme you picked is used all day.'),
+      findsOneWidget,
+    );
+
+    await tester.tap(tile);
+    await tester.pump();
+    await tester.pump();
+
+    expect(await StorageService.dimAfterDark(), isTrue);
+    expect(
+      find.textContaining(
+        'On. The dark theme is used from 20:00 to 07:00.',
+      ),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('changing each threshold persists', (WidgetTester tester) async {
     await pumpSettings(tester, const Size(390, 844));
 

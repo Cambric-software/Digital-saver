@@ -1,304 +1,411 @@
+/// Watches the published releases and, when asked, applies one safely.
+///
+/// The old file had three problems that all pointed the same way: it claimed
+/// more than it had done. It pointed "download" at invented filenames that
+/// 404'd, downloaded an APK and then called `pm install` as though a normal
+/// app could install silently, and reported "App Updated!" whether or not the
+/// system had accepted anything.
+///
+/// This version separates checking from applying. The release feed is decoded
+/// as JSON, the package for the current platform is selected from the assets
+/// GitHub actually published, and its SHA-256 is read from the asset `digest`
+/// or its `.sha256` sidecar. Applying is delegated to [PackageInstaller], which
+/// refuses a package without a published hash, deletes one that does not match,
+/// and distinguishes a completed desktop install from an Android hand-off that
+/// the person still has to confirm.
+library;
+
 import 'dart:async';
-import 'dart:io';
+import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:http/http.dart' as http;
-import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'dart:convert';
 
-// AppVersion now lives in app_version.dart as the single source of truth. It
-// used to be declared here as '1.0.2' while pubspec.yaml said 1.0.3+3 and the
-// newest published tag was v1.0.3-beta, so the app under-reported itself and
-// could never decide it was current.
-//
-// The old downloadUrl getter was worse than stale: it built URLs from
-// filenames that have never existed on any release
-// (digital_saver_windows_setup.exe, digital_saver_linux_installer.run,
-// digital_saver_android_v1.0.1-beta.apk), pinned to v1.0.1-beta. Every one of
-// those links 404s. Download URLs are now resolved from the actual release
-// assets published on GitHub, never invented locally.
+import 'app_installer_service.dart';
 import 'app_version.dart';
+import 'release_assets.dart';
 
 export 'app_version.dart';
 
+/// A release, plus the package this platform would use if it can be verified.
 class UpdateInfo {
-  final String version;
-  final String downloadUrl;
-  final String releaseNotes;
-  final DateTime releaseDate;
-  final bool isNewer;
-
+  /// Create a release description.
   UpdateInfo({
     required this.version,
     required this.downloadUrl,
     required this.releaseNotes,
     required this.releaseDate,
     required this.isNewer,
+    this.asset,
   });
+
+  /// Version from the release tag, without a leading `v`.
+  final String version;
+
+  /// Direct package URL when one was published, otherwise the releases page.
+  final String downloadUrl;
+
+  /// Release notes as published.
+  final String releaseNotes;
+
+  /// Publication time.
+  final DateTime releaseDate;
+
+  /// Whether this release is newer than the running build.
+  final bool isNewer;
+
+  /// The matching package, or null when no asset fits this platform.
+  final ReleaseAsset? asset;
+
+  /// Whether a package exists and carries a published SHA-256.
+  bool get canVerify => asset?.hasChecksum ?? false;
 }
 
+/// Checks for releases and applies a verified package on request.
 class AutoUpdateService extends ChangeNotifier {
+  /// Whether the network check runs at all.
   static const bool networkUpdateChecksEnabled = true;
+
+  /// Create the service.
+  ///
+  /// [installer] exists so a test can drive the install states without a
+  /// network or a real platform dialog.
+  AutoUpdateService({PackageInstaller? installer})
+      : _installer = installer ?? PackageInstaller() {
+    _initNotifications();
+  }
+
+  final PackageInstaller _installer;
+
   UpdateInfo? _latestUpdate;
   bool _isChecking = false;
   bool _updateAvailable = false;
   String? _error;
   DateTime? _lastChecked;
-  
-  // Auto-update state
+
   bool _isAutoUpdating = false;
   double _downloadProgress = 0.0;
+  String? _autoUpdateMessage;
   String? _autoUpdateError;
-  
-  // Notification plugin
+  bool _manualInstallNeeded = false;
+
   FlutterLocalNotificationsPlugin? _notificationsPlugin;
 
+  /// The release read by the last successful check, if any.
   UpdateInfo? get latestUpdate => _latestUpdate;
+
+  /// Whether a check is in progress.
   bool get isChecking => _isChecking;
+
+  /// Whether the last check found a newer release.
   bool get updateAvailable => _updateAvailable;
+
+  /// Why the last check failed, if it did.
   String? get error => _error;
+
+  /// When the last successful check finished.
   DateTime? get lastChecked => _lastChecked;
+
+  /// Whether a verified package is being downloaded or applied.
   bool get isAutoUpdating => _isAutoUpdating;
+
+  /// Download progress from 0 to 1, or 0 when nothing is downloading.
   double get downloadProgress => _downloadProgress;
+
+  /// What the last install attempt actually did, in its own words.
+  String? get autoUpdateMessage => _autoUpdateMessage;
+
+  /// Why the last install attempt failed, if it did.
   String? get autoUpdateError => _autoUpdateError;
 
-  AutoUpdateService() {
-    _initNotifications();
-  }
+  /// Whether the UI should offer the releases page because automatic install
+  /// could not finish here.
+  bool get needsManualInstall => _updateAvailable && _manualInstallNeeded;
 
   Future<void> _initNotifications() async {
     _notificationsPlugin = FlutterLocalNotificationsPlugin();
-    
-    const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
-    const iosSettings = DarwinInitializationSettings(
+
+    const AndroidInitializationSettings androidSettings =
+        AndroidInitializationSettings('@mipmap/ic_launcher');
+    const DarwinInitializationSettings iosSettings =
+        DarwinInitializationSettings(
       requestAlertPermission: true,
       requestBadgePermission: true,
       requestSoundPermission: true,
     );
-    
-    const initSettings = InitializationSettings(
+    const InitializationSettings initSettings = InitializationSettings(
       android: androidSettings,
       iOS: iosSettings,
     );
-    
+
     await _notificationsPlugin?.initialize(initSettings);
   }
 
+  /// Read the newest release and remember the package for this platform.
   Future<void> checkForUpdates() async {
     if (!networkUpdateChecksEnabled || _isChecking) return;
-    
+
     _isChecking = true;
     _error = null;
     notifyListeners();
 
     try {
-      // Check GitHub releases API for latest version
-      final response = await http.get(
-        Uri.parse('https://api.github.com/repos/Cambric-software/Digital-saver/releases/latest'),
-        headers: {'Accept': 'application/json'},
+      final http.Response response = await http.get(
+        Uri.parse(
+          'https://api.github.com/repos/'
+          '${AppVersion.repository}/releases/latest',
+        ),
+        headers: <String, String>{'Accept': 'application/json'},
       ).timeout(const Duration(seconds: 10));
 
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        final latestVersion = data['tag_name']?.toString().replaceFirst('v', '') ?? '0.0.0';
-        final releaseNotes = data['body']?.toString() ?? 'New update available!';
-        final releaseDateStr = data['published_at']?.toString();
-        final releaseDate = releaseDateStr != null 
-            ? DateTime.tryParse(releaseDateStr) ?? DateTime.now()
-            : DateTime.now();
-
-        // Parse version numbers for comparison
-        final currentParts = AppVersion.current.split('.').map((e) => int.tryParse(e) ?? 0).toList();
-        final latestParts = latestVersion.split('.').map((e) => int.tryParse(e) ?? 0).toList();
-
-        bool isNewer = false;
-        for (int i = 0; i < 3; i++) {
-          final curr = i < currentParts.length ? currentParts[i] : 0;
-          final lat = i < latestParts.length ? latestParts[i] : 0;
-          if (lat > curr) {
-            isNewer = true;
-            break;
-          } else if (lat < curr) {
-            break;
-          }
-        }
-
-        // Start from the real releases page and let the asset scan below
-        // replace it with an actual published package URL. An invented
-        // filename would be a link that 404s.
-        String downloadUrl = AppVersion.releasesPage;
-        
-        // Safely get assets - handle null, missing, or non-list assets
-        List<dynamic>? rawAssets = data['assets'];
-        if (rawAssets is List) {
-          for (final asset in rawAssets) {
-            if (asset is! Map) continue;
-            final name = (asset['name'] as String?)?.toLowerCase() ?? '';
-            if (name.isEmpty) continue;
-            
-            final url = (asset['browser_download_url'] as String?) ?? '';
-            if (url.isEmpty) continue;
-            
-            if (defaultTargetPlatform == TargetPlatform.android && name.contains('android')) {
-              downloadUrl = url;
-              break;
-            } else if (defaultTargetPlatform == TargetPlatform.windows && name.contains('windows')) {
-              downloadUrl = url;
-              break;
-            } else if (defaultTargetPlatform == TargetPlatform.linux && name.contains('linux')) {
-              downloadUrl = url;
-              break;
-            }
-          }
-        }
-
-        _latestUpdate = UpdateInfo(
-          version: latestVersion,
-          downloadUrl: downloadUrl,
-          releaseNotes: releaseNotes,
-          releaseDate: releaseDate,
-          isNewer: isNewer,
-        );
-
-        _updateAvailable = isNewer;
-        final now = DateTime.now();
-        _lastChecked = now;
-
-        // Save last checked time
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('last_update_check', now.toIso8601String());
-        
-        // Auto-update if conditions are met
-        if (isNewer && AppVersion.supportsAutoUpdate && Platform.isAndroid) {
-          _startAutoUpdate();
-        }
-      } else {
-        _error = 'Failed to check for updates';
+      if (response.statusCode != 200) {
+        _error = 'The release feed answered ${response.statusCode}.';
+        return;
       }
-    } catch (e) {
-      _error = 'Error checking updates: $e';
+
+      final Object? decoded = json.decode(response.body);
+      if (decoded is! Map<String, dynamic>) {
+        _error = 'The release feed was not a JSON object.';
+        return;
+      }
+
+      final String latestVersion =
+          decoded['tag_name']?.toString().replaceFirst('v', '') ?? '0.0.0';
+      final String releaseNotes =
+          decoded['body']?.toString() ?? 'No release notes were published.';
+      final DateTime releaseDate =
+          DateTime.tryParse(decoded['published_at']?.toString() ?? '') ??
+              DateTime.now();
+
+      final bool isNewer =
+          _compareVersions(latestVersion, AppVersion.current) > 0;
+
+      final List<dynamic>? rawAssets =
+          decoded['assets'] is List ? decoded['assets'] as List<dynamic> : null;
+      final ReleaseAsset? asset = await _selectAsset(rawAssets);
+
+      _latestUpdate = UpdateInfo(
+        version: latestVersion,
+        downloadUrl: asset?.url ?? AppVersion.releasesPage,
+        releaseNotes: releaseNotes,
+        releaseDate: releaseDate,
+        isNewer: isNewer,
+        asset: asset,
+      );
+      _updateAvailable = isNewer;
+      _lastChecked = DateTime.now();
+
+      final SharedPreferences prefs = await SharedPreferences.getInstance();
+      await prefs.setString(
+        'last_update_check',
+        _lastChecked!.toIso8601String(),
+      );
+
+      // Automatic application only happens where it can genuinely complete:
+      // a versioned desktop install with a verifiable package. Android is
+      // offered the verified package through the system installer instead.
+      if (isNewer &&
+          _latestUpdate!.canVerify &&
+          AppVersion.supportsAutoUpdate) {
+        unawaited(installUpdate());
+      }
+    } catch (error) {
+      _error = 'The update check failed: $error';
     } finally {
       _isChecking = false;
       notifyListeners();
     }
   }
 
-  Future<void> _startAutoUpdate() async {
-    if (_isAutoUpdating || _latestUpdate == null) return;
-    
-    _isAutoUpdating = true;
-    _downloadProgress = 0.0;
-    _autoUpdateError = null;
-    notifyListeners();
-    
-    try {
-      final downloadUrl = _latestUpdate!.downloadUrl;
-      final version = _latestUpdate!.version;
-      
-      // Download APK
-      final apkPath = await _downloadApkSilent(downloadUrl);
-      
-      if (apkPath == null) {
-        _autoUpdateError = 'download_failed';
-        _isAutoUpdating = false;
-        notifyListeners();
-        return;
-      }
-      
-      // Install APK — this only works on rooted/system Android. On a regular
-      // user install the pm command will be denied. We detect the failure and
-      // surface a user-facing download prompt instead of silently dropping it.
-      final installed = await installApkViaSystem(apkPath);
-      
-      if (installed) {
-        await _showUpdateNotification(
-          title: 'App Updated! 🎉',
-          body: 'Your app has been updated to version $version',
-        );
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('last_auto_update_version', version);
-      } else {
-        // Silent install failed (expected on user-installed apps).
-        // Signal the UI to show a manual download prompt.
-        _autoUpdateError = 'install_failed';
-        notifyListeners();
-      }
-    } catch (e) {
-      _autoUpdateError = 'error:$e';
+  /// Download, verify and apply the package for the release that was found.
+  ///
+  /// Returns the installer's outcome, or null when there is nothing to install
+  /// or an install is already running. The service never invents success: the
+  /// message comes from [PackageInstaller] and says whether a desktop install
+  /// completed or whether Android was merely handed a verified file.
+  Future<InstallOutcome?> installUpdate() async {
+    if (_isAutoUpdating) return null;
+
+    final UpdateInfo? latest = _latestUpdate;
+    if (latest == null) return null;
+
+    final ReleaseAsset? asset = latest.asset;
+    if (asset == null) {
+      _autoUpdateError = 'no_package';
+      _autoUpdateMessage =
+          'The release did not publish a package for this platform, so '
+          'nothing was downloaded.';
+      _manualInstallNeeded = true;
       notifyListeners();
+      return null;
+    }
+
+    if (!asset.hasChecksum) {
+      _autoUpdateError = 'no_checksum';
+      _autoUpdateMessage =
+          'The release did not publish a SHA-256 for ${asset.name}, so it was '
+          'not downloaded. An update that cannot be verified is not applied.';
+      _manualInstallNeeded = true;
+      notifyListeners();
+      return null;
+    }
+
+    _isAutoUpdating = true;
+    _downloadProgress = 0;
+    _autoUpdateMessage = null;
+    _autoUpdateError = null;
+    _manualInstallNeeded = false;
+    notifyListeners();
+
+    try {
+      final InstallOutcome outcome = await _installer.install(
+        version: latest.version,
+        asset: asset,
+        onProgress: (int received, int total) {
+          if (total <= 0) return;
+          final double progress = (received / total).clamp(0.0, 1.0);
+          if ((progress - _downloadProgress).abs() < 0.01) return;
+          _downloadProgress = progress;
+          notifyListeners();
+        },
+      );
+
+      _autoUpdateMessage = outcome.message;
+
+      switch (outcome.status) {
+        case InstallStatus.installed:
+          _downloadProgress = 1;
+          final SharedPreferences prefs = await SharedPreferences.getInstance();
+          await prefs.setString(
+            'last_auto_update_version',
+            outcome.version ?? latest.version,
+          );
+          await _showUpdateNotification(
+            title: 'Update verified and activated',
+            body: 'Restart Digital Saver to run version '
+                '${outcome.version ?? latest.version}.',
+          );
+        case InstallStatus.handedOff:
+          // The system installer is open; only the person can complete it.
+          _downloadProgress = 1;
+        case InstallStatus.failed:
+          _autoUpdateError = 'install_failed';
+          _manualInstallNeeded = outcome.needsUserAction;
+      }
+
+      return outcome;
+    } catch (error) {
+      _autoUpdateError = 'install_failed';
+      _autoUpdateMessage = 'The update could not be applied: $error';
+      _manualInstallNeeded = true;
+      return null;
     } finally {
       _isAutoUpdating = false;
       notifyListeners();
     }
   }
 
-  /// Returns true if the update is available but silent install failed/unavailable,
-  /// so the UI should offer a manual download button.
-  bool get needsManualInstall =>
-      _updateAvailable &&
-      (_autoUpdateError == 'install_failed' || _autoUpdateError == 'download_failed');
-
-  /// Call this to open the release download page or direct APK URL manually.
+  /// Open the package directly when known, otherwise the releases page.
   Future<void> openDownloadPage() async {
-    final url = _latestUpdate?.downloadUrl ?? AppVersion.releasesPage;
-    final uri = Uri.parse(url);
+    final String url = _latestUpdate?.downloadUrl ?? AppVersion.releasesPage;
+    final Uri uri = Uri.parse(url);
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     }
   }
 
-  Future<String?> _downloadApkSilent(String url) async {
+  /// Read the SHA-256 from a GitHub `digest` value (`sha256:<hex>`).
+  ///
+  /// Public so the accepted form is pinned by a test rather than inferred.
+  static String? parseDigest(Object? raw) {
+    if (raw is! String) return null;
+    final String value = raw.trim().toLowerCase();
+    const String prefix = 'sha256:';
+    final String candidate =
+        value.startsWith(prefix) ? value.substring(prefix.length) : value;
+    if (!RegExp(r'^[0-9a-f]{64}$').hasMatch(candidate)) return null;
+    return candidate;
+  }
+
+  /// Pick the matching asset and attach a checksum from the release payload.
+  ///
+  /// GitHub publishes the digest inline on newer releases and as a `.sha256`
+  /// sidecar on older ones. Both are read here; if neither exists the asset is
+  /// returned without a checksum and will be refused at install time.
+  Future<ReleaseAsset?> _selectAsset(List<dynamic>? rawAssets) async {
+    if (rawAssets == null) return null;
+
+    final List<ReleaseAsset> parsed = ReleaseAsset.parseAll(rawAssets);
+    final ReleaseAsset? selected = ReleaseAsset.forCurrentPlatform(parsed);
+    if (selected == null || selected.url.isEmpty) return null;
+
+    String? checksum;
+    String? sidecarUrl;
+    for (final dynamic entry in rawAssets) {
+      if (entry is! Map) continue;
+      final String name = (entry['name'] ?? '').toString();
+      if (name == selected.name) {
+        checksum = parseDigest(entry['digest']);
+      } else if (name == '${selected.name}.sha256') {
+        sidecarUrl = (entry['browser_download_url'] ?? '').toString();
+      }
+    }
+
+    if (checksum == null && sidecarUrl != null && sidecarUrl.isNotEmpty) {
+      checksum = await _readSidecar(sidecarUrl);
+    }
+
+    return ReleaseAsset(
+      name: selected.name,
+      url: selected.url,
+      sizeBytes: selected.sizeBytes,
+      checksum: checksum,
+    );
+  }
+
+  Future<String?> _readSidecar(String url) async {
     try {
-      final response = await http.get(Uri.parse(url)).timeout(
-        const Duration(minutes: 5),
-      );
-      
+      final http.Response response =
+          await http.get(Uri.parse(url)).timeout(const Duration(seconds: 10));
       if (response.statusCode != 200) return null;
-      
-      final bytes = response.bodyBytes;
-      final dir = await getTemporaryDirectory();
-      final file = File('${dir.path}/digital_saver_update.apk');
-      await file.writeAsBytes(bytes);
-      
-      return file.path;
-    } catch (e) {
-      debugPrint('Error downloading APK: $e');
+      return ReleaseAsset.parseChecksum(response.body);
+    } catch (_) {
       return null;
     }
   }
 
-  /// Install a downloaded APK by handing it to the Android system installer.
-  ///
-  /// The previous implementation shelled out to `pm install -r -t` and called
-  /// it a silent install. That cannot work on a stock device: a normal app has
-  /// no shell permission to run pm, so it failed at the last step - and the
-  /// older code path had already uninstalled the app by then, taking the
-  /// user's data with it.
-  ///
-  /// The system installer upgrades in place and preserves data. It needs one
-  /// tap from the user, which is the honest cost of not shipping root.
-  Future<bool> installApkViaSystem(String filePath) async {
-    if (!Platform.isAndroid) return false;
-    try {
-      final file = File(filePath);
-      if (!await file.exists()) return false;
-      final uri = Uri.file(file.absolute.path);
-      if (!await canLaunchUrl(uri)) return false;
-      // The system installer opens; the person confirms from there.
-      return await launchUrl(uri, mode: LaunchMode.externalApplication);
-    } catch (e) {
-      debugPrint('Error handing APK to the system installer: $e');
-      return false;
+  /// Compare dotted versions, treating a pre-release as older than the stable
+  /// build with the same numbers.
+  static int _compareVersions(String a, String b) {
+    final List<String> aParts = a.split('-');
+    final List<String> bParts = b.split('-');
+    final List<int> aNumbers = _numbers(aParts.first);
+    final List<int> bNumbers = _numbers(bParts.first);
+
+    for (var i = 0; i < 3; i++) {
+      final int left = i < aNumbers.length ? aNumbers[i] : 0;
+      final int right = i < bNumbers.length ? bNumbers[i] : 0;
+      if (left != right) return left.compareTo(right);
     }
+
+    final bool aPre = aParts.length > 1;
+    final bool bPre = bParts.length > 1;
+    if (aPre == bPre) return a.compareTo(b);
+    return aPre ? -1 : 1;
   }
+
+  static List<int> _numbers(String version) =>
+      version.split('.').map((String part) => int.tryParse(part) ?? 0).toList();
 
   Future<void> _showUpdateNotification({
     required String title,
     required String body,
   }) async {
-    const androidDetails = AndroidNotificationDetails(
+    const AndroidNotificationDetails androidDetails =
+        AndroidNotificationDetails(
       'update_channel',
       'App Updates',
       channelDescription: 'Notifications for app updates',
@@ -306,51 +413,44 @@ class AutoUpdateService extends ChangeNotifier {
       priority: Priority.high,
       showWhen: true,
     );
-    
-    const iosDetails = DarwinNotificationDetails(
+    const DarwinNotificationDetails iosDetails = DarwinNotificationDetails(
       presentAlert: true,
       presentBadge: true,
       presentSound: true,
     );
-    
-    const details = NotificationDetails(
+    const NotificationDetails details = NotificationDetails(
       android: androidDetails,
       iOS: iosDetails,
     );
-    
-    await _notificationsPlugin?.show(
-      0,
-      title,
-      body,
-      details,
-    );
+
+    await _notificationsPlugin?.show(0, title, body, details);
   }
 
+  /// Load the stored time of the last check.
   Future<void> loadLastChecked() async {
-    final prefs = await SharedPreferences.getInstance();
-    final lastCheckedStr = prefs.getString('last_update_check');
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    final String? lastCheckedStr = prefs.getString('last_update_check');
     if (lastCheckedStr != null) {
       _lastChecked = DateTime.tryParse(lastCheckedStr);
     }
   }
 
-  // Check if we should show update prompt (don't ask too often)
+  /// Whether enough time has passed to prompt again.
   bool shouldPromptUpdate() {
-    final lastChecked = _lastChecked;
-    if (lastChecked == null) return true;
-    final hoursSinceCheck = DateTime.now().difference(lastChecked).inHours;
-    return hoursSinceCheck >= 24; // Only prompt once per day
+    final DateTime? last = _lastChecked;
+    if (last == null) return true;
+    return DateTime.now().difference(last).inHours >= 24;
   }
 
-  // Dismiss update notification temporarily
+  /// Dismiss the prompt for a week.
   Future<void> dismissUpdate() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('update_dismissed_until', 
-        DateTime.now().add(const Duration(days: 7)).toIso8601String());
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setString(
+      'update_dismissed_until',
+      DateTime.now().add(const Duration(days: 7)).toIso8601String(),
+    );
   }
 
-  bool get isUpdateDismissed {
-    // Check if user dismissed update
-    return false; // For now, always show
-  }
+  /// Dismissal is not wired into the shell yet; a prompt is still shown.
+  bool get isUpdateDismissed => false;
 }

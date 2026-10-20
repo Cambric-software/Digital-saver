@@ -42,6 +42,10 @@ void main() {
         StorageService.defaultBreathHoldBest);
     expect(await StorageService.reflections(), isEmpty);
     expect(await StorageService.medications(), isEmpty);
+    expect(
+      await StorageService.dimAfterDark(),
+      StorageService.defaultDimAfterDark,
+    );
   });
 
   test('each setting round-trips', () async {
@@ -53,6 +57,7 @@ void main() {
     await StorageService.setComplicationTop('Battery Level');
     await StorageService.setComplicationBottom('Steps');
     await StorageService.setQuickReplies(<String>['Yes', 'No']);
+    await StorageService.setDimAfterDark(true);
 
     expect(await StorageService.demoMode(), isTrue);
     expect(await StorageService.watchFace(), 3);
@@ -62,6 +67,17 @@ void main() {
     expect(await StorageService.complicationTop(), 'Battery Level');
     expect(await StorageService.complicationBottom(), 'Steps');
     expect(await StorageService.quickReplies(), <String>['Yes', 'No']);
+    expect(await StorageService.dimAfterDark(), isTrue);
+  });
+
+  test('a non-boolean dim preference reads as the default', () async {
+    SharedPreferences.setMockInitialValues(<String, Object>{
+      'dim_after_dark': 'yes please',
+    });
+    expect(
+      await StorageService.dimAfterDark(),
+      StorageService.defaultDimAfterDark,
+    );
   });
 
   test('a cleared quick-reply list falls back to the defaults', () async {
@@ -111,8 +127,7 @@ void main() {
     final List<Reflection> all = await StorageService.reflections();
     expect(all, hasLength(StorageService.maxReflections));
     // Newest first.
-    expect(all.first.text,
-        'entry ${StorageService.maxReflections + 4}');
+    expect(all.first.text, 'entry ${StorageService.maxReflections + 4}');
     expect(all.last.text, 'entry 5');
   });
 
@@ -184,7 +199,8 @@ void main() {
     expect(await StorageService.medications(), isEmpty);
   });
 
-  test('an empty medication list is stored as empty, not as a default', () async {
+  test('an empty medication list is stored as empty, not as a default',
+      () async {
     await StorageService.setMedications(const <Medication>[]);
     expect(await StorageService.medications(), isEmpty);
   });
@@ -196,6 +212,7 @@ void main() {
     await StorageService.setMedications(const <Medication>[
       Medication(name: 'Iron'),
     ]);
+    await StorageService.setDimAfterDark(true);
 
     await StorageService.clear();
 
@@ -204,5 +221,9 @@ void main() {
     expect(await StorageService.breathHoldBest(),
         StorageService.defaultBreathHoldBest);
     expect(await StorageService.medications(), isEmpty);
+    expect(
+      await StorageService.dimAfterDark(),
+      StorageService.defaultDimAfterDark,
+    );
   });
 }

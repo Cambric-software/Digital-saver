@@ -94,6 +94,7 @@ abstract final class StorageService {
   static const String _keyReflections = 'reflections';
   static const String _keyBreathHoldBest = 'breath_hold_best_seconds';
   static const String _keyMedications = 'medications';
+  static const String _keyDimAfterDark = 'dim_after_dark';
 
   /// The defaults, in one place, so load and save cannot disagree.
   static const bool defaultDemoMode = false;
@@ -111,6 +112,7 @@ abstract final class StorageService {
   ];
   static const int defaultBreathHoldBest = 0;
   static const List<Medication> defaultMedications = <Medication>[];
+  static const bool defaultDimAfterDark = false;
 
   static Future<SharedPreferences> get _prefs =>
       SharedPreferences.getInstance();
@@ -293,6 +295,19 @@ abstract final class StorageService {
     );
   }
 
+  /// Whether the app may switch to the dark theme after dark.
+  ///
+  /// Anything other than a stored boolean is treated as unset rather than
+  /// throwing: a preference that cannot be read must not stop the app opening.
+  static Future<bool> dimAfterDark() async {
+    final Object? raw = (await _prefs).get(_keyDimAfterDark);
+    return raw is bool ? raw : defaultDimAfterDark;
+  }
+
+  /// Store the "Dim after dark" choice.
+  static Future<void> setDimAfterDark(bool value) async =>
+      (await _prefs).setBool(_keyDimAfterDark, value);
+
   /// Forgets everything this service stores. Used by tests and by a factory
   /// reset; the profile and contacts in [LocalStore] are untouched.
   static Future<void> clear() async {
@@ -309,6 +324,7 @@ abstract final class StorageService {
       _keyReflections,
       _keyBreathHoldBest,
       _keyMedications,
+      _keyDimAfterDark,
     ]) {
       await prefs.remove(key);
     }
