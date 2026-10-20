@@ -1,550 +1,926 @@
-import 'dart:math' as math;
-import 'package:flutter/material.dart';
-import '../theme/app_theme.dart';
+/// Trends from the samples the watch has actually stored.
+///
+/// Almost nothing on the previous version was measured:
+///
+/// * the "Heart Rate Pattern" chart was drawn from `math.Random(42)`, with a
+///   comment explaining that it added "peaks for realistic heart rate pattern" -
+///   a fabricated day of heart rate presented as the wearer's;
+/// * "Activity Overview" drew seven bar heights from
+///   `3000 + random.nextInt(7000)` and labelled them Mon to Sun, so the bars
+///   were random numbers pretending to be steps;
+/// * the Day/Week/Month/Year selector assigned a string and nothing else: every
+///   window showed the same invented chart;
+/// * the summary cards were hard-coded to `--`, so even with weeks of synced
+///   samples the screen could not show a real average;
+/// * the screen carried its own [Scaffold] and app bar inside the app shell, and
+///   painted white text on the light surface, which made the labels disappear
+///   in light mode.
+///
+/// What is here now reads [LocalStore], filters by a real time window, and draws
+/// only the samples that exist. A window with no samples says so, and the
+/// interpretation of the latest reading comes from
+/// [health_interpretation.dart] rather than from words chosen here.
+library;
 
-// Health trends and history screen
+import 'dart:math' as math;
+
+import 'package:fl_chart/fl_chart.dart';
+import 'package:flutter/material.dart';
+
+import '../services/local_store.dart';
+import '../services/veyro_protocol.dart';
+import '../theme/app_colors.dart';
+import '../theme/design_tokens.dart';
+import '../utils/health_interpretation.dart';
+import '../widgets/ds_widgets.dart';
+
+/// The time window a trend view covers.
+enum TrendPeriod {
+  /// The last 24 hours.
+  day('24 hours', Duration(hours: 24)),
+
+  /// The last seven days.
+  week('7 days', Duration(days: 7)),
+
+  /// The last thirty days.
+  month('30 days', Duration(days: 30)),
+
+  /// Everything the watch and this phone still keep.
+  retained('All kept', null);
+
+  const TrendPeriod(this.label, this.window);
+
+  /// Label used by the segmented control.
+  final String label;
+
+  /// How far back to look, or null for everything retained.
+  final Duration? window;
+}
+
+/// One point on a trend chart: minutes into the window, and the value.
+class TrendPoint {
+  /// Create a point.
+  const TrendPoint({required this.minute, required this.value});
+
+  /// Minutes from the window's first sample.
+  final double minute;
+
+  /// The measured value, in the metric's own unit.
+  final int value;
+}
+
+/// Summary statistics for a set of stored samples.
+class TrendSummary {
+  /// Create a summary.
+  const TrendSummary({
+    required this.sampleCount,
+    required this.heartRateCount,
+    required this.averageBpm,
+    required this.minimumBpm,
+    required this.maximumBpm,
+    required this.oxygenCount,
+    required this.averageSpO2,
+  });
+
+  /// Samples in the window, including ones with no reading.
+  final int sampleCount;
+
+  /// Samples that carried a heart rate.
+  final int heartRateCount;
+
+  /// Mean heart rate, or 0 when nothing was measured.
+  final int averageBpm;
+
+  /// Lowest measured heart rate, or 0 when nothing was measured.
+  final int minimumBpm;
+
+  /// Highest measured heart rate, or 0 when nothing was measured.
+  final int maximumBpm;
+
+  /// Samples that carried an oxygen saturation.
+  final int oxygenCount;
+
+  /// Mean oxygen saturation, or 0 when nothing was measured.
+  final int averageSpO2;
+
+  /// Whether any heart rate was measured.
+  bool get hasHeartRate => heartRateCount > 0;
+
+  /// Whether any oxygen saturation was measured.
+  bool get hasOxygen => oxygenCount > 0;
+}
+
+/// Per-day averages from stored samples.
+class DailyTrend {
+  /// Create a day's summary.
+  const DailyTrend({
+    required this.day,
+    required this.sampleCount,
+    required this.averageBpm,
+    required this.averageSpO2,
+  });
+
+  /// The calendar day, at local midnight.
+  final DateTime day;
+
+  /// Samples stored on this day.
+  final int sampleCount;
+
+  /// Mean heart rate, or 0 when no sample carried one.
+  final int averageBpm;
+
+  /// Mean oxygen saturation, or 0 when no sample carried one.
+  final int averageSpO2;
+}
+
+/// Samples inside [period], oldest first.
+List<WatchSample> samplesWithin(
+  List<WatchSample> samples,
+  TrendPeriod period, {
+  required DateTime now,
+}) {
+  final Duration? window = period.window;
+  final DateTime? cutoff = window == null ? null : now.subtract(window);
+  final List<WatchSample> selected = cutoff == null
+      ? List<WatchSample>.of(samples)
+      : samples
+          .where((WatchSample sample) => sample.at.isAfter(cutoff))
+          .toList();
+  selected.sort(
+    (WatchSample a, WatchSample b) => a.unix.compareTo(b.unix),
+  );
+  return selected;
+}
+
+/// Mean, minimum and maximum for the measurements that exist in [samples].
+///
+/// A sample whose heart rate or oxygen field is zero did not measure that
+/// metric, so it is left out of the mean rather than counted as zero.
+TrendSummary summarizeSamples(List<WatchSample> samples) {
+  var hrSum = 0;
+  var hrCount = 0;
+  var hrMin = 0;
+  var hrMax = 0;
+  var o2Sum = 0;
+  var o2Count = 0;
+
+  for (final WatchSample sample in samples) {
+    if (sample.hr > 0) {
+      hrSum += sample.hr;
+      hrCount++;
+      if (hrMin == 0 || sample.hr < hrMin) hrMin = sample.hr;
+      if (sample.hr > hrMax) hrMax = sample.hr;
+    }
+    if (sample.spo2 > 0) {
+      o2Sum += sample.spo2;
+      o2Count++;
+    }
+  }
+
+  return TrendSummary(
+    sampleCount: samples.length,
+    heartRateCount: hrCount,
+    averageBpm: hrCount == 0 ? 0 : (hrSum / hrCount).round(),
+    minimumBpm: hrMin,
+    maximumBpm: hrMax,
+    oxygenCount: o2Count,
+    averageSpO2: o2Count == 0 ? 0 : (o2Sum / o2Count).round(),
+  );
+}
+
+/// Groups [samples] by local calendar day, newest day first.
+List<DailyTrend> dailyTrends(List<WatchSample> samples) {
+  final Map<String, List<WatchSample>> groups = <String, List<WatchSample>>{};
+  for (final WatchSample sample in samples) {
+    final DateTime at = sample.at;
+    final String key = '${at.year}-${at.month}-${at.day}';
+    groups.putIfAbsent(key, () => <WatchSample>[]).add(sample);
+  }
+
+  final List<DailyTrend> days = <DailyTrend>[];
+  for (final List<WatchSample> group in groups.values) {
+    final DateTime at = group.first.at;
+    final TrendSummary summary = summarizeSamples(group);
+    days.add(
+      DailyTrend(
+        day: DateTime(at.year, at.month, at.day),
+        sampleCount: summary.sampleCount,
+        averageBpm: summary.averageBpm,
+        averageSpO2: summary.averageSpO2,
+      ),
+    );
+  }
+  days.sort((DailyTrend a, DailyTrend b) => b.day.compareTo(a.day));
+  return days;
+}
+
+/// Plot points from [samples], averaged into at most [maxPoints] buckets.
+///
+/// A day of one-minute samples is well over a thousand points; drawing all of
+/// them makes a line that is mostly ink. Bucketing averages consecutive stored
+/// samples, so the shape is preserved without inventing values between them.
+/// Samples whose [read] value is zero are skipped rather than plotted as zero.
+List<TrendPoint> trendPoints(
+  List<WatchSample> samples, {
+  required int Function(WatchSample sample) read,
+  required DateTime origin,
+  int maxPoints = 120,
+}) {
+  final List<WatchSample> measured = samples
+      .where((WatchSample sample) => read(sample) > 0)
+      .toList()
+    ..sort((WatchSample a, WatchSample b) => a.unix.compareTo(b.unix));
+  if (measured.isEmpty) return <TrendPoint>[];
+
+  final int limit = maxPoints < 1 ? 1 : maxPoints;
+  final int bucketSize = (measured.length / limit).ceil().clamp(1, measured.length);
+  final List<TrendPoint> points = <TrendPoint>[];
+
+  for (var start = 0; start < measured.length; start += bucketSize) {
+    final int end = math.min(start + bucketSize, measured.length);
+    final List<WatchSample> bucket = measured.sublist(start, end);
+    var sum = 0;
+    var minutes = 0.0;
+    for (final WatchSample sample in bucket) {
+      sum += read(sample);
+      minutes += sample.at.difference(origin).inSeconds / 60;
+    }
+    points.add(
+      TrendPoint(
+        minute: minutes / bucket.length,
+        value: (sum / bucket.length).round(),
+      ),
+    );
+  }
+  return points;
+}
+
+/// What the stored history can say about the last [TrendPeriod].
 class HealthTrendsScreen extends StatefulWidget {
+  /// Create the trends view.
   const HealthTrendsScreen({super.key});
 
   @override
   State<HealthTrendsScreen> createState() => _HealthTrendsScreenState();
 }
 
-class _HealthTrendsScreenState extends State<HealthTrendsScreen>
-    with SingleTickerProviderStateMixin {
-  late TabController _tabController;
-  String _selectedPeriod = 'Week';
-
-  final List<String> _periods = ['Day', 'Week', 'Month', 'Year'];
+class _HealthTrendsScreenState extends State<HealthTrendsScreen> {
+  TrendPeriod _period = TrendPeriod.week;
+  List<WatchSample> _samples = const <WatchSample>[];
+  bool _loading = true;
+  String? _error;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
+    _load();
   }
 
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
+  Future<void> _load() async {
+    if (!_loading) {
+      setState(() {
+        _loading = true;
+        _error = null;
+      });
+    }
+    try {
+      final List<WatchSample> samples = await LocalStore.loadAll();
+      if (!mounted) return;
+      setState(() {
+        _samples = samples;
+        _loading = false;
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _error = '$error';
+        _loading = false;
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: CustomScrollView(
-        slivers: [
-          SliverAppBar(
-            backgroundColor: AppColors.background,
-            expandedHeight: 120,
-            floating: false,
-            pinned: true,
-            flexibleSpace: FlexibleSpaceBar(
-              title: const Text(
-                'Health Trends',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 22,
-                ),
+    final ThemeData theme = Theme.of(context);
+    final Color heart = AppColors.of(
+      AppColors.heartRed,
+      AppColors.darkHeart,
+      context,
+    );
+    final Color oxygen = AppColors.of(
+      AppColors.oxyGreen,
+      AppColors.darkOxy,
+      context,
+    );
+
+    final DateTime now = DateTime.now();
+    final List<WatchSample> window = samplesWithin(
+      _samples,
+      _period,
+      now: now,
+    );
+    final TrendSummary summary = summarizeSamples(window);
+    final DateTime origin = window.isEmpty ? now : window.first.at;
+    final List<TrendPoint> heartPoints = trendPoints(
+      window,
+      read: (WatchSample sample) => sample.hr,
+      origin: origin,
+    );
+    final List<TrendPoint> oxygenPoints = trendPoints(
+      window,
+      read: (WatchSample sample) => sample.spo2,
+      origin: origin,
+    );
+    final WatchSample? latest = _latestReading(window);
+    final List<DailyTrend> days = dailyTrends(window);
+
+    return DsSection(
+      title: 'Health trends',
+      subtitle: 'Readings the watch has stored on this phone',
+      trailing: IconButton(
+        tooltip: 'Reload stored history',
+        onPressed: _loading ? null : _load,
+        icon: const Icon(Icons.refresh_rounded),
+      ),
+      child: _loading
+          ? const _LoadingCard(label: 'Reading stored history…')
+          : _error != null
+              ? _UnreadableHistory(error: _error!)
+              : _samples.isEmpty
+                  ? const _NoHistory()
+                  : Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: <Widget>[
+                        DsSegmented<TrendPeriod>(
+                          value: _period,
+                          onChanged: (TrendPeriod period) =>
+                              setState(() => _period = period),
+                          options: <DsSegment<TrendPeriod>>[
+                            for (final TrendPeriod period in TrendPeriod.values)
+                              DsSegment<TrendPeriod>(
+                                value: period,
+                                label: period.label,
+                              ),
+                          ],
+                        ),
+                        const SizedBox(height: Space.lg),
+                        if (window.isEmpty)
+                          _NothingInWindow(period: _period)
+                        else ...<Widget>[
+                          DsGrid(
+                            minTileWidth: 170,
+                            children: <Widget>[
+                              DsMetricTile(
+                                label: 'Average heart rate',
+                                value: summary.hasHeartRate
+                                    ? '${summary.averageBpm}'
+                                    : '--',
+                                unit: summary.hasHeartRate ? 'BPM' : null,
+                                accent: heart,
+                                icon: Icons.favorite_rounded,
+                              ),
+                              DsMetricTile(
+                                label: 'Heart rate range',
+                                value: summary.hasHeartRate
+                                    ? '${summary.minimumBpm}–${summary.maximumBpm}'
+                                    : '--',
+                                unit: summary.hasHeartRate ? 'BPM' : null,
+                                accent: heart,
+                                icon: Icons.swap_vert_rounded,
+                              ),
+                              DsMetricTile(
+                                label: 'Average oxygen',
+                                value:
+                                    summary.hasOxygen ? '${summary.averageSpO2}' : '--',
+                                unit: summary.hasOxygen ? '%' : null,
+                                accent: oxygen,
+                                icon: Icons.air_rounded,
+                              ),
+                              DsMetricTile(
+                                label: 'Readings in window',
+                                value: '${summary.sampleCount}',
+                                unit: summary.sampleCount == 1
+                                    ? 'sample'
+                                    : 'samples',
+                                accent: theme.colorScheme.primary,
+                                icon: Icons.dataset_outlined,
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: Space.xxl),
+                          _ChartCard(
+                            title: 'Heart rate',
+                            icon: Icons.favorite_rounded,
+                            accent: heart,
+                            unit: 'BPM',
+                            points: heartPoints,
+                            origin: origin,
+                            rangeLabel: _rangeLabel(window),
+                            emptyMessage:
+                                'No stored sample in this window carried a heart '
+                                'rate. The sensor needs skin contact; a loose '
+                                'strap records nothing.',
+                          ),
+                          const SizedBox(height: Space.xl),
+                          _ChartCard(
+                            title: 'Oxygen saturation',
+                            icon: Icons.air_rounded,
+                            accent: oxygen,
+                            unit: '%',
+                            points: oxygenPoints,
+                            origin: origin,
+                            rangeLabel: _rangeLabel(window),
+                            emptyMessage:
+                                'No stored sample in this window carried an '
+                                'oxygen reading.',
+                          ),
+                          if (latest != null) ...<Widget>[
+                            const SizedBox(height: Space.xl),
+                            _LatestReadingCard(sample: latest),
+                          ],
+                          if (days.isNotEmpty) ...<Widget>[
+                            const SizedBox(height: Space.xl),
+                            _DailyTable(days: days),
+                          ],
+                        ],
+                      ],
+                    ),
+    );
+  }
+}
+
+/// The most recent sample in [samples] that carried any interpretation.
+WatchSample? _latestReading(List<WatchSample> samples) {
+  for (var i = samples.length - 1; i >= 0; i--) {
+    final WatchSample sample = samples[i];
+    if (sample.hr > 0 || sample.spo2 > 0 || sample.hrv > 0) return sample;
+  }
+  return null;
+}
+
+const List<String> _monthNames = <String>[
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'May',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dec',
+];
+
+String _dayLabel(DateTime time) =>
+    '${time.day} ${_monthNames[time.month - 1]}';
+
+String _clockLabel(DateTime time) =>
+    '${time.hour.toString().padLeft(2, '0')}:'
+    '${time.minute.toString().padLeft(2, '0')}';
+
+String _rangeLabel(List<WatchSample> window) {
+  if (window.isEmpty) return 'no stored samples';
+  final DateTime first = window.first.at;
+  final DateTime last = window.last.at;
+  final bool sameDay =
+      first.year == last.year && first.month == last.month && first.day == last.day;
+  if (sameDay) {
+    return '${_dayLabel(first)}, ${_clockLabel(first)} to ${_clockLabel(last)}';
+  }
+  return '${_dayLabel(first)} to ${_dayLabel(last)}';
+}
+
+/// A progress indicator with a caption, used while the history is opened.
+class _LoadingCard extends StatelessWidget {
+  const _LoadingCard({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return DsCard(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: Space.xl),
+        child: Column(
+          children: <Widget>[
+            const SizedBox(
+              width: 24,
+              height: 24,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+            const SizedBox(height: Space.md),
+            Text(label, style: Theme.of(context).textTheme.bodySmall),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// The history could not be opened.
+class _UnreadableHistory extends StatelessWidget {
+  const _UnreadableHistory({required this.error});
+
+  final String error;
+
+  @override
+  Widget build(BuildContext context) {
+    return DsCard(
+      child: DsEmptyState(
+        icon: Icons.folder_off_outlined,
+        title: 'Stored history could not be read',
+        message: 'The samples saved on this phone could not be opened '
+            '($error). Nothing is drawn rather than guessing at the numbers.',
+      ),
+    );
+  }
+}
+
+/// No samples have ever been stored.
+class _NoHistory extends StatelessWidget {
+  const _NoHistory();
+
+  @override
+  Widget build(BuildContext context) {
+    return const DsCard(
+      child: DsEmptyState(
+        icon: Icons.show_chart_rounded,
+        title: 'No watch history yet',
+        message: 'This page charts samples the watch stores on this phone. '
+            'Pair the watch and let its memory sync. Readings older than '
+            '${VeyroProtocol.retainDays} days are deleted, so that is the '
+            'longest window available.',
+      ),
+    );
+  }
+}
+
+/// No samples fell inside the chosen window.
+class _NothingInWindow extends StatelessWidget {
+  const _NothingInWindow({required this.period});
+
+  final TrendPeriod period;
+
+  @override
+  Widget build(BuildContext context) {
+    return DsCard(
+      child: DsEmptyState(
+        icon: Icons.date_range_outlined,
+        title: 'Nothing in this window',
+        message: 'No sample stored on this phone falls inside the '
+            '${period.label.toLowerCase()} window. Choose a longer window, or '
+            'sync the watch memory to fetch what it has recorded.',
+      ),
+    );
+  }
+}
+
+/// A line chart drawn only from stored samples.
+class _ChartCard extends StatelessWidget {
+  const _ChartCard({
+    required this.title,
+    required this.icon,
+    required this.accent,
+    required this.unit,
+    required this.points,
+    required this.origin,
+    required this.rangeLabel,
+    required this.emptyMessage,
+  });
+
+  final String title;
+  final IconData icon;
+  final Color accent;
+  final String unit;
+  final List<TrendPoint> points;
+  final DateTime origin;
+  final String rangeLabel;
+  final String emptyMessage;
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+
+    return DsCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              Icon(icon, size: 18, color: accent),
+              const SizedBox(width: Space.sm),
+              Expanded(
+                child: Text(title, style: theme.textTheme.titleSmall),
               ),
-              centerTitle: true,
-              background: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      AppColors.primaryDark.withValues(alpha: 0.08),
-                      Colors.transparent,
-                    ],
-                  ),
+              if (points.isNotEmpty)
+                DsLabel(
+                  '${points.length} ${points.length == 1 ? 'point' : 'points'}',
+                  color: theme.colorScheme.onSurfaceVariant,
                 ),
-              ),
+            ],
+          ),
+          const SizedBox(height: Space.md),
+          if (points.isEmpty)
+            DsEmptyState(
+              icon: Icons.timeline_rounded,
+              title: 'No $title data in this window',
+              message: emptyMessage,
+            )
+          else ...<Widget>[
+            SizedBox(
+              height: 180,
+              child: LineChart(_data(theme)),
+            ),
+            const SizedBox(height: Space.sm),
+            Text(
+              'Stored readings from $rangeLabel. The line joins measurements '
+              'in time order; it does not invent points where the watch '
+              'recorded nothing.',
+              style: theme.textTheme.bodySmall,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  LineChartData _data(ThemeData theme) {
+    final List<double> values = points
+        .map((TrendPoint point) => point.value.toDouble())
+        .toList();
+    final double lowest = values.reduce(math.min);
+    final double highest = values.reduce(math.max);
+    final double padding = math.max(2, (highest - lowest) * 0.15);
+    final double minY = math.max(0, lowest - padding);
+    final double maxY = highest + padding;
+    final double minX = points.first.minute;
+    final double maxX = points.length == 1
+        ? minX + 1
+        : math.max(points.last.minute, minX + 1);
+    // A time of day is ambiguous once the window runs over more than a day, so
+    // a multi-day axis also names the day.
+    final bool spansDays = maxX - minX > 24 * 60;
+
+    return LineChartData(
+      minX: minX,
+      maxX: maxX,
+      minY: minY,
+      maxY: maxY,
+      lineTouchData: const LineTouchData(enabled: false),
+      gridData: FlGridData(
+        show: true,
+        drawVerticalLine: false,
+        horizontalInterval: math.max(1, (maxY - minY) / 3),
+        getDrawingHorizontalLine: (double value) => FlLine(
+          color: theme.colorScheme.outlineVariant,
+          strokeWidth: 1,
+        ),
+      ),
+      titlesData: FlTitlesData(
+        topTitles: const AxisTitles(
+          sideTitles: SideTitles(showTitles: false),
+        ),
+        rightTitles: const AxisTitles(
+          sideTitles: SideTitles(showTitles: false),
+        ),
+        leftTitles: AxisTitles(
+          sideTitles: SideTitles(
+            showTitles: true,
+            reservedSize: 36,
+            interval: math.max(1, (maxY - minY) / 3),
+            getTitlesWidget: (double value, TitleMeta meta) => Text(
+              value.round().toString(),
+              style: theme.textTheme.labelSmall,
             ),
           ),
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                children: [
-                  // Period selector
-                  _buildPeriodSelector(),
-                  const SizedBox(height: 24),
-                  
-                  // Summary cards
-                  _buildSummaryCards(),
-                  const SizedBox(height: 24),
-                  
-                  // Charts
-                  _buildCharts(),
-                  const SizedBox(height: 24),
-                  
-                  // Health insights
-                  _buildInsights(),
-                  const SizedBox(height: 100),
+        ),
+        bottomTitles: AxisTitles(
+          sideTitles: SideTitles(
+            showTitles: true,
+            reservedSize: spansDays ? 30 : 24,
+            interval: math.max(1, (maxX - minX) / 2),
+            getTitlesWidget: (double value, TitleMeta meta) {
+              final DateTime at =
+                  origin.add(Duration(minutes: value.round()));
+              final String label = spansDays
+                  ? '${_dayLabel(at)}\n${_clockLabel(at)}'
+                  : _clockLabel(at);
+              return Padding(
+                padding: const EdgeInsets.only(top: Space.xs),
+                child: Text(
+                  label,
+                  style: theme.textTheme.labelSmall,
+                  textAlign: TextAlign.center,
+                ),
+              );
+            },
+          ),
+        ),
+      ),
+      borderData: FlBorderData(show: false),
+      lineBarsData: <LineChartBarData>[
+        LineChartBarData(
+          spots: <FlSpot>[
+            for (final TrendPoint point in points)
+              FlSpot(point.minute, point.value.toDouble()),
+          ],
+          isCurved: false,
+          color: accent,
+          barWidth: 2,
+          dotData: const FlDotData(show: false),
+          belowBarData: BarAreaData(
+            show: true,
+            color: accent.withValues(alpha: 0.12),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// What the newest stored reading means, in the app's own words.
+class _LatestReadingCard extends StatelessWidget {
+  const _LatestReadingCard({required this.sample});
+
+  final WatchSample sample;
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+
+    return DsCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              Expanded(
+                child: Text(
+                  'Latest stored reading',
+                  style: theme.textTheme.titleSmall,
+                ),
+              ),
+              DsLabel(
+                '${_dayLabel(sample.at)} ${_clockLabel(sample.at)}',
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ],
+          ),
+          const SizedBox(height: Space.md),
+          if (hasHeartRate(sample.hr))
+            _Interpretation(
+              label: 'Heart rate',
+              value: '${sample.hr} BPM',
+              status: interpretHeartRate(sample.hr),
+              metric: 'heart rate',
+            ),
+          if (hasOxygen(sample.spo2))
+            _Interpretation(
+              label: 'Oxygen saturation',
+              value: '${sample.spo2}%',
+              status: interpretOxygen(sample.spo2),
+              metric: 'oxygen saturation',
+            ),
+          if (sample.hrv > 0)
+            Text(
+              'Heart rate variability recorded in the same sample: '
+              '${sample.hrv} ms.',
+              style: theme.textTheme.bodySmall,
+            ),
+          const SizedBox(height: Space.sm),
+          Text(
+            'These are screening cues based on the app\'s ranges, not a '
+            'diagnosis. A clinician reading the same number may interpret it '
+            'differently.',
+            style: theme.textTheme.bodySmall,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// A measured value with its band and the next step the app suggests.
+class _Interpretation extends StatelessWidget {
+  const _Interpretation({
+    required this.label,
+    required this.value,
+    required this.status,
+    required this.metric,
+  });
+
+  final String label;
+  final String value;
+  final HealthStatus status;
+  final String metric;
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    final String? guidance = guidanceFor(status, metric);
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: Space.md),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Wrap(
+            spacing: Space.sm,
+            runSpacing: Space.xs,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: <Widget>[
+              Text(label, style: theme.textTheme.titleSmall),
+              Text(value, style: theme.textTheme.labelMedium),
+              DsStatusPill(
+                label: status.label,
+                color: healthStatusColor(status, context),
+                dense: true,
+              ),
+            ],
+          ),
+          const SizedBox(height: Space.xs),
+          Text(
+            guidance ??
+                'Inside the range this app treats as usual for $metric. That '
+                    'describes the number, not a diagnosis.',
+            style: theme.textTheme.bodySmall,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// One row per recorded day, with the measured averages.
+class _DailyTable extends StatelessWidget {
+  const _DailyTable({required this.days});
+
+  final List<DailyTrend> days;
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+
+    return DsCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text('By day', style: theme.textTheme.titleSmall),
+          const SizedBox(height: Space.xxs),
+          Text(
+            'Mean of the samples stored on each day. Days with no stored '
+            'samples do not appear, rather than appearing as zero.',
+            style: theme.textTheme.bodySmall,
+          ),
+          const SizedBox(height: Space.md),
+          for (final DailyTrend day in days) ...<Widget>[
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: Space.xs),
+              child: Row(
+                children: <Widget>[
+                  SizedBox(
+                    width: 72,
+                    child: Text(
+                      _dayLabel(day.day),
+                      style: theme.textTheme.bodySmall,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  Expanded(
+                    child: Text(
+                      '${day.sampleCount} '
+                      '${day.sampleCount == 1 ? 'sample' : 'samples'}',
+                      style: theme.textTheme.bodySmall,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  SizedBox(
+                    width: 64,
+                    child: Text(
+                      day.averageBpm > 0 ? '${day.averageBpm} BPM' : '--',
+                      style: theme.textTheme.bodySmall,
+                      textAlign: TextAlign.end,
+                    ),
+                  ),
+                  const SizedBox(width: Space.sm),
+                  SizedBox(
+                    width: 40,
+                    child: Text(
+                      day.averageSpO2 > 0 ? '${day.averageSpO2}%' : '--',
+                      style: theme.textTheme.bodySmall,
+                      textAlign: TextAlign.end,
+                    ),
+                  ),
                 ],
               ),
             ),
-          ),
+            if (day != days.last)
+              Divider(height: 1, color: theme.colorScheme.outlineVariant),
+          ],
         ],
       ),
     );
   }
-
-  Widget _buildPeriodSelector() {
-    return Container(
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        children: _periods.map((period) {
-          final isSelected = _selectedPeriod == period;
-          return Expanded(
-            child: GestureDetector(
-              onTap: () => setState(() => _selectedPeriod = period),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                padding: const EdgeInsets.symmetric(vertical: 10),
-                decoration: BoxDecoration(
-                  color: isSelected 
-                      ? AppColors.primary
-                      : Colors.transparent,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  period,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: isSelected ? Colors.white : AppColors.textMuted,
-                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                    fontSize: 13,
-                  ),
-                ),
-              ),
-            ),
-          );
-        }).toList(),
-      ),
-    );
-  }
-
-  Widget _buildSummaryCards() {
-    return Row(
-      children: [
-        Expanded(child: _buildSummaryCard(
-          'Avg Heart Rate',
-          '--',
-          'bpm',
-          Icons.favorite_outline,
-          AppColors.heartRed,
-          'No local samples yet',
-        )),
-        const SizedBox(width: 12),
-        Expanded(child: _buildSummaryCard(
-          'Avg SpO2',
-          '--',
-          '%',
-          Icons.air_outlined,
-          AppColors.primary,
-          'No local samples yet',
-        )),
-      ],
-    );
-  }
-
-  Widget _buildSummaryCard(
-    String title,
-    String value,
-    String unit,
-    IconData icon,
-    Color color,
-    String trend,
-  ) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: AppColors.border,
-          width: 1,
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(icon, color: color, size: 20),
-              const SizedBox(width: 8),
-              Text(
-                title,
-                style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.6),
-                  fontSize: 12,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                value,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 32,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(width: 4),
-              Padding(
-                padding: const EdgeInsets.only(bottom: 4),
-                child: Text(
-                  unit,
-                  style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.5),
-                    fontSize: 14,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.2),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Text(
-              trend,
-              style: TextStyle(
-                color: color,
-                fontSize: 11,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCharts() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Heart Rate Pattern',
-          style: TextStyle(
-            color: AppColors.textPrimary,
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 16),
-        Container(
-          height: 200,
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: AppColors.surface,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: AppColors.border,
-              width: 1,
-            ),
-          ),
-          child: CustomPaint(
-            size: const Size(double.infinity, 168),
-            painter: _HeartRateChartPainter(),
-          ),
-        ),
-        const SizedBox(height: 24),
-        
-        const Text(
-          'Activity Overview',
-          style: TextStyle(
-            color: AppColors.textPrimary,
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 16),
-        Container(
-          height: 200,
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: AppColors.surface,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: AppColors.border,
-              width: 1,
-            ),
-          ),
-          child: CustomPaint(
-            size: const Size(double.infinity, 168),
-            painter: _ActivityChartPainter(),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildInsights() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Health Insights',
-          style: TextStyle(
-            color: AppColors.textPrimary,
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 16),
-        _buildInsightCard(
-          icon: Icons.trending_up,
-          title: 'Activity Goal Progress',
-          description: 'Connect and sync the watch to calculate activity progress.',
-          color: AppColors.success,
-          progress: 0,
-        ),
-        const SizedBox(height: 12),
-        _buildInsightCard(
-          icon: Icons.favorite,
-          title: 'Heart Rate Variability',
-          description: 'HRV comparisons appear after local history is available.',
-          color: AppColors.heartRed,
-          progress: 0,
-        ),
-        const SizedBox(height: 12),
-        _buildInsightCard(
-          icon: Icons.bedtime,
-          title: 'Sleep Quality',
-          description: 'Sleep trends appear after local watch history is available.',
-          color: AppColors.sleepPurple,
-          progress: 0,
-        ),
-      ],
-    );
-  }
-
-  Widget _buildInsightCard({
-    required IconData icon,
-    required String title,
-    required String description,
-    required Color color,
-    required double progress,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: color.withValues(alpha: 0.3),
-          width: 1,
-        ),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.2),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(icon, color: color, size: 24),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  description,
-                  style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.6),
-                    fontSize: 12,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(4),
-                  child: LinearProgressIndicator(
-                    value: progress,
-                    backgroundColor: Colors.white.withValues(alpha: 0.1),
-                    valueColor: AlwaysStoppedAnimation(color),
-                    minHeight: 6,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _HeartRateChartPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = Colors.red.withValues(alpha: 0.8)
-      ..strokeWidth = 2
-      ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round;
-
-    final fillPaint = Paint()
-      ..shader = LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: [
-          Colors.red.withValues(alpha: 0.3),
-          Colors.red.withValues(alpha: 0.0),
-        ],
-      ).createShader(Rect.fromLTWH(0, 0, size.width, size.height))
-      ..style = PaintingStyle.fill;
-
-    final path = Path();
-    final fillPath = Path();
-    
-    final points = _generateHeartRateData();
-    final stepX = size.width / (points.length - 1);
-    
-    path.moveTo(0, size.height - points[0] * size.height);
-    fillPath.moveTo(0, size.height);
-    fillPath.lineTo(0, size.height - points[0] * size.height);
-
-    for (int i = 1; i < points.length; i++) {
-      final x = i * stepX;
-      final y = size.height - points[i] * size.height;
-      path.lineTo(x, y);
-      fillPath.lineTo(x, y);
-    }
-
-    fillPath.lineTo(size.width, size.height);
-    fillPath.close();
-
-    canvas.drawPath(fillPath, fillPaint);
-    canvas.drawPath(path, paint);
-
-    // Draw labels
-    final textPainter = TextPainter(
-      text: TextSpan(
-        text: '120',
-        style: TextStyle(color: Colors.white.withValues(alpha: 0.4), fontSize: 10),
-      ),
-      textDirection: TextDirection.ltr,
-    );
-    textPainter.layout();
-    textPainter.paint(canvas, const Offset(4, 4));
-    
-    textPainter.text = TextSpan(
-      text: '60',
-      style: TextStyle(color: Colors.white.withValues(alpha: 0.4), fontSize: 10),
-    );
-    textPainter.layout();
-    textPainter.paint(canvas, Offset(4, size.height - 20));
-  }
-
-  List<double> _generateHeartRateData() {
-    final random = math.Random(42);
-    return List.generate(24, (i) {
-      final base = 0.5 + random.nextDouble() * 0.3;
-      // Add some peaks for realistic heart rate pattern
-      if (i >= 8 && i <= 10) return base + 0.2; // Morning activity
-      if (i >= 12 && i <= 13) return base + 0.15; // Lunch activity
-      if (i >= 17 && i <= 19) return base + 0.25; // Evening activity
-      if (i >= 0 && i <= 6) return base - 0.2; // Sleep
-      return base;
-    });
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-}
-
-class _ActivityChartPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final barPaint = Paint()
-      ..color = const Color(0xFF10B981)
-      ..style = PaintingStyle.fill;
-
-    final barPaintAlt = Paint()
-      ..color = const Color(0xFF10B981).withValues(alpha: 0.5)
-      ..style = PaintingStyle.fill;
-
-    final data = _generateActivityData();
-    final barWidth = (size.width - 48) / data.length;
-    final maxValue = data.reduce(math.max);
-
-    // Draw bars
-    for (int i = 0; i < data.length; i++) {
-      final x = 24 + i * barWidth;
-      final height = (data[i] / maxValue) * (size.height - 40);
-      final y = size.height - height - 20;
-      
-      canvas.drawRRect(
-        RRect.fromRectAndRadius(
-          Rect.fromLTWH(x, y, barWidth - 8, height),
-          const Radius.circular(4),
-        ),
-        i == 3 ? barPaint : barPaintAlt,
-      );
-    }
-
-    // Draw baseline
-    final linePaint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.2)
-      ..strokeWidth = 1;
-
-    canvas.drawLine(
-      Offset(24, size.height - 20),
-      Offset(size.width - 24, size.height - 20),
-      linePaint,
-    );
-
-    // Draw labels
-    final days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    final textPainter = TextPainter(
-      textDirection: TextDirection.ltr,
-    );
-    
-    for (int i = 0; i < days.length; i++) {
-      final x = 24 + i * barWidth + (barWidth - 8) / 2;
-      textPainter.text = TextSpan(
-        text: days[i],
-        style: TextStyle(color: Colors.white.withValues(alpha: 0.4), fontSize: 10),
-      );
-      textPainter.layout();
-      textPainter.paint(canvas, Offset(x - textPainter.width / 2, size.height - 12));
-    }
-  }
-
-  List<int> _generateActivityData() {
-    final random = math.Random(42);
-    return List.generate(7, (i) => 3000 + random.nextInt(7000));
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

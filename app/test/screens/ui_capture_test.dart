@@ -62,14 +62,20 @@ const List<({String name, Size size})> _viewports = <({String name, Size size})>
   (name: 'laptop', size: Size(1440, 900)),
 ];
 
-/// Screens rebuilt onto the design system. These render inside [DsPage].
-const Set<String> _contentScreens = <String>{
-  'dashboard',
-  'vitals',
+/// Screens that are bodies inside another page, and therefore rely on their host
+/// to supply the page frame and the scroll view: the three Vitals tab bodies and
+/// the three Insights bodies. Every other screen brings its own frame.
+///
+/// This distinction matters for what is captured. Rendering a body without its
+/// host hides the overflow it causes; rendering a full page inside a second
+/// page draws padding and a title bar the app never shows.
+const Set<String> _embeddedScreens = <String>{
   'heart',
   'activity',
   'sleep',
-  'health_hub',
+  'health_trends',
+  'health_tips',
+  'achievements',
 };
 
 final Map<String, Widget Function()> _screens = <String, Widget Function()>{
@@ -141,18 +147,13 @@ Future<void> loadRealFonts() async {
 /// Wraps a screen in the providers the app supplies, and paints the real theme
 /// so the capture reflects what someone would see.
 ///
-/// [isContent] distinguishes screens that render inside [DsPage] from screens
-/// that are pages in their own right. Content screens must not provide their own
-/// Scaffold, because DsPage supplies the title bar and the scroll view; giving
-/// one here reproduces a nested scroll that the real shell would not have.
-///
-/// Both are given a Scaffold, because the real shell always has one (DsShell
-/// builds it) and material widgets need it: without one, the first TextField or
-/// button added to a content screen failed with "No Material widget found",
-/// which reads as a broken screen rather than as a gap in the harness. The
-/// Scaffold adds no scroll view of its own, so it does not change what is
-/// captured.
-Widget harness(Widget child, {required bool isContent}) {
+/// [isEmbedded] says the screen is a body inside another page; it is given a
+/// [DsPage] here because that is what its host gives it in the app. A full page
+/// is given only a Scaffold, because it supplies its own frame and the real
+/// shell always has a Scaffold above it. Either way there is a Scaffold, because
+/// material widgets need a Material ancestor; without one, the first TextField
+/// or button added to a screen failed with "No Material widget found".
+Widget harness(Widget child, {required bool isEmbedded}) {
   return MultiProvider(
     providers: <ChangeNotifierProvider<ChangeNotifier>>[
       ChangeNotifierProvider<BleService>(create: (_) => BleService()),
@@ -175,7 +176,9 @@ Widget harness(Widget child, {required bool isContent}) {
     child: MaterialApp(
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
-      home: Scaffold(body: isContent ? DsPage(child: child) : child),
+      home: Scaffold(
+        body: isEmbedded ? DsPage(child: child) : child,
+      ),
     ),
   );
 }
@@ -290,7 +293,7 @@ void main() {
             await tester.pumpWidget(
               harness(
                 entry.value(),
-                isContent: _contentScreens.contains(entry.key),
+                isEmbedded: _embeddedScreens.contains(entry.key),
               ),
             );
             // Fixed pumps, not settle: an indeterminate progress indicator

@@ -1,468 +1,708 @@
-import 'package:flutter/material.dart';
-import '../theme/app_theme.dart';
+/// Guidance derived from the app's own thresholds.
+///
+/// The previous version was a carousel of eight fixed "daily" tips:
+///
+/// * the tip of the day was `DateTime.now().hour % 8`, so it was the tip of the
+///   hour, and the same eight strings were the entire content of the screen;
+/// * the strings made health claims presented as fact - "Drink at least 8
+///   glasses of water daily", "Just 2 minutes of stair climbing can improve
+///   heart health", "Normal levels are 95-100%" - with no source and no regard
+///   for who was reading them;
+/// * the eight "actions" below each tip ("Check your heart rate now", "Set a
+///   bedtime reminder", "Track your meals") were plain [Text], not buttons.
+///   Nothing happened when they were read, and nothing could happen;
+/// * "Swipe to see more tips" appeared above a screen with no swipe gesture;
+/// * fixed colours and a shadow meant it ignored the theme entirely.
+///
+/// What replaces it is generated from an actual stored or live reading using
+/// [health_interpretation.dart]: the band the number falls in, what that band
+/// means, and the next step the app suggests. The band table uses the same
+/// constants as every other screen, so the wording here cannot drift from the
+/// numbers there. No food, water, exercise or treatment targets are given,
+/// because the app has no basis for personalising them.
+library;
 
-// Daily health tips screen
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+import '../services/ble_service.dart';
+import '../services/local_store.dart';
+import '../theme/app_colors.dart';
+import '../theme/design_tokens.dart';
+import '../utils/health_interpretation.dart';
+import '../widgets/ds_widgets.dart';
+
+/// What the app's bands mean for the readings it has.
 class HealthTipsScreen extends StatefulWidget {
+  /// Create the guidance view.
   const HealthTipsScreen({super.key});
 
   @override
   State<HealthTipsScreen> createState() => _HealthTipsScreenState();
 }
 
-class _HealthTipsScreenState extends State<HealthTipsScreen>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  int _currentTipIndex = 0;
-
-  final List<HealthTip> _tips = [
-    HealthTip(
-      category: 'Heart Health',
-      icon: Icons.favorite,
-      color: Colors.red,
-      title: 'Monitor Your Heart Rate',
-      content: 'A normal resting heart rate for adults ranges from 60 to 100 beats per minute. Athletes may have lower rates. Track yours regularly to notice patterns.',
-      actionable: 'Check your heart rate now',
-    ),
-    HealthTip(
-      category: 'Sleep',
-      icon: Icons.bedtime,
-      color: const Color(0xFF8B5CF6),
-      title: 'Consistent Sleep Schedule',
-      content: 'Going to bed and waking up at the same time every day helps regulate your body\'s internal clock. Aim for 7-9 hours of quality sleep.',
-      actionable: 'Set a bedtime reminder',
-    ),
-    HealthTip(
-      category: 'Activity',
-      icon: Icons.directions_walk,
-      color: const Color(0xFF10B981),
-      title: 'Take the Stairs',
-      content: 'Just 2 minutes of stair climbing can improve heart health, burn calories, and boost energy levels. Small activities add up throughout the day.',
-      actionable: 'Log your activity',
-    ),
-    HealthTip(
-      category: 'Hydration',
-      icon: Icons.water_drop,
-      color: const Color(0xFF3B82F6),
-      title: 'Stay Hydrated',
-      content: 'Drink at least 8 glasses of water daily. Your body needs water for every cell function, temperature regulation, and toxin removal.',
-      actionable: 'Set a hydration reminder',
-    ),
-    HealthTip(
-      category: 'SpO2',
-      icon: Icons.air,
-      color: const Color(0xFF06B6D4),
-      title: 'Understanding SpO2',
-      content: 'Blood oxygen saturation (SpO2) measures how much oxygen your red blood cells carry. Normal levels are 95-100%. Low levels may indicate breathing issues.',
-      actionable: 'Check your SpO2 level',
-    ),
-    HealthTip(
-      category: 'Stress',
-      icon: Icons.self_improvement,
-      color: const Color(0xFFEC4899),
-      title: 'Take Deep Breaths',
-      content: 'Practice deep breathing for 5 minutes daily. It activates your parasympathetic nervous system, reducing stress hormones and promoting relaxation.',
-      actionable: 'Start a breathing exercise',
-    ),
-    HealthTip(
-      category: 'Nutrition',
-      icon: Icons.restaurant,
-      color: Colors.orange,
-      title: 'Colorful Plates',
-      content: 'Eat a variety of colorful fruits and vegetables. Different colors provide different nutrients your body needs for optimal health.',
-      actionable: 'Track your meals',
-    ),
-    HealthTip(
-      category: 'Posture',
-      icon: Icons.accessibility_new,
-      color: const Color(0xFF14B8A6),
-      title: 'Check Your Posture',
-      content: 'Good posture reduces strain on muscles and joints, prevents back pain, and even boosts confidence. Sit up straight and take regular breaks.',
-      actionable: 'Set a posture reminder',
-    ),
-  ];
+class _HealthTipsScreenState extends State<HealthTipsScreen> {
+  List<WatchSample> _samples = const <WatchSample>[];
+  bool _loading = true;
+  String? _error;
 
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(
-      duration: const Duration(milliseconds: 500),
-      vsync: this,
-    );
-    _currentTipIndex = DateTime.now().hour % _tips.length;
-    _controller.forward();
+    _load();
   }
 
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  void _nextTip() {
-    _controller.reverse().then((_) {
+  Future<void> _load() async {
+    if (!_loading) {
       setState(() {
-        _currentTipIndex = (_currentTipIndex + 1) % _tips.length;
+        _loading = true;
+        _error = null;
       });
-      _controller.forward();
-    });
-  }
-
-  void _previousTip() {
-    _controller.reverse().then((_) {
+    }
+    try {
+      final List<WatchSample> samples = await LocalStore.loadAll();
+      if (!mounted) return;
       setState(() {
-        _currentTipIndex = (_currentTipIndex - 1 + _tips.length) % _tips.length;
+        _samples = samples;
+        _loading = false;
       });
-      _controller.forward();
-    });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _error = '$error';
+        _loading = false;
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final tip = _tips[_currentTipIndex];
+    final BleService ble = context.watch<BleService>();
+    final WatchSample? stored = _latestStored(_samples);
 
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: CustomScrollView(
-        slivers: [
-          SliverAppBar(
-            backgroundColor: AppColors.background,
-            expandedHeight: 160,
-            floating: false,
-            pinned: true,
-            flexibleSpace: FlexibleSpaceBar(
-              background: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      tip.color.withValues(alpha: 0.3),
-                      AppColors.background,
-                    ],
-                  ),
-                ),
-                child: SafeArea(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const SizedBox(height: 30),
-                      Icon(tip.icon, color: tip.color, size: 40),
-                      const SizedBox(height: 8),
-                      const Text(
-                        'Daily Health Tips',
-                        style: TextStyle(
-                          color: AppColors.textPrimary,
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const Text(
-                        'Swipe to see more tips',
-                        style: TextStyle(
-                          color: AppColors.textMuted,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
+    // A disconnected watch reports zero, and a zero is not a reading. Prefer
+    // the live value only when it exists, then fall back to what is stored.
+    final int liveHr = ble.isConnected ? ble.heartRate.bpm : 0;
+    final int liveOxygen = ble.isConnected ? ble.oxygen.spO2 : 0;
+    final int liveHrv = ble.isConnected ? ble.heartRate.hrv : 0;
+    final bool hasLive = liveHr > 0 || liveOxygen > 0 || liveHrv > 0;
+
+    final int heartRate = liveHr > 0 ? liveHr : (stored?.hr ?? 0);
+    final int oxygen = liveOxygen > 0 ? liveOxygen : (stored?.spo2 ?? 0);
+    final int hrv = liveHrv > 0 ? liveHrv : (stored?.hrv ?? 0);
+    final bool hasReading = heartRate > 0 || oxygen > 0 || hrv > 0;
+
+    final String source = hasLive
+        ? ble.demoMode
+            ? 'From a simulated demo reading. It is not a measurement.'
+            : 'From the live reading on the connected watch.'
+        : stored == null
+            ? 'No reading has been stored yet.'
+            : 'From the reading stored on ${_dayLabel(stored.at)} at '
+                '${_clockLabel(stored.at)}.';
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        DsSection(
+          title: 'Reading guidance',
+          subtitle: 'Based on the ranges this app uses. Screening cues, not a '
+              'diagnosis.',
+          trailing: IconButton(
+            tooltip: 'Reload stored history',
+            onPressed: _loading ? null : _load,
+            icon: const Icon(Icons.refresh_rounded),
           ),
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                children: [
-                  // Category badge
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: tip.color.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: tip.color.withValues(alpha: 0.5),
-                        width: 1,
-                      ),
-                    ),
-                    child: Text(
-                      tip.category,
-                      style: TextStyle(
-                        color: tip.color,
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 30),
-
-                  // Main tip card
-                  AnimatedBuilder(
-                    animation: _controller,
-                    builder: (context, child) {
-                      return Transform.scale(
-                        scale: 0.8 + (_controller.value * 0.2),
-                        child: Opacity(
-                          opacity: _controller.value,
-                          child: child,
-                        ),
-                      );
-                    },
-                    child: Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(24),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [
-                            tip.color.withValues(alpha: 0.15),
-                            tip.color.withValues(alpha: 0.05),
-                          ],
-                        ),
-                        borderRadius: BorderRadius.circular(24),
-                        border: Border.all(
-                          color: tip.color.withValues(alpha: 0.3),
-                          width: 1,
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: tip.color.withValues(alpha: 0.2),
-                            blurRadius: 30,
-                            spreadRadius: -10,
-                          ),
-                        ],
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                  color: tip.color.withValues(alpha: 0.2),
-                                  borderRadius: BorderRadius.circular(16),
-                                ),
-                                child: Icon(tip.icon, color: tip.color, size: 32),
-                              ),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: Text(
-                                  tip.title,
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 22,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 20),
-                          Text(
-                            tip.content,
-                            style: TextStyle(
-                              color: Colors.white.withValues(alpha: 0.8),
-                              fontSize: 16,
-                              height: 1.6,
-                            ),
-                          ),
-                          const SizedBox(height: 24),
-                          Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: tip.color.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                color: tip.color.withValues(alpha: 0.2),
-                                width: 1,
-                              ),
-                            ),
-                            child: Row(
-                              children: [
-                                Icon(Icons.lightbulb_outline, color: tip.color, size: 20),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Text(
-                                    tip.actionable,
-                                    style: TextStyle(
-                                      color: tip.color,
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 30),
-
-                  // Navigation buttons
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      _buildNavButton(
-                        icon: Icons.arrow_back_ios,
-                        onTap: _previousTip,
-                      ),
-                      const SizedBox(width: 20),
-                      _buildIndicator(),
-                      const SizedBox(width: 20),
-                      _buildNavButton(
-                        icon: Icons.arrow_forward_ios,
-                        onTap: _nextTip,
-                      ),
+          child: _loading
+              ? const _LoadingCard(label: 'Reading stored history…')
+              : Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: <Widget>[
+                    if (_error != null) ...<Widget>[
+                      _UnreadableHistory(error: _error!),
+                      const SizedBox(height: Space.lg),
                     ],
-                  ),
-
-                  const SizedBox(height: 40),
-
-                  // All tips preview
-                  const Text(
-                    'All Tips',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Tips grid
-                  GridView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
-                      mainAxisSpacing: 12,
-                      crossAxisSpacing: 12,
-                      childAspectRatio: 1.5,
-                    ),
-                    itemCount: _tips.length,
-                    itemBuilder: (context, index) {
-                      final t = _tips[index];
-                      return GestureDetector(
-                        onTap: () {
-                          _controller.reverse().then((_) {
-                            setState(() {
-                              _currentTipIndex = index;
-                            });
-                            _controller.forward();
-                          });
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: _currentTipIndex == index
-                                ? t.color.withValues(alpha: 0.2)
-                                : Colors.white.withValues(alpha: 0.05),
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color: _currentTipIndex == index
-                                  ? t.color.withValues(alpha: 0.5)
-                                  : Colors.white.withValues(alpha: 0.1),
-                              width: 1,
-                            ),
+                    if (ble.demoMode) ...<Widget>[
+                      const _DemoNotice(),
+                      const SizedBox(height: Space.lg),
+                    ],
+                    if (!hasReading)
+                      const _NoReadingYet()
+                    else ...<Widget>[
+                      if (heartRate > 0)
+                        _ReadingCard(
+                          label: 'Heart rate',
+                          metric: 'heart rate',
+                          value: '$heartRate',
+                          unit: 'BPM',
+                          status: interpretHeartRate(heartRate),
+                          icon: Icons.favorite_rounded,
+                          accent: AppColors.of(
+                            AppColors.heartRed,
+                            AppColors.darkHeart,
+                            context,
                           ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Icon(t.icon, color: t.color, size: 24),
-                              const Spacer(),
-                              Text(
-                                t.category,
-                                style: TextStyle(
-                                  color: _currentTipIndex == index ? t.color : Colors.white54,
-                                  fontSize: 11,
-                                ),
-                              ),
-                              Text(
-                                t.title,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
-                          ),
+                          source: source,
                         ),
-                      );
-                    },
+                      if (heartRate > 0 && oxygen > 0)
+                        const SizedBox(height: Space.lg),
+                      if (oxygen > 0)
+                        _ReadingCard(
+                          label: 'Oxygen saturation',
+                          metric: 'oxygen saturation',
+                          value: '$oxygen',
+                          unit: '%',
+                          status: interpretOxygen(oxygen),
+                          icon: Icons.air_rounded,
+                          accent: AppColors.of(
+                            AppColors.oxyGreen,
+                            AppColors.darkOxy,
+                            context,
+                          ),
+                          source: source,
+                        ),
+                      if (hrv > 0) ...<Widget>[
+                        if (heartRate > 0 || oxygen > 0)
+                          const SizedBox(height: Space.lg),
+                        _HrvCard(value: hrv, source: source),
+                      ],
+                    ],
+                  ],
+                ),
+        ),
+        const SizedBox(height: Space.xxl),
+        DsSection(
+          title: 'What the bands mean',
+          subtitle: 'The same boundaries every other screen uses',
+          child: DsGrid(
+            minTileWidth: 320,
+            children: <Widget>[
+              _BandCard(
+                title: 'Heart rate',
+                metric: 'heart rate',
+                accent: AppColors.of(
+                  AppColors.heartRed,
+                  AppColors.darkHeart,
+                  context,
+                ),
+                bands: const <_Band>[
+                  _Band(
+                    status: HealthStatus.normal,
+                    range: '50–100 BPM',
                   ),
-
-                  const SizedBox(height: 100),
+                  _Band(
+                    status: HealthStatus.elevated,
+                    range: '101–120 BPM',
+                  ),
+                  _Band(
+                    status: HealthStatus.high,
+                    range: '40–49 or 121–180 BPM',
+                  ),
+                  _Band(
+                    status: HealthStatus.critical,
+                    range: 'Below 40 or above 180 BPM',
+                  ),
                 ],
               ),
+              _BandCard(
+                title: 'Oxygen saturation',
+                metric: 'oxygen saturation',
+                accent: AppColors.of(
+                  AppColors.oxyGreen,
+                  AppColors.darkOxy,
+                  context,
+                ),
+                bands: const <_Band>[
+                  _Band(
+                    status: HealthStatus.normal,
+                    range: '96–100%',
+                  ),
+                  _Band(
+                    status: HealthStatus.elevated,
+                    range: '94–95%',
+                  ),
+                  _Band(
+                    status: HealthStatus.high,
+                    range: '90–93%',
+                  ),
+                  _Band(
+                    status: HealthStatus.critical,
+                    range: 'Below 90%',
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: Space.xxl),
+        const DsSection(
+          title: 'Getting a usable reading',
+          subtitle: 'What the hardware needs, not what to do about a number',
+          child: DsCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                _Bullet(
+                  'The optical sensor needs skin contact. A loose strap records '
+                  'nothing, which this app shows as "--" rather than zero.',
+                ),
+                _Bullet(
+                  'Movement during a reading adds noise to heart rate and '
+                  'oxygen. Sit still for the duration of a measurement.',
+                ),
+                _Bullet(
+                  'Oxygen saturation from this sensor is a trend estimate, not '
+                  'a hospital measurement.',
+                ),
+                _Bullet(
+                  'One reading is a moment, not a pattern. The trends pages use '
+                  'the samples the watch stores, one a minute while it sees a '
+                  'pulse or steps.',
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: Space.xxl),
+        const DsSection(
+          title: 'What this page does not do',
+          child: DsCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                _Bullet(
+                  'It does not diagnose anything. A band describes how a number '
+                  'compares with the ranges this app treats as usual.',
+                ),
+                _Bullet(
+                  'It does not tell you to start or stop any treatment, food, '
+                  'drink or exercise.',
+                ),
+                _Bullet(
+                  'If a reading stays outside the usual range, or you feel '
+                  'unwell, the next step is a clinician or emergency services.',
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// The newest stored sample that carried any interpretable value.
+WatchSample? _latestStored(List<WatchSample> samples) {
+  for (var i = samples.length - 1; i >= 0; i--) {
+    final WatchSample sample = samples[i];
+    if (sample.hr > 0 || sample.spo2 > 0 || sample.hrv > 0) return sample;
+  }
+  return null;
+}
+
+const List<String> _monthNames = <String>[
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'May',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dec',
+];
+
+String _dayLabel(DateTime time) =>
+    '${time.day} ${_monthNames[time.month - 1]}';
+
+String _clockLabel(DateTime time) =>
+    '${time.hour.toString().padLeft(2, '0')}:'
+    '${time.minute.toString().padLeft(2, '0')}';
+
+/// The app's suggestion for a band, or a description when nothing is suggested.
+String _bandMeaning(HealthStatus status, String metric) =>
+    guidanceFor(status, metric) ??
+    'Inside the range this app treats as usual for $metric. That describes '
+        'the number, not a diagnosis.';
+
+/// One measured value, its band and the suggested next step.
+class _ReadingCard extends StatelessWidget {
+  const _ReadingCard({
+    required this.label,
+    required this.metric,
+    required this.value,
+    required this.unit,
+    required this.status,
+    required this.icon,
+    required this.accent,
+    required this.source,
+  });
+
+  final String label;
+  final String metric;
+  final String value;
+  final String unit;
+  final HealthStatus status;
+  final IconData icon;
+  final Color accent;
+  final String source;
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+
+    return DsCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              Icon(icon, size: 18, color: accent),
+              const SizedBox(width: Space.sm),
+              Expanded(
+                child: DsLabel(
+                  label,
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+              DsStatusPill(
+                label: status.label,
+                color: healthStatusColor(status, context),
+                dense: true,
+              ),
+            ],
+          ),
+          const SizedBox(height: Space.sm),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.baseline,
+            textBaseline: TextBaseline.alphabetic,
+            children: <Widget>[
+              Text(
+                value,
+                style: Type.metricSmall.copyWith(
+                  color: theme.colorScheme.onSurface,
+                ),
+              ),
+              const SizedBox(width: Space.xxs),
+              Text(unit, style: theme.textTheme.labelMedium),
+            ],
+          ),
+          const SizedBox(height: Space.sm),
+          Text(
+            _bandMeaning(status, metric),
+            style: theme.textTheme.bodyMedium,
+          ),
+          const SizedBox(height: Space.xs),
+          Text(source, style: theme.textTheme.bodySmall),
+        ],
+      ),
+    );
+  }
+}
+
+/// Heart rate variability, described only as far as the app interprets it.
+class _HrvCard extends StatelessWidget {
+  const _HrvCard({required this.value, required this.source});
+
+  final int value;
+  final String source;
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    final bool low = isRecoveryLow(hrv: value, restingHrv: 0);
+
+    return DsCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              Icon(
+                Icons.monitor_heart_outlined,
+                size: 18,
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+              const SizedBox(width: Space.sm),
+              Expanded(
+                child: DsLabel(
+                  'Heart rate variability',
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: Space.sm),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.baseline,
+            textBaseline: TextBaseline.alphabetic,
+            children: <Widget>[
+              Text(
+                '$value',
+                style: Type.metricSmall.copyWith(
+                  color: theme.colorScheme.onSurface,
+                ),
+              ),
+              const SizedBox(width: Space.xxs),
+              Text('ms', style: theme.textTheme.labelMedium),
+            ],
+          ),
+          const SizedBox(height: Space.sm),
+          Text(
+            low
+                ? 'Below the single low threshold this app uses '
+                    '($kLowHrvMs ms). One reading is not meaningful on its '
+                    'own: HRV moves with sleep, stress, alcohol and illness.'
+                : 'Above the single low threshold this app uses '
+                    '($kLowHrvMs ms). The app does not interpret HRV beyond '
+                    'that flag.',
+            style: theme.textTheme.bodyMedium,
+          ),
+          const SizedBox(height: Space.xs),
+          Text(source, style: theme.textTheme.bodySmall),
+        ],
+      ),
+    );
+  }
+}
+
+/// One band in the reference table.
+class _Band {
+  const _Band({required this.status, required this.range});
+
+  final HealthStatus status;
+  final String range;
+}
+
+/// The bands for one metric.
+class _BandCard extends StatelessWidget {
+  const _BandCard({
+    required this.title,
+    required this.metric,
+    required this.accent,
+    required this.bands,
+  });
+
+  final String title;
+  final String metric;
+  final Color accent;
+  final List<_Band> bands;
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+
+    return DsCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              Container(
+                width: 8,
+                height: 8,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: accent,
+                ),
+              ),
+              const SizedBox(width: Space.sm),
+              Expanded(
+                child: Text(title, style: theme.textTheme.titleSmall),
+              ),
+            ],
+          ),
+          const SizedBox(height: Space.md),
+          for (final _Band band in bands)
+            Padding(
+              padding: const EdgeInsets.only(bottom: Space.md),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Icon(
+                    band.status.icon,
+                    size: 16,
+                    color: healthStatusColor(band.status, context),
+                  ),
+                  const SizedBox(width: Space.sm),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        Wrap(
+                          spacing: Space.sm,
+                          runSpacing: Space.xxs,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          children: <Widget>[
+                            Text(band.range, style: theme.textTheme.labelLarge),
+                            Text(
+                              band.status.label,
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: healthStatusColor(
+                                  band.status,
+                                  context,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: Space.xxs),
+                        Text(
+                          _bandMeaning(band.status, metric),
+                          style: theme.textTheme.bodySmall,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          Text(
+            'Screening bands for an adult at rest. A single reading is not a '
+            'diagnosis, and a clinician reading the same number may interpret '
+            'it differently.',
+            style: theme.textTheme.bodySmall,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// A sentence with a leading dot, used in short reference lists.
+class _Bullet extends StatelessWidget {
+  const _Bullet(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: Space.sm),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: Icon(
+              Icons.circle,
+              size: 6,
+              color: theme.colorScheme.primary,
+            ),
+          ),
+          const SizedBox(width: Space.sm),
+          Expanded(
+            child: Text(text, style: theme.textTheme.bodyMedium),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// A progress indicator with a caption, used while the history is opened.
+class _LoadingCard extends StatelessWidget {
+  const _LoadingCard({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return DsCard(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: Space.xl),
+        child: Column(
+          children: <Widget>[
+            const SizedBox(
+              width: 24,
+              height: 24,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+            const SizedBox(height: Space.md),
+            Text(label, style: Theme.of(context).textTheme.bodySmall),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// The stored history could not be opened.
+class _UnreadableHistory extends StatelessWidget {
+  const _UnreadableHistory({required this.error});
+
+  final String error;
+
+  @override
+  Widget build(BuildContext context) {
+    return DsCard(
+      child: DsEmptyState(
+        icon: Icons.folder_off_outlined,
+        title: 'Stored history could not be read',
+        message: 'The samples saved on this phone could not be opened '
+            '($error). Live readings can still be described below, but stored '
+            'history cannot.',
+      ),
+    );
+  }
+}
+
+/// Makes it unambiguous that a demo reading is simulated.
+class _DemoNotice extends StatelessWidget {
+  const _DemoNotice();
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    final Color warning = AppColors.of(
+      AppColors.warning,
+      AppColors.darkWarning,
+      context,
+    );
+
+    return Container(
+      padding: const EdgeInsets.all(Space.md),
+      decoration: BoxDecoration(
+        color: warning.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(Radii.md),
+        border: Border.all(color: warning.withValues(alpha: 0.25)),
+      ),
+      child: Row(
+        children: <Widget>[
+          Icon(Icons.science_outlined, size: 18, color: warning),
+          const SizedBox(width: Space.sm),
+          Expanded(
+            child: Text(
+              'Demo mode is on. The reading below is simulated by the app, not '
+              'measured by a watch.',
+              style: theme.textTheme.bodySmall,
             ),
           ),
         ],
       ),
     );
   }
+}
 
-  Widget _buildNavButton({required IconData icon, required VoidCallback onTap}) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 50,
-        height: 50,
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.1),
-          shape: BoxShape.circle,
-          border: Border.all(
-            color: Colors.white.withValues(alpha: 0.2),
-            width: 1,
-          ),
-        ),
-        child: Icon(icon, color: Colors.white70, size: 20),
+/// Nothing to interpret yet.
+class _NoReadingYet extends StatelessWidget {
+  const _NoReadingYet();
+
+  @override
+  Widget build(BuildContext context) {
+    return const DsCard(
+      child: DsEmptyState(
+        icon: Icons.lightbulb_outline_rounded,
+        title: 'No reading to guide yet',
+        message: 'Guidance here is derived from your own readings. Pair the '
+            'watch and take a reading, or let its stored history sync, and '
+            'this page will explain the band each number falls in.',
       ),
     );
   }
-
-  Widget _buildIndicator() {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: List.generate(_tips.length, (index) {
-        final isActive = index == _currentTipIndex;
-        return AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          margin: const EdgeInsets.symmetric(horizontal: 3),
-          width: isActive ? 24 : 8,
-          height: 8,
-          decoration: BoxDecoration(
-            color: isActive ? _tips[index].color : Colors.white24,
-            borderRadius: BorderRadius.circular(4),
-          ),
-        );
-      }),
-    );
-  }
-}
-
-class HealthTip {
-  final String category;
-  final IconData icon;
-  final Color color;
-  final String title;
-  final String content;
-  final String actionable;
-
-  HealthTip({
-    required this.category,
-    required this.icon,
-    required this.color,
-    required this.title,
-    required this.content,
-    required this.actionable,
-  });
 }
