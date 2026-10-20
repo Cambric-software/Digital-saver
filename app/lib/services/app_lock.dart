@@ -172,6 +172,17 @@ class AppLock extends ChangeNotifier {
     }
   }
 
+  /// How long until another attempt is allowed, or null when not throttled.
+  ///
+  /// Exposed so the lock screen can say why a correct-looking attempt was
+  /// refused instead of repeating "that PIN is not right" for thirty seconds.
+  Duration? get lockoutRemaining {
+    final DateTime? until = _lockedUntil;
+    if (until == null) return null;
+    final Duration left = until.difference(DateTime.now());
+    return left.isNegative ? null : left;
+  }
+
   Future<void> saveWatchPin(String pin) async {
     await _secureStorage.write(key: _pairKey, value: pin);
   }

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/services.dart';
@@ -9,6 +11,7 @@ import 'services/theme_service.dart';
 import 'services/locale_service.dart';
 import 'services/auto_update_service.dart';
 import 'services/heart_rate_tracker.dart';
+import 'screens/lock_screen.dart';
 import 'screens/web_landing_page.dart';
 import 'widgets/ds_shell.dart';
 import 'widgets/enhanced_splash.dart';
@@ -48,6 +51,11 @@ class DigitalSaverApp extends StatefulWidget {
 }
 
 class _DigitalSaverAppState extends State<DigitalSaverApp> with WidgetsBindingObserver {
+  /// The app's navigator, so routes opened above the shell can be closed when
+  /// the lock shuts. A dialog is a route on this navigator, not part of the
+  /// locked subtree, so it would otherwise stay readable over the PIN screen.
+  final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
+
   @override
   void initState() {
     super.initState();
@@ -63,6 +71,12 @@ class _DigitalSaverAppState extends State<DigitalSaverApp> with WidgetsBindingOb
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused || state == AppLifecycleState.hidden) {
+      _navigatorKey.currentState
+          ?.popUntil((Route<dynamic> route) => route.isFirst);
+      unawaited(context.read<AppLock>().lockNow());
+      return;
+    }
     if (state == AppLifecycleState.resumed) {
       _checkForUpdates();
     }
@@ -82,6 +96,7 @@ class _DigitalSaverAppState extends State<DigitalSaverApp> with WidgetsBindingOb
     return MaterialApp(
       title: 'Digital Saver',
       debugShowCheckedModeBanner: false,
+      navigatorKey: _navigatorKey,
       theme: themeService.getLightTheme(),
       darkTheme: themeService.getDarkTheme(),
       themeMode: themeService.themeMode,
@@ -92,9 +107,11 @@ class _DigitalSaverAppState extends State<DigitalSaverApp> with WidgetsBindingOb
       ),
       home: kIsWeb
           ? const WebLandingPage()
-          : _UpdateWrapper(
-              updateService: updateService,
-              child: const EnhancedSplashScreen(),
+          : LockGate(
+              child: _UpdateWrapper(
+                updateService: updateService,
+                child: const EnhancedSplashScreen(),
+              ),
             ),
     );
   }

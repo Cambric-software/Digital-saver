@@ -1,20 +1,48 @@
+/// Settings: the one place the app's choices are changed.
+///
+/// Rebuilt. The previous version was a 715-line [Scaffold] with an [AppBar]
+/// inside the shared shell, so Settings drew a page frame inside a page frame.
+/// It read and wrote every preference through shared_preferences by hand, with
+/// the key string and the default spelled out separately on the load side and
+/// the save side; a typo in either produced a switch that appeared to save and
+/// reverted on the next open. It also loaded the profile and emergency contacts
+/// and never showed them, kept a PIN controller it never used, and carried
+/// three imports - url_launcher, app_lock and emergency_service - that did
+/// nothing.
+///
+/// What is here now:
+///   * a [DsPage] with no frame of its own;
+///   * every stored preference goes through [StorageService], so a key and its
+///     default exist once;
+///   * the profile and emergency contacts are editable and save through
+///     [LocalStore];
+///   * the app-lock PIN sets, verifies and clears through [AppLock], with the
+///     wrong-PIN and too-short-PIN failures shown in the dialog;
+///   * controls that only store a value say so, rather than claiming to change
+///     the watch when this build has no command for them;
+///   * no save-everything button. Each control saves itself, so the snackbar
+///     can only appear when the write actually succeeded.
+library;
+
 import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../models/health_models.dart';
 import '../services/app_lock.dart';
 import '../services/auto_update_service.dart';
 import '../services/ble_service.dart';
-import '../services/emergency_service.dart';
 import '../services/local_store.dart';
-import '../services/theme_service.dart';
 import '../services/locale_service.dart';
-import '../theme/app_theme.dart';
+import '../services/storage_service.dart';
+import '../services/theme_service.dart';
+import '../theme/design_tokens.dart';
+import '../widgets/ds_widgets.dart';
 
+/// Appearance, the watch, alerts, records and the release.
 class SettingsScreen extends StatefulWidget {
+  /// Create the screen.
   const SettingsScreen({super.key});
 
   @override
@@ -22,57 +50,53 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  UserProfile _profile = UserProfile();
-  List<EmergencyContact> _contacts = [];
-  bool _loading = true;
+  static const List<String> _watchFaces = <String>[
+    'Face 1: Minimal Sport',
+    'Face 2: Health Rings',
+    'Face 3: Cyberpunk Pixel',
+    'Face 4: Classic Analog Dial',
+    'Face 5: Detailed Telemetry',
+  ];
 
-  /// Set when loading settings failed.
-  ///
-  /// The screen used to have no failure path at all: any exception in [_load]
-  /// left `_loading` true, so the person was shown a spinner that never
-  /// stopped and no way to find out why. A settings screen that silently hangs
-  /// looks identical to one that is broken.
-  String? _loadError;
-  final _name = TextEditingController();
-  final _age = TextEditingController();
-  final _weight = TextEditingController();
-  final _pin = TextEditingController();
-  final _watchPin = TextEditingController();
-
-  // Settings state
-  String _selectedLanguage = 'English';
-  bool _demoMode = false;
-  int _selectedWatchFace = 0;
-  bool _autoSyncHistory = true;
-  double _highHrThreshold = 120.0;
-  double _lowSpo2Threshold = 90.0;
-
-
-  // Feature 21 & 22: Complications & Quick-Reply Templates
-  String _complicationTop = 'Steps';
-  String _complicationBottom = 'Heart Rate';
-  final List<String> _availableComplications = [
+  static const List<String> _complicationChoices = <String>[
     'Steps',
     'Heart Rate',
     'Battery Level',
     'Calories Burned',
     'Distance (km)',
-    'None'
-  ];
-  List<String> _quickReplies = [
-    'In a meeting, call you later.',
-    'On my way!',
-    "Can't talk right now.",
-    'Got it, thanks!'
+    'None',
   ];
 
-  final List<String> _watchFaces = [
-    'Face 1: Minimal Sport',
-    'Face 2: Health Rings (Apple-like)',
-    'Face 3: Cyberpunk Pixel',
-    'Face 4: Classic Analog Dial',
-    'Face 5: Detailed Telemetry'
-  ];
+  static const List<String> _languages = <String>['English', 'العربية'];
+
+  bool _loading = true;
+  String? _loadError;
+
+  // Profile and contacts are the two records the screen owns. They stay in
+  // LocalStore; the settings above them stay in StorageService.
+  UserProfile _profile = UserProfile();
+  List<EmergencyContact> _contacts = <EmergencyContact>[];
+  bool _savingProfile = false;
+  String? _profileError;
+  bool _savingContact = false;
+  String? _contactError;
+
+  final TextEditingController _name = TextEditingController();
+  final TextEditingController _age = TextEditingController();
+  final TextEditingController _weight = TextEditingController();
+  final TextEditingController _contactName = TextEditingController();
+  final TextEditingController _contactPhone = TextEditingController();
+  final TextEditingController _contactRelation = TextEditingController();
+
+  bool _demoMode = StorageService.defaultDemoMode;
+  int _watchFace = StorageService.defaultWatchFace;
+  bool _autoSync = StorageService.defaultAutoSyncHistory;
+  double _highHr = StorageService.defaultHighHrThreshold;
+  double _lowSpo2 = StorageService.defaultLowSpo2Threshold;
+  String _complicationTop = StorageService.defaultComplicationTop;
+  String _complicationBottom = StorageService.defaultComplicationBottom;
+  List<String> _quickReplies =
+      List<String>.of(StorageService.defaultQuickReplies);
 
   @override
   void initState() {
@@ -80,39 +104,59 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _load();
   }
 
+  @override
+  void dispose() {
+    _name.dispose();
+    _age.dispose();
+    _weight.dispose();
+    _contactName.dispose();
+    _contactPhone.dispose();
+    _contactRelation.dispose();
+    super.dispose();
+  }
+
   Future<void> _load() async {
     try {
-      final p = await LocalStore.loadProfile();
-      final c = await LocalStore.loadContacts();
-      final prefs = await SharedPreferences.getInstance();
-      final locale = context.read<LocaleService>();
+      // Captured before the first await: this State may be gone afterwards.
+      final AppLock lock = context.read<AppLock>();
 
-      // The screen may have been left while these were loading.
+      final UserProfile profile = await LocalStore.loadProfile();
+      final List<EmergencyContact> contacts = await LocalStore.loadContacts();
+      final bool demoMode = await StorageService.demoMode();
+      final int watchFace = await StorageService.watchFace();
+      final bool autoSync = await StorageService.autoSyncHistory();
+      final double highHr = await StorageService.highHrThreshold();
+      final double lowSpo2 = await StorageService.lowSpo2Threshold();
+      final String complicationTop = await StorageService.complicationTop();
+      final String complicationBottom =
+          await StorageService.complicationBottom();
+      final List<String> quickReplies = await StorageService.quickReplies();
+
+      if (!lock.ready) await lock.load();
       if (!mounted) return;
 
-      _name.text = p.name;
-      _age.text = '${p.age}';
-      _weight.text = '${p.weightKg.round()}';
-
       setState(() {
-        _profile = p;
-        _contacts = c;
-        _selectedLanguage = locale.currentLanguage;
-        _demoMode = prefs.getBool('demo_mode') ?? false;
-        _selectedWatchFace = prefs.getInt('selected_watch_face') ?? 0;
-        _autoSyncHistory = prefs.getBool('auto_sync_history') ?? true;
-        _highHrThreshold = prefs.getDouble('high_hr_threshold') ?? 120.0;
-        _lowSpo2Threshold = prefs.getDouble('low_spo2_threshold') ?? 90.0;
-
-        _complicationTop = prefs.getString('complication_top') ?? 'Steps';
-        _complicationBottom =
-            prefs.getString('complication_bottom') ?? 'Heart Rate';
-        final savedReplies = prefs.getStringList('quick_replies');
-        if (savedReplies != null && savedReplies.isNotEmpty) {
-          _quickReplies = savedReplies;
-        }
-
+        _profile = profile;
+        _contacts = contacts;
+        _name.text = profile.name;
+        _age.text = '${profile.age}';
+        _weight.text = _formatNumber(profile.weightKg);
+        _demoMode = demoMode;
+        _watchFace = watchFace >= 0 && watchFace < _watchFaces.length
+            ? watchFace
+            : StorageService.defaultWatchFace;
+        _autoSync = autoSync;
+        _highHr = highHr;
+        _lowSpo2 = lowSpo2;
+        _complicationTop = _complicationChoices.contains(complicationTop)
+            ? complicationTop
+            : StorageService.defaultComplicationTop;
+        _complicationBottom = _complicationChoices.contains(complicationBottom)
+            ? complicationBottom
+            : StorageService.defaultComplicationBottom;
+        _quickReplies = List<String>.of(quickReplies);
         _loading = false;
+        _loadError = null;
       });
     } catch (error) {
       if (!mounted) return;
@@ -123,631 +167,1586 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
-  @override
-  void dispose() {
-    _name.dispose();
-    _age.dispose();
-    _weight.dispose();
-    _pin.dispose();
-    _watchPin.dispose();
-    super.dispose();
+  Future<void> _retry() async {
+    setState(() {
+      _loading = true;
+      _loadError = null;
+    });
+    await _load();
   }
 
-  Future<void> _saveSettings() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('app_language', _selectedLanguage);
-    if (mounted) {
-      await context.read<LocaleService>().setLanguage(_selectedLanguage);
-    }
-    await prefs.setBool('demo_mode', _demoMode);
-    await prefs.setInt('selected_watch_face', _selectedWatchFace);
-    await prefs.setBool('auto_sync_history', _autoSyncHistory);
-    await prefs.setDouble('high_hr_threshold', _highHrThreshold);
-    await prefs.setDouble('low_spo2_threshold', _lowSpo2Threshold);
+  static String _formatNumber(double value) {
+    if (value == value.roundToDouble()) return '${value.round()}';
+    return value.toString();
+  }
 
-    await prefs.setString('complication_top', _complicationTop);
-    await prefs.setString('complication_bottom', _complicationBottom);
-    await prefs.setStringList('quick_replies', _quickReplies);
-
-
-    final nextProfile = UserProfile(
-      name: _name.text.trim(),
-      age: int.tryParse(_age.text) ?? 16,
-      weightKg: double.tryParse(_weight.text) ?? 65.0,
-      gender: _profile.gender,
-      heightCm: _profile.heightCm,
-    );
-    await LocalStore.saveProfile(nextProfile);
-
-    // Saving the profile is async, so the person may have navigated away and
-    // this State may no longer be mounted.
+  void _snack(String message) {
     if (!mounted) return;
-    final ble = context.read<BleService>();
-    if (ble.isConnected) {
-      await ble.setWatchFace(_selectedWatchFace);
+    ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+      SnackBar(content: Text(message)),
+    );
+  }
+
+  // ── Stored settings ─────────────────────────────────────────────────
+
+  Future<void> _setDemoMode(bool value) async {
+    setState(() => _demoMode = value);
+    try {
+      await StorageService.setDemoMode(value);
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => _demoMode = !value);
+      _snack('Demo mode could not be saved: $error');
+    }
+  }
+
+  Future<void> _setAutoSync(bool value) async {
+    setState(() => _autoSync = value);
+    try {
+      await StorageService.setAutoSyncHistory(value);
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => _autoSync = !value);
+      _snack('The auto-sync preference could not be saved: $error');
+    }
+  }
+
+  Future<void> _setWatchFace(int value, BleService ble) async {
+    final int previous = _watchFace;
+    setState(() => _watchFace = value);
+    try {
+      await StorageService.setWatchFace(value);
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => _watchFace = previous);
+      _snack('The watch face could not be saved: $error');
+      return;
     }
 
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Settings saved successfully!'),
-          backgroundColor: AppColors.primary,
+    if (!ble.isConnected) return;
+    try {
+      await ble.setWatchFace(value);
+      _snack('Face ${value + 1} saved and sent to the watch.');
+    } catch (error) {
+      _snack('The choice was saved, but the watch did not accept it: $error');
+    }
+  }
+
+  Future<void> _setHighHr(double value) async {
+    setState(() => _highHr = value);
+    try {
+      await StorageService.setHighHrThreshold(value);
+    } catch (error) {
+      _snack('The high heart-rate threshold could not be saved: $error');
+    }
+  }
+
+  Future<void> _setLowSpo2(double value) async {
+    setState(() => _lowSpo2 = value);
+    try {
+      await StorageService.setLowSpo2Threshold(value);
+    } catch (error) {
+      _snack('The low oxygen threshold could not be saved: $error');
+    }
+  }
+
+  Future<void> _setComplicationTop(String value) async {
+    final String previous = _complicationTop;
+    setState(() => _complicationTop = value);
+    try {
+      await StorageService.setComplicationTop(value);
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => _complicationTop = previous);
+      _snack('The top slot could not be saved: $error');
+    }
+  }
+
+  Future<void> _setComplicationBottom(String value) async {
+    final String previous = _complicationBottom;
+    setState(() => _complicationBottom = value);
+    try {
+      await StorageService.setComplicationBottom(value);
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => _complicationBottom = previous);
+      _snack('The bottom slot could not be saved: $error');
+    }
+  }
+
+  // ── Quick replies ───────────────────────────────────────────────────
+
+  Future<void> _addQuickReply() async {
+    final String? text = await showDialog<String>(
+      context: context,
+      builder: (BuildContext context) => const _TextPromptDialog(
+        title: 'Add a quick reply',
+        hint: 'On my way!',
+        confirmLabel: 'Add',
+        fieldLabel: 'Reply text',
+      ),
+    );
+    if (text == null || !mounted) return;
+    await _saveQuickReplies(
+      <String>[..._quickReplies, text],
+      'Quick reply added to this phone.',
+    );
+  }
+
+  Future<void> _removeQuickReply(int index) async {
+    if (index < 0 || index >= _quickReplies.length) return;
+    final List<String> next = List<String>.of(_quickReplies)..removeAt(index);
+    await _saveQuickReplies(next, 'Quick reply removed.');
+  }
+
+  Future<void> _saveQuickReplies(List<String> next, String message) async {
+    try {
+      await StorageService.setQuickReplies(next);
+      if (!mounted) return;
+      setState(() => _quickReplies = List<String>.of(next));
+      _snack(message);
+    } catch (error) {
+      _snack('The quick replies could not be saved: $error');
+    }
+  }
+
+  // ── Profile ─────────────────────────────────────────────────────────
+
+  Future<void> _saveProfile() async {
+    final String name = _name.text.trim();
+    final int? age = int.tryParse(_age.text.trim());
+    final double? weight = double.tryParse(_weight.text.trim());
+
+    String? error;
+    if (name.isEmpty) {
+      error = 'Enter a name, or leave the field blank and save; a blank name '
+          'is allowed but the emergency alert will not name you.';
+    } else if (age == null || age < 1 || age > 120) {
+      error = 'Age must be a whole number from 1 to 120.';
+    } else if (weight == null || weight < 20 || weight > 300) {
+      error = 'Weight must be a number from 20 to 300 kg.';
+    }
+    if (error != null) {
+      setState(() => _profileError = error);
+      return;
+    }
+
+    setState(() {
+      _savingProfile = true;
+      _profileError = null;
+    });
+
+    final UserProfile next = _profile.copyWith(
+      name: name,
+      age: age,
+      weightKg: weight,
+    );
+
+    try {
+      await LocalStore.saveProfile(next);
+      if (!mounted) return;
+      setState(() {
+        _profile = next;
+        _savingProfile = false;
+      });
+      _snack('Profile saved on this phone.');
+    } catch (saveError) {
+      if (!mounted) return;
+      setState(() {
+        _savingProfile = false;
+        _profileError = 'The profile could not be saved: $saveError';
+      });
+    }
+  }
+
+  // ── Emergency contacts ──────────────────────────────────────────────
+
+  Future<void> _addContact() async {
+    final String name = _contactName.text.trim();
+    final String phone = _contactPhone.text.trim();
+    final String relation = _contactRelation.text.trim();
+
+    if (name.isEmpty || phone.isEmpty) {
+      setState(
+        () => _contactError = 'A contact needs a name and a phone number.',
+      );
+      return;
+    }
+
+    final List<EmergencyContact> next = <EmergencyContact>[
+      ..._contacts,
+      EmergencyContact(name: name, phone: phone, relation: relation),
+    ];
+    final bool saved = await _saveContacts(
+      next,
+      'Contact added. It is stored on this phone.',
+    );
+    if (!saved || !mounted) return;
+    setState(() {
+      _contactName.clear();
+      _contactPhone.clear();
+      _contactRelation.clear();
+      _contactError = null;
+    });
+  }
+
+  Future<void> _removeContact(int index) async {
+    if (index < 0 || index >= _contacts.length) return;
+    final List<EmergencyContact> next = List<EmergencyContact>.of(_contacts)
+      ..removeAt(index);
+    await _saveContacts(next, 'Contact removed.');
+  }
+
+  Future<bool> _saveContacts(
+    List<EmergencyContact> next,
+    String message,
+  ) async {
+    setState(() {
+      _savingContact = true;
+      _contactError = null;
+    });
+    try {
+      await LocalStore.saveContacts(next);
+      if (!mounted) return false;
+      setState(() {
+        _contacts = next;
+        _savingContact = false;
+      });
+      _snack(message);
+      return true;
+    } catch (error) {
+      if (!mounted) return false;
+      setState(() {
+        _savingContact = false;
+        _contactError = 'The contacts could not be saved: $error';
+      });
+      return false;
+    }
+  }
+
+  // ── App lock ────────────────────────────────────────────────────────
+
+  Future<void> _openPinDialog(AppLock lock, _PinMode mode) async {
+    final bool? changed = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) => _PinDialog(mode: mode, lock: lock),
+    );
+    if (changed != true || !mounted) return;
+    final String message = switch (mode) {
+      _PinMode.set =>
+        'PIN set. Changing or removing it will ask for this PIN first.',
+      _PinMode.change => 'PIN changed.',
+      _PinMode.remove => 'PIN removed. No app lock is set.',
+    };
+    _snack(message);
+  }
+
+  // ── Scan and export ─────────────────────────────────────────────────
+
+  Future<void> _scan() async {
+    final BleService ble = context.read<BleService>();
+    if (ble.state == BleState.scanning) return;
+    try {
+      await ble.startScan();
+      if (!mounted) return;
+      if (ble.state == BleState.scanning) {
+        _snack('Searching for Veyro. Keep the watch nearby.');
+      } else if (ble.state == BleState.error) {
+        _snack(
+          ble.errorMessage.isEmpty
+              ? 'The scan could not start.'
+              : ble.errorMessage,
+        );
+      }
+    } catch (error) {
+      _snack('The scan could not start: $error');
+    }
+  }
+
+  Future<void> _showStoredSamples({required bool json}) async {
+    try {
+      final List<WatchSample> samples = await LocalStore.loadAll();
+      if (!mounted) return;
+
+      if (samples.isEmpty) {
+        await showDialog<void>(
+          context: context,
+          builder: (BuildContext context) => AlertDialog(
+            title: const Text('Nothing stored yet'),
+            content: const Text(
+              'No watch samples are saved on this phone. Pair the watch and '
+              'pull once from the Watch screen, then come back.',
+            ),
+            actions: <Widget>[
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Close'),
+              ),
+            ],
+          ),
+        );
+        return;
+      }
+
+      final String body = json
+          ? jsonEncode(
+              samples
+                  .map(
+                    (WatchSample sample) => <String, Object>{
+                      'unix': sample.unix,
+                      'hr': sample.hr,
+                      'spo2': sample.spo2,
+                      'bps': sample.bps,
+                      'bpd': sample.bpd,
+                      'hrv': sample.hrv,
+                      'steps': sample.steps,
+                      'fall': sample.fall,
+                      'battery': sample.bat,
+                    },
+                  )
+                  .toList(),
+            )
+          : 'unix,hr,spo2,bps,bpd,hrv,steps,fall,bat\n'
+              '${samples.map((WatchSample sample) => sample.toCsv()).join('\n')}';
+
+      await showDialog<void>(
+        context: context,
+        builder: (BuildContext context) => AlertDialog(
+          title: Text(
+            json
+                ? '${samples.length} samples as JSON'
+                : '${samples.length} samples as CSV',
+          ),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: SingleChildScrollView(
+              child: SelectableText(body),
+            ),
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Close'),
+            ),
+          ],
+        ),
+      );
+    } catch (error) {
+      _snack('Stored samples could not be read: $error');
+    }
+  }
+
+  // ── Build ───────────────────────────────────────────────────────────
+
+  @override
+  Widget build(BuildContext context) {
+    if (_loading) {
+      return DsPage(
+        title: 'Settings',
+        child: DsCard(
+          child: Padding(
+            padding: const EdgeInsets.all(Space.xl),
+            child: Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  const CircularProgressIndicator(),
+                  const SizedBox(height: Space.lg),
+                  Text(
+                    'Reading the stored preferences and records…',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ],
+              ),
+            ),
+          ),
         ),
       );
     }
-  }
 
-
-  void _showAddQuickReplyDialog(bool isArabic) {
-    final controller = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(isArabic ? 'إضافة رد سريع' : 'Add Quick-Reply Template'),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          decoration: InputDecoration(
-            hintText: isArabic ? 'اكتب نص الرد...' : 'Enter response text...',
-            border: const OutlineInputBorder(),
+    if (_loadError != null) {
+      return DsPage(
+        title: 'Settings',
+        child: DsCard(
+          borderColor: Theme.of(context).colorScheme.error,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Row(
+                children: <Widget>[
+                  Icon(
+                    Icons.error_outline_rounded,
+                    color: Theme.of(context).colorScheme.error,
+                  ),
+                  const SizedBox(width: Space.sm),
+                  Expanded(
+                    child: Text(
+                      'Settings could not be loaded',
+                      style: Theme.of(context).textTheme.titleSmall,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: Space.sm),
+              Text(_loadError!, style: Theme.of(context).textTheme.bodySmall),
+              const SizedBox(height: Space.lg),
+              OutlinedButton.icon(
+                onPressed: _retry,
+                icon: const Icon(Icons.refresh_rounded, size: 18),
+                label: const Text('Try again'),
+              ),
+            ],
           ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text(isArabic ? 'إلغاء' : 'Cancel'),
+      );
+    }
+
+    final ThemeData theme = Theme.of(context);
+    final ThemeService themeService = context.watch<ThemeService>();
+    final LocaleService locale = context.watch<LocaleService>();
+    final BleService ble = context.watch<BleService>();
+    final AutoUpdateService updates = context.watch<AutoUpdateService>();
+    final AppLock lock = context.watch<AppLock>();
+
+    final bool dark = themeService.themeModeType == AppThemeMode.dark;
+    final String language = _languages.contains(locale.currentLanguage)
+        ? locale.currentLanguage
+        : 'English';
+
+    return DsPage(
+      title: 'Settings',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          DsCard(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Icon(
+                  Icons.info_outline_rounded,
+                  size: 18,
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+                const SizedBox(width: Space.sm),
+                Expanded(
+                  child: Text(
+                    'Changes save as you make them. The profile and contact '
+                    'forms have their own save buttons, so a half-typed entry '
+                    'is never stored.',
+                    style: theme.textTheme.bodySmall,
+                  ),
+                ),
+              ],
+            ),
           ),
-          ElevatedButton(
-            onPressed: () {
-              final text = controller.text.trim();
-              if (text.isNotEmpty) {
-                setState(() {
-                  _quickReplies.add(text);
-                });
-                Navigator.pop(ctx);
-              }
-            },
-            child: Text(isArabic ? 'إضافة' : 'Add'),
+          const SizedBox(height: Space.xxl),
+          DsSection(
+            title: 'Appearance & language',
+            subtitle: 'How the app looks and which language it asks for',
+            child: DsCard(
+              child: Column(
+                children: <Widget>[
+                  Material(
+                    type: MaterialType.transparency,
+                    child: SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      secondary: Icon(
+                        dark
+                            ? Icons.dark_mode_outlined
+                            : Icons.light_mode_outlined,
+                      ),
+                      title: const Text('Dark theme'),
+                      subtitle: Text(
+                        dark
+                            ? 'Dark surfaces and lifted text colours.'
+                            : 'Light surfaces for daytime use.',
+                      ),
+                      value: dark,
+                      onChanged: (bool value) => themeService.setTheme(
+                        value ? AppThemeMode.dark : AppThemeMode.light,
+                      ),
+                    ),
+                  ),
+                  Divider(color: theme.colorScheme.outlineVariant),
+                  const SizedBox(height: Space.md),
+                  DropdownButtonFormField<String>(
+                    initialValue: language,
+                    isExpanded: true,
+                    decoration: _fieldDecoration('App language'),
+                    items: <DropdownMenuItem<String>>[
+                      for (final String option in _languages)
+                        DropdownMenuItem<String>(
+                          value: option,
+                          child: Text(
+                            option == 'English'
+                                ? 'English (US / UK)'
+                                : 'العربية (مصر / الفصحى)',
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                    ],
+                    onChanged: (String? value) async {
+                      if (value == null) return;
+                      await locale.setLanguage(value);
+                    },
+                  ),
+                  const SizedBox(height: Space.sm),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      'The language choice is stored by LocaleService and '
+                      'survives a restart.',
+                      style: theme.textTheme.bodySmall,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: Space.xxl),
+          DsSection(
+            title: 'Watch & sync',
+            subtitle: 'The connection, the face and what a sync does',
+            child: DsCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Wrap(
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: Space.sm,
+                    runSpacing: Space.sm,
+                    children: <Widget>[
+                      DsStatusPill(
+                        label: ble.isConnected
+                            ? 'Watch connected'
+                            : 'No watch connected',
+                        icon: ble.isConnected
+                            ? Icons.bluetooth_connected_rounded
+                            : Icons.bluetooth_disabled_rounded,
+                        color: ble.isConnected
+                            ? theme.colorScheme.secondary
+                            : theme.colorScheme.onSurfaceVariant,
+                      ),
+                      Text(
+                        ble.batteryLevel > 0
+                            ? '${ble.batteryLevel}% battery'
+                            : 'Battery --',
+                        style: theme.textTheme.bodySmall,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: Space.lg),
+                  Wrap(
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: Space.md,
+                    runSpacing: Space.sm,
+                    children: <Widget>[
+                      FilledButton.tonalIcon(
+                        onPressed:
+                            ble.state == BleState.scanning ? null : _scan,
+                        icon: ble.state == BleState.scanning
+                            ? const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child:
+                                    CircularProgressIndicator(strokeWidth: 2),
+                              )
+                            : const Icon(Icons.bluetooth_searching, size: 18),
+                        label: Text(
+                          ble.state == BleState.scanning
+                              ? 'Searching…'
+                              : 'Scan for Veyro',
+                        ),
+                      ),
+                      if (ble.state == BleState.error &&
+                          ble.errorMessage.isNotEmpty)
+                        Text(
+                          ble.errorMessage,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.error,
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: Space.sm),
+                  Text(
+                    'Scanning asks for Bluetooth and nearby-device permission. '
+                    'Pairing needs the six digits shown on the watch face.',
+                    style: theme.textTheme.bodySmall,
+                  ),
+                  Divider(color: theme.colorScheme.outlineVariant),
+                  Material(
+                    type: MaterialType.transparency,
+                    child: SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      secondary: const Icon(Icons.sync_outlined),
+                      title: const Text('Remember auto-sync choice'),
+                      subtitle: const Text(
+                        'Saved on this phone. This build starts a log sync on '
+                        'its own when the watch connects.',
+                      ),
+                      value: _autoSync,
+                      onChanged: _setAutoSync,
+                    ),
+                  ),
+                  Divider(color: theme.colorScheme.outlineVariant),
+                  const SizedBox(height: Space.md),
+                  Material(
+                    type: MaterialType.transparency,
+                    child: SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      secondary: const Icon(Icons.science_outlined),
+                      title: const Text('Demo mode'),
+                      subtitle: const Text(
+                        'Saved on this phone. Sleep history reads this setting; '
+                        'live readings come from the watch when one is '
+                        'connected.',
+                      ),
+                      value: _demoMode,
+                      onChanged: _setDemoMode,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: Space.xxl),
+          DsSection(
+            title: 'Watch face & complications',
+            subtitle: 'What the watch shows, and what is stored for its slots',
+            child: DsCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  DropdownButtonFormField<int>(
+                    initialValue: _watchFace,
+                    isExpanded: true,
+                    decoration: _fieldDecoration('Active watch face'),
+                    items: <DropdownMenuItem<int>>[
+                      for (int i = 0; i < _watchFaces.length; i++)
+                        DropdownMenuItem<int>(
+                          value: i,
+                          child: Text(
+                            _watchFaces[i],
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                    ],
+                    onChanged: (int? value) {
+                      if (value == null) return;
+                      _setWatchFace(value, ble);
+                    },
+                  ),
+                  const SizedBox(height: Space.sm),
+                  Text(
+                    'Saved on this phone. If a watch is connected, the face is '
+                    'applied immediately.',
+                    style: theme.textTheme.bodySmall,
+                  ),
+                  Divider(color: theme.colorScheme.outlineVariant),
+                  const SizedBox(height: Space.md),
+                  Text('Complication slots', style: theme.textTheme.titleSmall),
+                  const SizedBox(height: Space.xs),
+                  Text(
+                    'Saved on this phone. This build does not send the slot '
+                    'choice to the watch.',
+                    style: theme.textTheme.bodySmall,
+                  ),
+                  const SizedBox(height: Space.md),
+                  DropdownButtonFormField<String>(
+                    initialValue: _complicationTop,
+                    isExpanded: true,
+                    decoration: _fieldDecoration('Top slot'),
+                    items: <DropdownMenuItem<String>>[
+                      for (final String choice in _complicationChoices)
+                        DropdownMenuItem<String>(
+                          value: choice,
+                          child: Text(
+                            choice,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                    ],
+                    onChanged: (String? value) {
+                      if (value == null) return;
+                      _setComplicationTop(value);
+                    },
+                  ),
+                  const SizedBox(height: Space.md),
+                  DropdownButtonFormField<String>(
+                    initialValue: _complicationBottom,
+                    isExpanded: true,
+                    decoration: _fieldDecoration('Bottom slot'),
+                    items: <DropdownMenuItem<String>>[
+                      for (final String choice in _complicationChoices)
+                        DropdownMenuItem<String>(
+                          value: choice,
+                          child: Text(
+                            choice,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                    ],
+                    onChanged: (String? value) {
+                      if (value == null) return;
+                      _setComplicationBottom(value);
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: Space.xxl),
+          DsSection(
+            title: 'Health alerts',
+            subtitle: 'The values this app remembers for flagging a reading',
+            child: DsCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text(
+                    'High heart-rate threshold',
+                    style: theme.textTheme.titleSmall,
+                  ),
+                  const SizedBox(height: Space.xs),
+                  Text(
+                    'Saved at ${_highHr.toInt()} BPM or above.',
+                    style: theme.textTheme.bodySmall,
+                  ),
+                  Slider(
+                    value: _highHr,
+                    min: 80,
+                    max: 180,
+                    divisions: 20,
+                    label: '${_highHr.toInt()} BPM',
+                    onChanged: (double value) =>
+                        setState(() => _highHr = value),
+                    onChangeEnd: _setHighHr,
+                  ),
+                  Divider(color: theme.colorScheme.outlineVariant),
+                  Text(
+                    'Low oxygen threshold',
+                    style: theme.textTheme.titleSmall,
+                  ),
+                  const SizedBox(height: Space.xs),
+                  Text(
+                    'Saved at ${_lowSpo2.toInt()}% or below.',
+                    style: theme.textTheme.bodySmall,
+                  ),
+                  Slider(
+                    value: _lowSpo2,
+                    min: 80,
+                    max: 95,
+                    divisions: 15,
+                    label: '${_lowSpo2.toInt()}%',
+                    onChanged: (double value) =>
+                        setState(() => _lowSpo2 = value),
+                    onChangeEnd: _setLowSpo2,
+                  ),
+                  Text(
+                    'These values are stored on this phone. This build does '
+                    'not raise an alert from them yet; it does not pretend '
+                    'that it does.',
+                    style: theme.textTheme.bodySmall,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: Space.xxl),
+          DsSection(
+            title: 'Quick replies',
+            subtitle: 'Replies kept for answering from the watch',
+            child: DsCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text(
+                    'Stored on this phone. This build does not send the list '
+                    'to the watch.',
+                    style: theme.textTheme.bodySmall,
+                  ),
+                  const SizedBox(height: Space.md),
+                  if (_quickReplies.isEmpty)
+                    Text(
+                      'No replies saved.',
+                      style: theme.textTheme.bodySmall,
+                    ),
+                  for (int i = 0; i < _quickReplies.length; i++)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: Space.sm),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: <Widget>[
+                          Icon(
+                            Icons.short_text_rounded,
+                            size: 18,
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                          const SizedBox(width: Space.sm),
+                          Expanded(
+                            child: Text(
+                              _quickReplies[i],
+                              style: theme.textTheme.bodyMedium,
+                            ),
+                          ),
+                          IconButton(
+                            tooltip: _quickReplies.length <= 1
+                                ? 'Keep at least one reply'
+                                : 'Remove this reply',
+                            onPressed: _quickReplies.length <= 1
+                                ? null
+                                : () => _removeQuickReply(i),
+                            icon: const Icon(Icons.delete_outline_rounded),
+                          ),
+                        ],
+                      ),
+                    ),
+                  if (_quickReplies.length <= 1)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: Space.sm),
+                      child: Text(
+                        'One reply is kept, so there is always something to '
+                        'send from the watch.',
+                        style: theme.textTheme.bodySmall,
+                      ),
+                    ),
+                  OutlinedButton.icon(
+                    onPressed: _addQuickReply,
+                    icon: const Icon(Icons.add_rounded, size: 18),
+                    label: const Text('Add a reply'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: Space.xxl),
+          DsSection(
+            title: 'Profile',
+            subtitle: 'Used for the emergency alert and the health context',
+            child: DsCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  TextField(
+                    controller: _name,
+                    textInputAction: TextInputAction.next,
+                    decoration: _fieldDecoration('Name'),
+                  ),
+                  const SizedBox(height: Space.md),
+                  Row(
+                    children: <Widget>[
+                      Expanded(
+                        child: TextField(
+                          controller: _age,
+                          keyboardType: TextInputType.number,
+                          decoration: _fieldDecoration('Age'),
+                        ),
+                      ),
+                      const SizedBox(width: Space.md),
+                      Expanded(
+                        child: TextField(
+                          controller: _weight,
+                          keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true,
+                          ),
+                          decoration: _fieldDecoration('Weight (kg)'),
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (_profileError != null) ...<Widget>[
+                    const SizedBox(height: Space.md),
+                    Text(
+                      _profileError!,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.error,
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: Space.lg),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: FilledButton.icon(
+                      onPressed: _savingProfile ? null : _saveProfile,
+                      icon: _savingProfile
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.check_rounded, size: 18),
+                      label: Text(
+                        _savingProfile ? 'Saving…' : 'Save profile',
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: Space.xxl),
+          DsSection(
+            title: 'Emergency contacts',
+            subtitle: 'The people the alert offers to call',
+            child: DsCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text(
+                    'Stored on this phone by LocalStore. Nothing here is '
+                    'uploaded.',
+                    style: theme.textTheme.bodySmall,
+                  ),
+                  const SizedBox(height: Space.md),
+                  if (_contacts.isEmpty)
+                    Text(
+                      'No emergency contacts yet. Add one below; an alert '
+                      'without a contact has nobody to offer.',
+                      style: theme.textTheme.bodySmall,
+                    ),
+                  for (int i = 0; i < _contacts.length; i++)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: Space.md),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          Icon(
+                            Icons.person_outline_rounded,
+                            size: 20,
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                          const SizedBox(width: Space.sm),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: <Widget>[
+                                Text(
+                                  _contacts[i].name,
+                                  style: theme.textTheme.titleSmall,
+                                ),
+                                if (_contacts[i].relation.isNotEmpty)
+                                  Text(
+                                    _contacts[i].relation,
+                                    style: theme.textTheme.bodySmall,
+                                  ),
+                                Text(
+                                  _contacts[i].phone,
+                                  style: theme.textTheme.bodySmall,
+                                ),
+                              ],
+                            ),
+                          ),
+                          IconButton(
+                            tooltip: 'Remove ${_contacts[i].name}',
+                            onPressed:
+                                _savingContact ? null : () => _removeContact(i),
+                            icon: const Icon(Icons.delete_outline_rounded),
+                          ),
+                        ],
+                      ),
+                    ),
+                  Divider(color: theme.colorScheme.outlineVariant),
+                  const SizedBox(height: Space.md),
+                  Text('Add a contact', style: theme.textTheme.titleSmall),
+                  const SizedBox(height: Space.md),
+                  TextField(
+                    controller: _contactName,
+                    textInputAction: TextInputAction.next,
+                    decoration: _fieldDecoration('Name'),
+                  ),
+                  const SizedBox(height: Space.md),
+                  Row(
+                    children: <Widget>[
+                      Expanded(
+                        child: TextField(
+                          controller: _contactPhone,
+                          keyboardType: TextInputType.phone,
+                          decoration: _fieldDecoration('Phone'),
+                        ),
+                      ),
+                      const SizedBox(width: Space.md),
+                      Expanded(
+                        child: TextField(
+                          controller: _contactRelation,
+                          decoration: _fieldDecoration('Relation'),
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (_contactError != null) ...<Widget>[
+                    const SizedBox(height: Space.md),
+                    Text(
+                      _contactError!,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.error,
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: Space.lg),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: OutlinedButton.icon(
+                      onPressed: _savingContact ? null : _addContact,
+                      icon: _savingContact
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.person_add_alt_1_rounded,
+                              size: 18),
+                      label: Text(
+                        _savingContact ? 'Saving…' : 'Add contact',
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: Space.xxl),
+          DsSection(
+            title: 'App lock',
+            subtitle: 'A six-digit PIN checked by AppLock on this device',
+            child: DsCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  if (!lock.ready)
+                    Text(
+                      'Checking whether a PIN is stored…',
+                      style: theme.textTheme.bodySmall,
+                    )
+                  else if (!lock.hasLock) ...<Widget>[
+                    Text(
+                      'No PIN is set. The app opens without asking for one.',
+                      style: theme.textTheme.bodyMedium,
+                    ),
+                    const SizedBox(height: Space.sm),
+                    Text(
+                      'A PIN is stored as a salted hash on this device and is '
+                      'never sent anywhere.',
+                      style: theme.textTheme.bodySmall,
+                    ),
+                    const SizedBox(height: Space.lg),
+                    FilledButton.icon(
+                      onPressed: () => _openPinDialog(lock, _PinMode.set),
+                      icon: const Icon(Icons.lock_outline_rounded, size: 18),
+                      label: const Text('Set a 6-digit PIN'),
+                    ),
+                  ] else ...<Widget>[
+                    DsStatusPill(
+                      label: 'PIN set',
+                      icon: Icons.lock_rounded,
+                      color: theme.colorScheme.secondary,
+                    ),
+                    const SizedBox(height: Space.sm),
+                    Text(
+                      'The PIN is asked for when the app opens and again after '
+                      'it has been in the background. Changing or removing it '
+                      'asks for the current one first. Five wrong tries make '
+                      'the lock wait 30 seconds.',
+                      style: theme.textTheme.bodySmall,
+                    ),
+                    const SizedBox(height: Space.lg),
+                    Wrap(
+                      spacing: Space.md,
+                      runSpacing: Space.sm,
+                      children: <Widget>[
+                        OutlinedButton.icon(
+                          onPressed: () =>
+                              _openPinDialog(lock, _PinMode.change),
+                          icon: const Icon(Icons.password_rounded, size: 18),
+                          label: const Text('Change PIN'),
+                        ),
+                        OutlinedButton.icon(
+                          onPressed: () => lock.lockNow(),
+                          icon: const Icon(Icons.lock_clock_rounded, size: 18),
+                          label: const Text('Lock now'),
+                        ),
+                        TextButton.icon(
+                          onPressed: () =>
+                              _openPinDialog(lock, _PinMode.remove),
+                          icon: const Icon(Icons.lock_open_rounded, size: 18),
+                          label: const Text('Remove PIN'),
+                        ),
+                      ],
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: Space.xxl),
+          DsSection(
+            title: 'Your data',
+            subtitle: 'A selectable copy of what is already stored',
+            child: DsCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text(
+                    'Nothing is uploaded. The buttons below read the samples '
+                    'saved on this phone; they do not pull from the watch.',
+                    style: theme.textTheme.bodySmall,
+                  ),
+                  const SizedBox(height: Space.lg),
+                  Wrap(
+                    spacing: Space.md,
+                    runSpacing: Space.sm,
+                    children: <Widget>[
+                      OutlinedButton.icon(
+                        onPressed: () => _showStoredSamples(json: false),
+                        icon: const Icon(
+                          Icons.file_download_outlined,
+                          size: 18,
+                        ),
+                        label: const Text('View CSV'),
+                      ),
+                      OutlinedButton.icon(
+                        onPressed: () => _showStoredSamples(json: true),
+                        icon: const Icon(Icons.data_object_rounded, size: 18),
+                        label: const Text('View JSON'),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: Space.xxl),
+          DsSection(
+            title: 'About & updates',
+            subtitle: 'The build, the release feed and the check',
+            child: DsCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Row(
+                    children: <Widget>[
+                      Container(
+                        padding: const EdgeInsets.all(Space.sm),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.primaryContainer,
+                          borderRadius: BorderRadius.circular(Radii.md),
+                        ),
+                        child: Icon(
+                          Icons.monitor_heart_rounded,
+                          size: 20,
+                          color: theme.colorScheme.onPrimaryContainer,
+                        ),
+                      ),
+                      const SizedBox(width: Space.md),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[
+                            Text(
+                              AppVersion.displayName,
+                              style: theme.textTheme.titleSmall,
+                            ),
+                            Text(
+                              'Version ${AppVersion.display} '
+                              '(build ${AppVersion.buildNumber})',
+                              style: theme.textTheme.bodySmall,
+                            ),
+                            Text(
+                              AppVersion.publisher,
+                              style: theme.textTheme.bodySmall,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  Divider(color: theme.colorScheme.outlineVariant),
+                  Text(
+                    _updateStatus(updates),
+                    style: theme.textTheme.bodySmall,
+                  ),
+                  if (updates.error != null) ...<Widget>[
+                    const SizedBox(height: Space.xs),
+                    Text(
+                      'The check did not complete. Nothing was installed or '
+                      'changed.',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.error,
+                      ),
+                    ),
+                  ],
+                  if (updates.lastChecked != null) ...<Widget>[
+                    const SizedBox(height: Space.xs),
+                    Text(
+                      'Last checked ${_stamp(updates.lastChecked!)}.',
+                      style: theme.textTheme.bodySmall,
+                    ),
+                  ],
+                  const SizedBox(height: Space.lg),
+                  FilledButton.tonalIcon(
+                    onPressed: updates.isChecking
+                        ? null
+                        : () => updates.checkForUpdates(),
+                    icon: updates.isChecking
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.system_update_alt_rounded, size: 18),
+                    label: Text(
+                      updates.isChecking ? 'Checking…' : 'Check for updates',
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: Space.xxl),
+          const DsSection(
+            title: 'Licence',
+            subtitle: 'Proprietary, and not a medical device',
+            child: DsCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text(
+                    'Copyright (c) 2026 Cambric Software. All rights reserved.',
+                  ),
+                  SizedBox(height: Space.sm),
+                  Text(
+                    'Digital Saver is proprietary software. You may install '
+                    'and run it on devices you control. Redistribution, '
+                    'modification and reverse engineering are not licensed; '
+                    'the source is published for inspection, not for reuse.',
+                  ),
+                  SizedBox(height: Space.sm),
+                  Text(
+                    'It is a consumer wellness product, not a certified '
+                    'medical device. Sensor readings are estimates and can be '
+                    'wrong. Do not use them for diagnosis or treatment, or as '
+                    'the only way help would be called.',
+                  ),
+                  SizedBox(height: Space.sm),
+                  Text(
+                    'The full agreement ships with the project as LICENSE.',
+                  ),
+                ],
+              ),
+            ),
           ),
         ],
       ),
     );
   }
 
-  void _triggerBleScan() {
-    final ble = context.read<BleService>();
-    if (ble.state != BleState.scanning) {
-      ble.startScan();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Scanning for Veyro smartwatch nearby...'),
-          backgroundColor: AppColors.primary,
-        ),
-      );
+  static String _updateStatus(AutoUpdateService updates) {
+    if (updates.isChecking) {
+      return 'Checking the GitHub releases feed…';
+    }
+    final String? error = updates.error;
+    if (error != null) return error;
+    final UpdateInfo? latest = updates.latestUpdate;
+    if (latest == null) return 'Not checked yet in this session.';
+    if (latest.isNewer) {
+      return 'Version ${latest.version} is available. This copy is '
+          '${AppVersion.current}.';
+    }
+    return 'Up to date. The newest published release is ${latest.version}.';
+  }
+
+  static String _stamp(DateTime value) {
+    final DateTime local = value.toLocal();
+    final String hour = local.hour.toString().padLeft(2, '0');
+    final String minute = local.minute.toString().padLeft(2, '0');
+    return '${local.year}-${local.month.toString().padLeft(2, '0')}-'
+        '${local.day.toString().padLeft(2, '0')} $hour:$minute';
+  }
+
+  static InputDecoration _fieldDecoration(String label) {
+    return InputDecoration(
+      labelText: label,
+      isDense: true,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(Radii.sm),
+      ),
+      contentPadding: const EdgeInsets.symmetric(
+        horizontal: Space.md,
+        vertical: Space.md,
+      ),
+    );
+  }
+}
+
+/// Which PIN flow the dialog is running.
+enum _PinMode { set, change, remove }
+
+/// A dialog that sets, changes or removes the app PIN.
+///
+/// The controllers live here rather than in the screen so a dialog that is
+/// dismissed mid-animation cannot leave a disposed controller in the tree.
+class _PinDialog extends StatefulWidget {
+  const _PinDialog({required this.mode, required this.lock});
+
+  final _PinMode mode;
+  final AppLock lock;
+
+  @override
+  State<_PinDialog> createState() => _PinDialogState();
+}
+
+class _PinDialogState extends State<_PinDialog> {
+  final TextEditingController _current = TextEditingController();
+  final TextEditingController _newPin = TextEditingController();
+  final TextEditingController _confirm = TextEditingController();
+  bool _busy = false;
+  String? _error;
+
+  @override
+  void dispose() {
+    _current.dispose();
+    _newPin.dispose();
+    _confirm.dispose();
+    super.dispose();
+  }
+
+  bool get _needsCurrent =>
+      widget.mode == _PinMode.change || widget.mode == _PinMode.remove;
+
+  bool get _needsNew =>
+      widget.mode == _PinMode.set || widget.mode == _PinMode.change;
+
+  String get _title => switch (widget.mode) {
+        _PinMode.set => 'Set a PIN',
+        _PinMode.change => 'Change the PIN',
+        _PinMode.remove => 'Remove the PIN',
+      };
+
+  String get _confirmLabel => switch (widget.mode) {
+        _PinMode.set => 'Set PIN',
+        _PinMode.change => 'Change PIN',
+        _PinMode.remove => 'Remove',
+      };
+
+  Future<void> _submit() async {
+    final String newPin = _newPin.text;
+    final String current = _current.text;
+
+    if (_needsNew) {
+      if (newPin.length != 6 || int.tryParse(newPin) == null) {
+        setState(() => _error = 'Use exactly 6 digits, 0 to 9.');
+        return;
+      }
+      if (newPin != _confirm.text) {
+        setState(() => _error = 'The two new PINs do not match.');
+        return;
+      }
+    }
+    if (_needsCurrent && current.length != 6) {
+      setState(() => _error = 'Enter the current 6-digit PIN.');
+      return;
+    }
+
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+
+    try {
+      if (_needsCurrent) {
+        final bool correct = await widget.lock.unlock(current);
+        if (!mounted) return;
+        if (!correct) {
+          setState(() {
+            _busy = false;
+            _error = 'That PIN is not correct. After five wrong tries the '
+                'lock waits 30 seconds.';
+          });
+          return;
+        }
+      }
+
+      if (widget.mode == _PinMode.remove) {
+        await widget.lock.clearPin();
+      } else {
+        await widget.lock.setPin(newPin);
+      }
+
+      if (!mounted) return;
+      Navigator.of(context).pop(true);
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _busy = false;
+        _error = 'The PIN could not be saved: $error';
+      });
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_loading) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
-    }
-
-    // A spinner that never stops tells the person nothing. Say what happened and
-    // let them try again.
-    if (_loadError != null) {
-      return Scaffold(
-        appBar: AppBar(title: const Text('Settings')),
-        body: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                const Icon(Icons.error_outline_rounded, size: 40),
-                const SizedBox(height: 12),
-                const Text(
-                  'Settings could not be loaded',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+    final ThemeData theme = Theme.of(context);
+    return AlertDialog(
+      title: Text(_title),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            if (_needsCurrent) ...<Widget>[
+              TextField(
+                controller: _current,
+                autofocus: true,
+                obscureText: true,
+                keyboardType: TextInputType.number,
+                maxLength: 6,
+                decoration: _SettingsScreenState._fieldDecoration(
+                  'Current PIN',
+                ).copyWith(counterText: ''),
+              ),
+              const SizedBox(height: Space.md),
+            ],
+            if (_needsNew) ...<Widget>[
+              TextField(
+                controller: _newPin,
+                autofocus: widget.mode == _PinMode.set,
+                obscureText: true,
+                keyboardType: TextInputType.number,
+                maxLength: 6,
+                decoration: _SettingsScreenState._fieldDecoration(
+                  'New 6-digit PIN',
+                ).copyWith(counterText: ''),
+              ),
+              const SizedBox(height: Space.md),
+              TextField(
+                controller: _confirm,
+                obscureText: true,
+                keyboardType: TextInputType.number,
+                maxLength: 6,
+                decoration: _SettingsScreenState._fieldDecoration(
+                  'Confirm the new PIN',
+                ).copyWith(counterText: ''),
+              ),
+            ],
+            if (_error != null) ...<Widget>[
+              const SizedBox(height: Space.md),
+              Text(
+                _error!,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.error,
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  _loadError!,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(fontSize: 12),
-                ),
-                const SizedBox(height: 16),
-                FilledButton.icon(
-                  onPressed: () {
-                    setState(() {
-                      _loadError = null;
-                      _loading = true;
-                    });
-                    _load();
-                  },
-                  icon: const Icon(Icons.refresh_rounded),
-                  label: const Text('Try again'),
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
-    }
-
-    final ble = context.watch<BleService>();
-    final themeService = context.watch<ThemeService>();
-    final updateService = context.watch<AutoUpdateService>();
-    final isArabic = _selectedLanguage == 'العربية';
-
-    return Directionality(
-      textDirection: isArabic ? TextDirection.rtl : TextDirection.ltr,
-      child: Scaffold(
-        appBar: AppBar(
-          title: Text(isArabic ? 'الإعدادات والتحكم' : 'Settings & Preferences'),
-          elevation: 0,
-          backgroundColor: AppColors.surface,
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.save_outlined, color: AppColors.primary),
-              tooltip: isArabic ? 'حفظ' : 'Save',
-              onPressed: _saveSettings,
-            ),
+              ),
+            ],
+            if (widget.mode == _PinMode.remove) ...<Widget>[
+              const SizedBox(height: Space.md),
+              Text(
+                'Removing the PIN deletes the stored hash. The profile, '
+                'contacts and samples are not touched.',
+                style: theme.textTheme.bodySmall,
+              ),
+            ],
           ],
         ),
-        body: ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            // 1. Language & Display Card
-            _buildCard(
-              title: isArabic ? 'اللغة والمظهر' : 'Language & Display',
-              icon: Icons.language_outlined,
-              children: [
-                DropdownButtonFormField<String>(
-                  value: _selectedLanguage,
-                  decoration: InputDecoration(
-                    labelText: isArabic ? 'لغة التطبيق' : 'App Language',
-                    border: const OutlineInputBorder(),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  ),
-                  items: const [
-                    DropdownMenuItem(value: 'English', child: Text('English (US / UK)')),
-                    DropdownMenuItem(value: 'العربية', child: Text('العربية (مصر / الفصحى)')),
-                  ],
-                  onChanged: (v) {
-                    if (v != null) {
-                        setState(() => _selectedLanguage = v);
-                        context.read<LocaleService>().setLanguage(v);
-                      }
-                  },
-                ),
-                const SizedBox(height: 12),
-                SwitchListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: Text(isArabic ? 'الوضع الليلي (Dark Mode)' : 'Dark Theme Mode'),
-                  subtitle: Text(isArabic ? 'تفعيل الوضع الداكن الموفر للطاقة' : 'Reduce eye strain and conserve battery'),
-                  value: themeService.themeModeType == AppThemeMode.dark,
-                  onChanged: (dark) {
-                    themeService.setTheme(dark ? AppThemeMode.dark : AppThemeMode.light);
-                  },
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
+      ),
+      actions: <Widget>[
+        TextButton(
+          onPressed: _busy ? null : () => Navigator.of(context).pop(false),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed: _busy ? null : _submit,
+          child: _busy
+              ? const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : Text(_confirmLabel),
+        ),
+      ],
+    );
+  }
+}
 
-            // 2. Hardware Watch & Demo Mode Card
-            _buildCard(
-              title: isArabic ? 'تحكم ساعة فيرو (Veyro Control)' : 'Veyro Watch & Telemetry',
-              icon: Icons.watch_outlined,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            ble.isConnected ? (isArabic ? 'الساعة متصلة عبر BLE' : 'Watch Connected via BLE') : (isArabic ? 'غير متصلة' : 'Disconnected'),
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: ble.isConnected ? Colors.green : Colors.grey,
-                            ),
-                          ),
-                          Text(
-                            isArabic ? 'البطارية: ${ble.batteryLevel}%' : 'Battery: ${ble.batteryLevel}%',
-                            style: const TextStyle(fontSize: 12, color: Colors.grey),
-                          ),
-                        ],
-                      ),
-                    ),
-                    ElevatedButton.icon(
-                      onPressed: _triggerBleScan,
-                      icon: const Icon(Icons.bluetooth_searching, size: 16),
-                      label: Text(isArabic ? 'بحث عن الساعة' : 'Scan BLE'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        foregroundColor: Colors.white,
-                      ),
-                    ),
-                  ],
-                ),
-                const Divider(height: 20),
-                DropdownButtonFormField<int>(
-                  value: _selectedWatchFace,
-                  decoration: InputDecoration(
-                    labelText: isArabic ? 'واجهة الساعة (Watch Face)' : 'Active Watch Face',
-                    border: const OutlineInputBorder(),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  ),
-                  items: List.generate(_watchFaces.length, (i) => DropdownMenuItem(value: i, child: Text(_watchFaces[i], style: const TextStyle(fontSize: 13)))),
-                  onChanged: (v) {
-                    if (v != null) setState(() => _selectedWatchFace = v);
-                  },
-                ),
-                const SizedBox(height: 12),
-                SwitchListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: Text(isArabic ? 'وضع العرض التجريبي (Demo Mode)' : 'Demo Simulation Mode'),
-                  subtitle: Text(isArabic ? 'إيقاف محاكاة الحساسات وقراءة الحساسات الحقيقية فقط' : 'Toggle between simulated data and real watch BLE sensor feeds'),
-                  value: _demoMode,
-                  onChanged: (v) {
-                          setState(() => _demoMode = v);
-                          SharedPreferences.getInstance().then((p) => p.setBool('demo_mode', v));
-                        },
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
+/// A one-field dialog that returns the trimmed text, or null on cancel.
+class _TextPromptDialog extends StatefulWidget {
+  const _TextPromptDialog({
+    required this.title,
+    required this.hint,
+    required this.confirmLabel,
+    required this.fieldLabel,
+  });
 
-            // 3. User Profile Card
-                        // Health Alerts & Data Export Card
-            _buildCard(
-              title: isArabic ? 'تنبيهات الصحة وتصدير البيانات' : 'Health Alerts & Data Export',
-              icon: Icons.health_and_safety_outlined,
-              children: [
-                Text(
-                  isArabic ? 'تنبيه معدل ضربات القلب المرتفع: ${_highHrThreshold.toInt()} نبضة/دقيقة' : 'High Heart Rate Alert: ${_highHrThreshold.toInt()} BPM',
-                  style: const TextStyle(fontWeight: FontWeight.w600),
-                ),
-                Slider(
-                  value: _highHrThreshold,
-                  min: 80,
-                  max: 180,
-                  divisions: 20,
-                  label: '${_highHrThreshold.toInt()} BPM',
-                  onChanged: (v) => setState(() => _highHrThreshold = v),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  isArabic ? 'تنبيه انخفاض تشبع الأكسجين: ${_lowSpo2Threshold.toInt()}%' : 'Low Oxygen (SpO2) Alert: ${_lowSpo2Threshold.toInt()}%',
-                  style: const TextStyle(fontWeight: FontWeight.w600),
-                ),
-                Slider(
-                  value: _lowSpo2Threshold,
-                  min: 80,
-                  max: 95,
-                  divisions: 15,
-                  label: '${_lowSpo2Threshold.toInt()}%',
-                  onChanged: (v) => setState(() => _lowSpo2Threshold = v),
-                ),
-                const Divider(height: 24),
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        icon: const Icon(Icons.file_download_outlined, size: 18),
-                        label: Text(isArabic ? 'تصدير CSV' : 'Export CSV'),
-                        onPressed: () async {
-                          final samples = await LocalStore.loadAll();
-                          final csv = samples.map((s) => s.toCsv()).join('\n');
-                          if (context.mounted) {
-                            showDialog(
-                              context: context,
-                              builder: (ctx) => AlertDialog(
-                                title: Text(isArabic ? 'بيانات CSV المصدرة' : 'Exported CSV Data'),
-                                content: SingleChildScrollView(
-                                  child: SelectableText(csv.isEmpty ? 'No data recorded yet' : 'unix,hr,spo2,bps,bpd,hrv,steps,fall,bat\n$csv'),
-                                ),
-                                actions: [
-                                  TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('OK')),
-                                ],
-                              ),
-                            );
-                          }
-                        },
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        icon: const Icon(Icons.data_object_outlined, size: 18),
-                        label: Text(isArabic ? 'تصدير JSON' : 'Export JSON'),
-                        onPressed: () async {
-                          final samples = await LocalStore.loadAll();
-                          final jsonStr = jsonEncode(samples.map((s) => {
-                            'unix': s.unix,
-                            'hr': s.hr,
-                            'spo2': s.spo2,
-                            'steps': s.steps,
-                            'hrv': s.hrv,
-                            'fall': s.fall,
-                            'battery': s.bat
-                          }).toList());
-                          if (context.mounted) {
-                            showDialog(
-                              context: context,
-                              builder: (ctx) => AlertDialog(
-                                title: Text(isArabic ? 'بيانات JSON المصدرة' : 'Exported JSON Data'),
-                                content: SingleChildScrollView(
-                                  child: SelectableText(jsonStr),
-                                ),
-                                actions: [
-                                  TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('OK')),
-                                ],
-                              ),
-                            );
-                          }
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-_buildCard(
-              title: isArabic ? 'الملف الشخصي والأهداف' : 'Personal Health Profile',
-              icon: Icons.person_outline,
-              children: [
-                TextField(
-                  controller: _name,
-                  decoration: InputDecoration(
-                    labelText: isArabic ? 'الاسم' : 'Name',
-                    border: const OutlineInputBorder(),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: _age,
-                        keyboardType: TextInputType.number,
-                        decoration: InputDecoration(
-                          labelText: isArabic ? 'العمر' : 'Age',
-                          border: const OutlineInputBorder(),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: TextField(
-                        controller: _weight,
-                        keyboardType: TextInputType.number,
-                        decoration: InputDecoration(
-                          labelText: isArabic ? 'الوزن (كجم)' : 'Weight (kg)',
-                          border: const OutlineInputBorder(),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
+  final String title;
+  final String hint;
+  final String confirmLabel;
+  final String fieldLabel;
 
+  @override
+  State<_TextPromptDialog> createState() => _TextPromptDialogState();
+}
 
-            // Feature 21: Watch Face Complications
-            _buildCard(
-              title: isArabic ? 'تخصيص خانات واجهة الساعة' : 'Watch Face Complications',
-              icon: Icons.dashboard_customize_outlined,
-              children: [
-                Text(
-                  isArabic
-                      ? 'اختر البيانات المصغرة التي تظهر في الخانات العلوية والسفلية للساعة.'
-                      : 'Customize telemetry widgets displayed in modular watch face slots.',
-                  style: const TextStyle(fontSize: 12, color: Colors.grey),
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(isArabic ? 'الخانة العلوية' : 'Top Slot', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                          const SizedBox(height: 4),
-                          DropdownButtonFormField<String>(
-                            value: _availableComplications.contains(_complicationTop) ? _complicationTop : 'Steps',
-                            decoration: const InputDecoration(border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8)),
-                            items: _availableComplications.map((c) => DropdownMenuItem(value: c, child: Text(c, style: const TextStyle(fontSize: 13)))).toList(),
-                            onChanged: (v) => setState(() => _complicationTop = v ?? 'Steps'),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(isArabic ? 'الخانة السفلية' : 'Bottom Slot', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                          const SizedBox(height: 4),
-                          DropdownButtonFormField<String>(
-                            value: _availableComplications.contains(_complicationBottom) ? _complicationBottom : 'Heart Rate',
-                            decoration: const InputDecoration(border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8)),
-                            items: _availableComplications.map((c) => DropdownMenuItem(value: c, child: Text(c, style: const TextStyle(fontSize: 13)))).toList(),
-                            onChanged: (v) => setState(() => _complicationBottom = v ?? 'Heart Rate'),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
+class _TextPromptDialogState extends State<_TextPromptDialog> {
+  final TextEditingController _controller = TextEditingController();
+  String? _error;
 
-            // Feature 22: Quick-Reply Templates
-            _buildCard(
-              title: isArabic ? 'قوالب الردود السريعة للساعة' : 'Watch Quick-Reply Templates',
-              icon: Icons.quickreply_outlined,
-              children: [
-                Text(
-                  isArabic
-                      ? 'رسائل معدة مسبقاً لإرسالها مباشرة من شاشة الساعة عند استقبال الإشعارات.'
-                      : 'Pre-written replies synced to the watch to respond instantly from your wrist.',
-                  style: const TextStyle(fontSize: 12, color: Colors.grey),
-                ),
-                const SizedBox(height: 10),
-                ..._quickReplies.asMap().entries.map((entry) {
-                  final idx = entry.key;
-                  final reply = entry.value;
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 6),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.short_text, size: 16, color: Colors.grey),
-                        const SizedBox(width: 8),
-                        Expanded(child: Text(reply, style: const TextStyle(fontSize: 13))),
-                        IconButton(
-                          icon: const Icon(Icons.delete_outline, size: 18, color: Colors.redAccent),
-                          onPressed: () {
-                            setState(() {
-                              _quickReplies.removeAt(idx);
-                            });
-                          },
-                        ),
-                      ],
-                    ),
-                  );
-                }),
-                const SizedBox(height: 6),
-                OutlinedButton.icon(
-                  onPressed: () => _showAddQuickReplyDialog(isArabic),
-                  icon: const Icon(Icons.add, size: 16),
-                  label: Text(isArabic ? 'إضافة رد جديد' : 'Add New Template'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.primary,
-                    side: const BorderSide(color: AppColors.primary),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
 
-            // Feature 30: BLE Signal & Diagnostics
-            _buildCard(
-              title: isArabic ? 'تشخيص إشارة البلوتوث' : 'BLE Link & Diagnostics',
-              icon: Icons.network_check_outlined,
-              children: [
-                Row(
-                  children: [
-                    Icon(
-                      ble.isConnected ? Icons.bluetooth_connected : Icons.bluetooth_disabled,
-                      color: ble.isConnected ? Colors.green : Colors.grey,
-                      size: 20,
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      ble.isConnected
-                          ? (isArabic ? 'متصل بالساعة: Veyro S3' : 'Link Active: Veyro S3')
-                          : (isArabic ? 'غير متصل حالياً' : 'Watch Disconnected'),
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: ble.isConnected ? Colors.green : Colors.grey,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  isArabic
-                      ? 'بروتوكول Veyro v5.0 • وضع المزامنة التلقائية: ' + (_autoSyncHistory ? 'مفعل' : 'معطل')
-                      : 'Protocol: Veyro v5.0 • Background Auto-Sync: ' + (_autoSyncHistory ? 'Enabled' : 'Disabled'),
-                  style: const TextStyle(fontSize: 12, color: Colors.grey),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            // 4. Updates & About Cambric
-            _buildCard(
-              title: isArabic ? 'عن كمبريك والتحديثات' : 'About Cambric & Releases',
-              icon: Icons.info_outline,
-              children: [
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('Digital Saver Suite', style: TextStyle(fontWeight: FontWeight.bold)),
-                  subtitle: Text(isArabic ? 'الإصدار 1.0.3 • صنع بواسطة كمبريك (مصر)' : 'Version 1.0.3 • Built by Cambric (Egypt)'),
-                  trailing: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Text('Production', style: TextStyle(color: AppColors.primary, fontSize: 11, fontWeight: FontWeight.bold)),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                ElevatedButton.icon(
-                  onPressed: () => updateService.checkForUpdates(),
-                  icon: const Icon(Icons.system_update_alt, size: 16),
-                  label: Text(isArabic ? 'التحقق من التحديثات' : 'Check for GitHub Releases'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.surface,
-                    foregroundColor: AppColors.primary,
-                    side: const BorderSide(color: AppColors.primary),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 24),
+  void _submit() {
+    final String text = _controller.text.trim();
+    if (text.isEmpty) {
+      setState(() => _error = 'Write something first.');
+      return;
+    }
+    Navigator.of(context).pop(text);
+  }
 
-            ElevatedButton.icon(
-              onPressed: _saveSettings,
-              icon: const Icon(Icons.check_circle_outline),
-              label: Text(isArabic ? 'حفظ كافة التغييرات' : 'Save All Preferences'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    return AlertDialog(
+      title: Text(widget.title),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          TextField(
+            controller: _controller,
+            autofocus: true,
+            maxLength: 80,
+            decoration: _SettingsScreenState._fieldDecoration(
+              widget.fieldLabel,
+            ).copyWith(
+              hintText: widget.hint,
+              counterText: '',
+            ),
+            onSubmitted: (_) => _submit(),
+          ),
+          if (_error != null) ...<Widget>[
+            const SizedBox(height: Space.sm),
+            Text(
+              _error!,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.error,
               ),
             ),
           ],
-        ),
+        ],
       ),
-    );
-  }
-
-  Widget _buildCard({
-    required String title,
-    required IconData icon,
-    required List<Widget> children,
-  }) {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(icon, color: AppColors.primary, size: 20),
-                const SizedBox(width: 8),
-                Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-              ],
-            ),
-            const Divider(height: 18),
-            ...children,
-          ],
+      actions: <Widget>[
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
         ),
-      ),
+        FilledButton(
+          onPressed: _submit,
+          child: Text(widget.confirmLabel),
+        ),
+      ],
     );
   }
 }

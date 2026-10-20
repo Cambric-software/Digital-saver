@@ -25,6 +25,7 @@ import 'package:digital_saver/screens/health_tips_screen.dart';
 import 'package:digital_saver/screens/health_trends_screen.dart';
 import 'package:digital_saver/screens/heart_screen.dart';
 import 'package:digital_saver/screens/insights_screen.dart';
+import 'package:digital_saver/screens/lock_screen.dart';
 import 'package:digital_saver/screens/lifestyle_tools_screen.dart';
 import 'package:digital_saver/screens/memory_screen.dart';
 import 'package:digital_saver/screens/settings_screen.dart';
@@ -95,6 +96,7 @@ final Map<String, Widget Function()> _screens = <String, Widget Function()>{
   'achievements': AchievementsScreen.new,
   'ai_assistant': AIAssistantScreen.new,
   'memory': MemoryScreen.new,
+  'lock': LockScreen.new,
   'device_diagnostics': DeviceDiagnosticsScreen.new,
   'watch_simulator': WatchSimulatorScreen.new,
   'settings': SettingsScreen.new,
