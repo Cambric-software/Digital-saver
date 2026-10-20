@@ -112,13 +112,45 @@ Nothing below this matters if the product tells lies or has dead controls.
 
 ### Phase 3 — Digital Saver interface
 
-- [ ] **3.1 Rebuild the remaining screens** on the design system. Done:
-      dashboard, heart, activity, sleep, vitals. Remaining: bp, insights,
-      health_hub, health_trends, health_tips, fitness_tools, lifestyle_tools,
-      achievements, memory, device_diagnostics, watch_simulator, settings.
-- [ ] **3.2 Interaction harness.** Rendering is verified; *behaviour* is not.
-      Every button, tab, form and dialog must be exercised at 390px and 1440px,
-      and its effect asserted.
+- [x] **3.1 Rebuild the remaining screens** on the design system. Every screen is
+      now rebuilt: dashboard, heart, activity, sleep, vitals, insights (trends,
+      guidance, progress), bp, health_hub, health_trends, health_tips, fitness,
+      lifestyle, achievements, memory, device_diagnostics, watch_simulator,
+      settings and the app lock. Each carries a top doc comment saying what the
+      previous version claimed and what replaced it, and the UI capture harness
+      renders every one at 390px and 1440px. Screens that had invented data now
+      show an empty state naming what is missing.
+- [x] **3.1a Reachability — decided 2026-10-20.** Seven screens were unreachable:
+      `bp`, `health_hub` and `watch_simulator` were referenced nowhere in `lib/`,
+      and `fitness`, `lifestyle`, `wellness` and `device` were reachable only
+      from `health_hub`, which itself was unreachable. The shell also hid `watch`
+      on a phone: the bottom bar held five of six destinations, and the rail
+      only appears at 1100px. **Done:** a **Health hub** destination joins the
+      shell and is the door to the tool suites, blood pressure and the simulator.
+      The bar is Today, Vitals, Insights, Coach and **More**, where More lists
+      every destination the bar cannot hold. Reachability is tested at both
+      widths in `test/widgets/ds_shell_test.dart`.
+- [x] **3.1b Unreferenced code — decided 2026-10-20.** Eight files were imported
+      by nothing, about 3,500 lines. **Done:** `storage_service` is the typed
+      settings and records store behind Settings and fitness;
+      `quick_actions_widget` is the Quick actions panel on Today;
+      `enhanced_animations` keeps the BPM-driven `HeartPulseRing` used on the
+      heart screen; `dynamic_theme_service` is the clock rule behind "Dim after
+      dark"; `app_installer_service` verifies a published SHA-256 before
+      installing and reports an honest hand-off on Android;
+      `health_analysis_service_v2` is `HealthPatternsService`, shown as Patterns
+      in Insights; `creative_effects` is the static splash backdrop.
+      **Open:** `glassmorphic_widgets` is the one file without a job. Its
+      translucent, glowing surface conflicts with the design system, and the only
+      surface that could carry it — the web download page — must keep the Max
+      Tools palette exactly. Decision needed: delete it, or let that page diverge.
+- [ ] **3.2 Interaction harness.** Rendering is verified; *behaviour* is only
+      partly so. Each rebuilt screen has tests for its main path at 390px and
+      1440px (hub, settings, lock, memory, wellness, lifestyle, fitness, device,
+      simulator, insights, dashboard), but "every button, tab, form and dialog
+      exercised, and its effect asserted" is not yet true. The remaining work is
+      a per-screen pass over the controls those tests do not touch, including
+      dialogs and the disabled-state reasons.
 
 ### Phase 4 — Veyro product
 
