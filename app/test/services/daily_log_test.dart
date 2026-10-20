@@ -67,6 +67,22 @@ void main() {
     expect(await DailyLog.counter(DailyLog.hydrationGlasses, now: monday), 6);
   });
 
+  test('an effort rating and its note are stored with the day', () async {
+    await DailyLog.setCounter(DailyLog.rpe, 7, now: monday);
+    await DailyLog.setEntry(DailyLog.rpeNote, 'Steady until the last lap',
+        now: monday);
+
+    expect(await DailyLog.counter(DailyLog.rpe, now: monday), 7);
+    expect(
+      await DailyLog.entry(DailyLog.rpeNote, now: monday),
+      'Steady until the last lap',
+    );
+
+    // The next day starts with nothing logged.
+    expect(await DailyLog.counter(DailyLog.rpe, now: tuesday), 0);
+    expect(await DailyLog.entry(DailyLog.rpeNote, now: tuesday), isNull);
+  });
+
   test('a corrupt day reads as empty instead of throwing', () async {
     SharedPreferences.setMockInitialValues(<String, Object>{
       'daily_log_2026-10-20': 'this is not json',

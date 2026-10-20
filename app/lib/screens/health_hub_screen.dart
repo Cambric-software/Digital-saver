@@ -163,7 +163,7 @@ class _HealthHubScreenState extends State<HealthHubScreen> {
                 ),
                 _SuiteCard(
                   title: 'Device & sensors',
-                  subtitle: 'The watch, its sensors, and its own controls',
+                  subtitle: 'Connection, firmware, storage and the commands it accepts',
                   icon: Icons.tune_outlined,
                   onTap: () => _open(const DeviceDiagnosticsScreen()),
                 ),

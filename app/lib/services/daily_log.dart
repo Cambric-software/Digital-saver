@@ -46,6 +46,12 @@ abstract final class DailyLog {
   /// When the current fast started. Absent means no fast is running.
   static const String fastingStart = 'fasting_start';
 
+  /// Perceived effort for today, 1 to 10. Absent means nothing was logged.
+  static const String rpe = 'rpe';
+
+  /// Optional words attached to today's effort rating.
+  static const String rpeNote = 'rpe_note';
+
   static const String _dayPrefix = 'daily_log_';
   static const String _settingPrefix = 'daily_log_setting_';
   static const String _strideKey = 'stride_cm';

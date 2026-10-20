@@ -41,6 +41,7 @@ void main() {
     expect(await StorageService.breathHoldBest(),
         StorageService.defaultBreathHoldBest);
     expect(await StorageService.reflections(), isEmpty);
+    expect(await StorageService.medications(), isEmpty);
   });
 
   test('each setting round-trips', () async {
@@ -149,10 +150,52 @@ void main() {
     expect(await StorageService.breathHoldBest(), 45);
   });
 
+  test('the medication list round-trips in order', () async {
+    await StorageService.setMedications(const <Medication>[
+      Medication(name: 'Vitamin D3', dose: '2000 IU'),
+      Medication(name: 'Magnesium glycinate'),
+    ]);
+
+    final List<Medication> stored = await StorageService.medications();
+    expect(stored, hasLength(2));
+    expect(stored.first.name, 'Vitamin D3');
+    expect(stored.first.dose, '2000 IU');
+    expect(stored.last.name, 'Magnesium glycinate');
+    expect(stored.last.dose, isEmpty);
+  });
+
+  test('unreadable medications are skipped and the readable ones kept',
+      () async {
+    SharedPreferences.setMockInitialValues(<String, Object>{
+      'medications': '[{"name":"Iron","dose":"50 mg"},{"name":"  "},{},'
+          '{"name":42},{"dose":"1 tab"}]',
+    });
+
+    final List<Medication> stored = await StorageService.medications();
+    expect(stored, hasLength(1));
+    expect(stored.single.name, 'Iron');
+    expect(stored.single.dose, '50 mg');
+  });
+
+  test('a corrupt medication list reads as empty', () async {
+    SharedPreferences.setMockInitialValues(<String, Object>{
+      'medications': 'this is not json',
+    });
+    expect(await StorageService.medications(), isEmpty);
+  });
+
+  test('an empty medication list is stored as empty, not as a default', () async {
+    await StorageService.setMedications(const <Medication>[]);
+    expect(await StorageService.medications(), isEmpty);
+  });
+
   test('clear forgets what this service owns', () async {
     await StorageService.setDemoMode(true);
     await StorageService.saveReflection('note');
     await StorageService.recordBreathHold(60);
+    await StorageService.setMedications(const <Medication>[
+      Medication(name: 'Iron'),
+    ]);
 
     await StorageService.clear();
 
@@ -160,5 +203,6 @@ void main() {
     expect(await StorageService.reflections(), isEmpty);
     expect(await StorageService.breathHoldBest(),
         StorageService.defaultBreathHoldBest);
+    expect(await StorageService.medications(), isEmpty);
   });
 }

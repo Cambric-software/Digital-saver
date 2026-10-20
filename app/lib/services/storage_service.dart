@@ -45,6 +45,38 @@ class Reflection {
   Map<String, Object> toJson() => <String, Object>{'date': date, 'text': text};
 }
 
+/// A medication or supplement the person keeps on their own list.
+///
+/// Just a name and an optional dose. There is no schedule, no reminder and no
+/// interval: the watch has no alarm API, and the phone app does not send
+/// notifications from this list.
+class Medication {
+  /// Create an entry.
+  const Medication({required this.name, this.dose = ''});
+
+  /// What it is, e.g. `Vitamin D3`.
+  final String name;
+
+  /// Strength or note, e.g. `2000 IU`. May be empty.
+  final String dose;
+
+  /// Read from stored JSON, or null when the object is not a usable entry.
+  static Medication? fromJson(Object? value) {
+    if (value is! Map) return null;
+    final Object? name = value['name'];
+    final Object? dose = value['dose'];
+    if (name is! String || name.trim().isEmpty) return null;
+    return Medication(
+      name: name.trim(),
+      dose: dose is String ? dose.trim() : '',
+    );
+  }
+
+  /// Write as stored JSON.
+  Map<String, Object> toJson() =>
+      <String, Object>{'name': name, 'dose': dose};
+}
+
 /// Typed access to stored settings and records.
 abstract final class StorageService {
   /// The most reflection entries kept. Older ones are dropped rather than
@@ -61,6 +93,7 @@ abstract final class StorageService {
   static const String _keyQuickReplies = 'quick_replies';
   static const String _keyReflections = 'reflections';
   static const String _keyBreathHoldBest = 'breath_hold_best_seconds';
+  static const String _keyMedications = 'medications';
 
   /// The defaults, in one place, so load and save cannot disagree.
   static const bool defaultDemoMode = false;
@@ -77,6 +110,7 @@ abstract final class StorageService {
     'Got it, thanks!',
   ];
   static const int defaultBreathHoldBest = 0;
+  static const List<Medication> defaultMedications = <Medication>[];
 
   static Future<SharedPreferences> get _prefs =>
       SharedPreferences.getInstance();
@@ -225,6 +259,40 @@ abstract final class StorageService {
     return best;
   }
 
+  /// The medication and supplement list, in the order the person arranged it.
+  ///
+  /// The list starts empty. The previous screen opened with three named
+  /// products already in it, so the list read as a schedule the app had
+  /// somehow established rather than one the person had written.
+  ///
+  /// Entries that cannot be read are skipped rather than discarding the whole
+  /// list, for the same reason the reflection log does it: one bad entry should
+  /// not erase the others.
+  static Future<List<Medication>> medications() async {
+    final String? raw = (await _prefs).getString(_keyMedications);
+    if (raw == null) return <Medication>[];
+    try {
+      final Object? decoded = jsonDecode(raw);
+      if (decoded is! List) return <Medication>[];
+      return decoded
+          .map(Medication.fromJson)
+          .whereType<Medication>()
+          .toList(growable: false);
+    } on FormatException {
+      return <Medication>[];
+    }
+  }
+
+  /// Replace the medication and supplement list.
+  static Future<void> setMedications(List<Medication> value) async {
+    await (await _prefs).setString(
+      _keyMedications,
+      jsonEncode(
+        value.map((Medication entry) => entry.toJson()).toList(),
+      ),
+    );
+  }
+
   /// Forgets everything this service stores. Used by tests and by a factory
   /// reset; the profile and contacts in [LocalStore] are untouched.
   static Future<void> clear() async {
@@ -240,6 +308,7 @@ abstract final class StorageService {
       _keyQuickReplies,
       _keyReflections,
       _keyBreathHoldBest,
+      _keyMedications,
     ]) {
       await prefs.remove(key);
     }
