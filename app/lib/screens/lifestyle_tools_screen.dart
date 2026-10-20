@@ -1,9 +1,39 @@
+/// Lifestyle tools, rebuilt onto the design system and stripped of claims.
+///
+/// The previous version sold itself with numbers it did not have. Sleep debt was
+/// fixed at "+11.2 hrs" from a "7-day average" of 6.4 hours that was typed into
+/// the source, and it followed that with a catch-up strategy. The hearing card
+/// reported "62 dB SPL" as an ambient measurement "via Veyro microphone
+/// sensor", which no stream in the app provides. The fasting card named
+/// biological stages - "Ketosis & Fat-Burning", "Blood Sugar Normalizing" - as
+/// if a timer could observe them, and the mood entry, the fasting start and the
+/// break count were `setState` values that vanished on the way back to the hub.
+/// BMR was calculated from three editable fields that were never saved, using a
+/// formula its comment labelled both Mifflin-St Jeor and Harris-Benedict.
+///
+/// What is here now: a fast that records when it really started and shows only
+/// elapsed time against the window the person chose; a mood and energy entry
+/// stored per day; a movement-break countdown that counts when the break is
+/// acknowledged; and a BMR/TDEE calculator that uses the stored profile, prints
+/// the formula, and calls every result an estimate. The sleep-debt and hearing
+/// cards are gone because nothing in the app measures either.
+library;
+
 import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../theme/app_colors.dart';
 
+import '../models/health_models.dart';
+import '../services/daily_log.dart';
+import '../services/local_store.dart';
+import '../theme/design_tokens.dart';
+import '../widgets/ds_timers.dart';
+import '../widgets/ds_widgets.dart';
+
+/// Daily habits and two calculators, nothing diagnostic.
 class LifestyleToolsScreen extends StatefulWidget {
+  /// Create the screen.
   const LifestyleToolsScreen({super.key});
 
   @override
@@ -11,723 +41,704 @@ class LifestyleToolsScreen extends StatefulWidget {
 }
 
 class _LifestyleToolsScreenState extends State<LifestyleToolsScreen> {
-  // 1. Intermittent Fasting Tracker (#4)
-  bool _isFasting = false;
-  String _fastingPlan = '16:8';
-  DateTime? _fastingStartTime;
-  int _fastingDurationHours = 16;
+  static const List<String> _plans = <String>['14:10', '16:8', '18:6', '20:4'];
+  static const List<String> _moods = <String>[
+    'Great',
+    'Good',
+    'Okay',
+    'Tired',
+    'Stressed',
+  ];
+  static const List<String> _availableTags = <String>[
+    'Slept well',
+    'Post-workout',
+    'Busy day',
+    'Relaxed',
+    'Caffeine',
+  ];
+  static const List<({String label, double factor})> _activityLevels =
+      <({String label, double factor})>[
+    (label: 'Sedentary', factor: 1.2),
+    (label: 'Light', factor: 1.375),
+    (label: 'Moderate', factor: 1.55),
+    (label: 'Active', factor: 1.725),
+  ];
+
+  bool _loading = true;
+  String? _loadError;
+
+  DateTime? _fastingStart;
+  String _plan = '16:8';
   Timer? _fastingTimer;
 
-  // 2. Sleep Debt & Recovery (#8)
-  final double _targetSleep = 8.0;
-  final double _actualSleepAvg = 6.4;
-  final double _sleepDebtHours = 11.2;
+  String? _mood;
+  int _energy = 5;
+  final Set<String> _tags = <String>{};
+  String? _savedSummary;
 
-  // 3. Noise Exposure & Hearing Safety (#9)
-  final int _currentDbLevel = 62;
-  final String _hearingSafetyRating = 'Safe (Moderate)';
+  int _breaks = 0;
 
-  // 4. Daily Mood & Energy Logger (#16)
-  int _selectedMoodIndex = 1; // 0: Great, 1: Good, 2: Okay, 3: Tired, 4: Stressed
-  final List<String> _moodLabels = ['Great', 'Good', 'Okay', 'Tired', 'Stressed'];
-  final List<String> _moodIcons = ['😄', '🙂', '😐', '🥱', '😫'];
-  double _energyLevel = 7.0; // 1-10
-  final List<String> _selectedTags = [];
-  final List<String> _availableTags = ['Deep Sleep', 'Post-Workout', 'Busy Day', 'Relaxed', 'Caffeine'];
-  String _lastSavedMood = '';
-
-  // 5. BMR & Daily Calorie Burn (#18)
-  int _calcAge = 25;
-  double _calcWeightKg = 72.0;
-  double _calcHeightCm = 175.0;
-  final String _calcGender = 'Male';
-  final double _activityMultiplier = 1.375; // Lightly active
-  double _bmrResult = 1705;
-  double _tdeeResult = 2344;
-
-  // 6. Posture & Sedentary Break Timer (#19)
-  final int _postureIntervalMinutes = 30;
-  int _postureSecondsRemaining = 1800;
-  bool _postureTimerActive = false;
-  Timer? _postureTimer;
-  int _breaksCompletedToday = 3;
+  UserProfile _profile = UserProfile();
+  final TextEditingController _age = TextEditingController();
+  final TextEditingController _weight = TextEditingController();
+  final TextEditingController _height = TextEditingController();
+  bool _femaleConstant = false;
+  double _activityFactor = 1.375;
 
   @override
   void initState() {
     super.initState();
-    _loadStoredPreferences();
+    _load();
   }
 
   @override
   void dispose() {
     _fastingTimer?.cancel();
-    _postureTimer?.cancel();
+    _age.dispose();
+    _weight.dispose();
+    _height.dispose();
     super.dispose();
   }
 
-  Future<void> _loadStoredPreferences() async {
-    final prefs = await SharedPreferences.getInstance();
-    setState(() {
-      _isFasting = prefs.getBool('fasting_active') ?? false;
-      final startStr = prefs.getString('fasting_start_time');
-      if (startStr != null) {
-        _fastingStartTime = DateTime.tryParse(startStr);
-      }
-      _fastingPlan = prefs.getString('fasting_plan') ?? '16:8';
-      _fastingDurationHours = int.tryParse(_fastingPlan.split(':').first) ?? 16;
-      _lastSavedMood = prefs.getString('today_logged_mood') ?? 'Good (Energy: 7/10)';
-      _breaksCompletedToday = prefs.getInt('posture_breaks_count') ?? 3;
-    });
+  Future<void> _load() async {
+    try {
+      final DateTime? start = await DailyLog.time(DailyLog.fastingStart);
+      final String? storedPlan = await DailyLog.fastingPlan();
+      final String? mood = await DailyLog.entry(DailyLog.mood);
+      final int energy = await DailyLog.counter(DailyLog.energy);
+      final String? tags = await DailyLog.entry(DailyLog.moodTags);
+      final int breaks = await DailyLog.counter(DailyLog.breaks);
+      final UserProfile profile = await LocalStore.loadProfile();
+      final SharedPreferences prefs = await SharedPreferences.getInstance();
+      // Loaded profiles have a stored JSON object; a missing one means the
+      // person has not entered age, weight or height yet, so the fields are
+      // left empty rather than filled with the model's defaults.
+      final bool hasProfile = prefs.getString('veyro_profile') != null;
 
-    if (_isFasting) {
-      _startFastingTicker();
+      final String? validMood =
+          mood != null && _moods.contains(mood) ? mood : null;
+      final int validEnergy = energy >= 1 && energy <= 10 ? energy : 5;
+      final Set<String> chosenTags = <String>{
+        for (final String tag in (tags ?? '').split(','))
+          if (_availableTags.contains(tag.trim())) tag.trim(),
+      };
+
+      if (!mounted) return;
+      setState(() {
+        _fastingStart = start;
+        _plan = storedPlan != null && _plans.contains(storedPlan)
+            ? storedPlan
+            : '16:8';
+        _mood = validMood;
+        _energy = validEnergy;
+        _tags
+          ..clear()
+          ..addAll(chosenTags);
+        _savedSummary = validMood == null
+            ? null
+            : 'Saved today: $validMood · energy $validEnergy/10';
+        _breaks = breaks;
+        _profile = profile;
+        _femaleConstant = profile.gender.toLowerCase() == 'female';
+        if (hasProfile) {
+          _age.text = '${profile.age}';
+          _weight.text = _formatNumber(profile.weightKg);
+          _height.text = _formatNumber(profile.heightCm);
+        }
+        _loading = false;
+        _loadError = null;
+      });
+
+      if (start != null) _startFastingTicker();
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _loadError = '$error';
+        _loading = false;
+      });
     }
-    _recalcBmr();
   }
 
   void _startFastingTicker() {
     _fastingTimer?.cancel();
-    _fastingTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+    _fastingTimer = Timer.periodic(const Duration(seconds: 1), (Timer timer) {
       if (mounted) setState(() {});
     });
   }
 
-  void _toggleFasting() async {
-    final prefs = await SharedPreferences.getInstance();
-    setState(() {
-      if (_isFasting) {
-        _isFasting = false;
-        _fastingStartTime = null;
-        _fastingTimer?.cancel();
-        prefs.remove('fasting_active');
-        prefs.remove('fasting_start_time');
-      } else {
-        _isFasting = true;
-        _fastingStartTime = DateTime.now();
-        prefs.setBool('fasting_active', true);
-        prefs.setString('fasting_start_time', _fastingStartTime!.toIso8601String());
-        _startFastingTicker();
-      }
-    });
-  }
-
-  void _togglePostureTimer() {
-    if (_postureTimerActive) {
-      _postureTimer?.cancel();
-      setState(() => _postureTimerActive = false);
-    } else {
-      setState(() {
-        _postureTimerActive = true;
-        _postureSecondsRemaining = _postureIntervalMinutes * 60;
-      });
-      _postureTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-        if (!mounted) {
-          timer.cancel();
-          return;
-        }
-        if (_postureSecondsRemaining > 0) {
-          setState(() => _postureSecondsRemaining--);
-        } else {
-          timer.cancel();
-          setState(() {
-            _postureTimerActive = false;
-            _breaksCompletedToday++;
-          });
-          SharedPreferences.getInstance().then((p) {
-            p.setInt('posture_breaks_count', _breaksCompletedToday);
-          });
-          _showPostureAlert();
-        }
-      });
+  Future<void> _toggleFast() async {
+    if (_fastingStart != null) {
+      _fastingTimer?.cancel();
+      _fastingTimer = null;
+      setState(() => _fastingStart = null);
+      await DailyLog.setTime(DailyLog.fastingStart, null);
+      return;
     }
+
+    final DateTime now = DateTime.now();
+    setState(() => _fastingStart = now);
+    await DailyLog.setTime(DailyLog.fastingStart, now);
+    _startFastingTicker();
   }
 
-  void _showPostureAlert() {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Row(
-          children: [
-            Icon(Icons.accessibility_new, color: AppColors.primary),
-            SizedBox(width: 8),
-            Text('Posture & Movement Break!'),
-          ],
-        ),
-        content: const Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Time to stand up, roll your shoulders, and hydrate!'),
-            SizedBox(height: 12),
-            Text('• 10 Shoulder rolls back\n• 5 Neck side-stretches\n• Drink 1 glass of water\n• Look 20ft away for 20s'),
-          ],
-        ),
-        actions: [
-          ElevatedButton(
-            onPressed: () => Navigator.pop(ctx),
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
-            child: const Text('Break Done', style: TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
+  Future<void> _setPlan(String value) async {
+    setState(() => _plan = value);
+    await DailyLog.setFastingPlan(value);
+  }
+
+  Future<void> _saveMood() async {
+    final String? mood = _mood;
+    if (mood == null) return;
+    final int energy = _energy;
+    final List<String> tags = _tags.toList()..sort();
+    await DailyLog.setEntry(DailyLog.mood, mood);
+    await DailyLog.setCounter(DailyLog.energy, energy);
+    await DailyLog.setEntry(DailyLog.moodTags, tags.join(', '));
+    if (!mounted) return;
+    setState(() {
+      _savedSummary = 'Saved today: $mood · energy $energy/10';
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Today\'s entry saved.')),
     );
   }
 
-  void _recalcBmr() {
-    // Mifflin-St Jeor / Revised Harris-Benedict
-    double bmr;
-    if (_calcGender == 'Male') {
-      bmr = (10 * _calcWeightKg) + (6.25 * _calcHeightCm) - (5 * _calcAge) + 5;
-    } else {
-      bmr = (10 * _calcWeightKg) + (6.25 * _calcHeightCm) - (5 * _calcAge) - 161;
-    }
-    setState(() {
-      _bmrResult = bmr;
-      _tdeeResult = bmr * _activityMultiplier;
-    });
+  Future<void> _onBreakFinished() async {
+    final bool? acknowledged = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext ctx) {
+        return AlertDialog(
+          title: const Text('Time to move'),
+          content: const Text(
+            'Stand up, roll your shoulders, look across the room for twenty '
+            'seconds, and take a few slow breaths.',
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Not now'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Done'),
+            ),
+          ],
+        );
+      },
+    );
+    if (acknowledged != true || !mounted) return;
+
+    final int next = _breaks + 1;
+    setState(() => _breaks = next);
+    await DailyLog.setCounter(DailyLog.breaks, next);
   }
 
-  void _saveMoodEntry() async {
-    final prefs = await SharedPreferences.getInstance();
-    final entry = '${_moodIcons[_selectedMoodIndex]} ${_moodLabels[_selectedMoodIndex]} (Energy: ${_energyLevel.toInt()}/10)';
-    await prefs.setString('today_logged_mood', entry);
-    // Both the setState and the messenger lookup happen after an await, so
-    // this State may have been disposed by now.
+  Future<void> _saveProfileNumbers() async {
+    final int? age = int.tryParse(_age.text.trim());
+    final double? weight = double.tryParse(_weight.text.trim());
+    final double? height = double.tryParse(_height.text.trim());
+    if (age == null ||
+        age < 1 ||
+        age > 120 ||
+        weight == null ||
+        weight < 20 ||
+        weight > 300 ||
+        height == null ||
+        height < 100 ||
+        height > 250) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Enter an age from 1 to 120, a weight from 20 to 300 kg and a '
+            'height from 100 to 250 cm.',
+          ),
+        ),
+      );
+      return;
+    }
+
+    final UserProfile next = _profile.copyWith(
+      age: age,
+      weightKg: weight,
+      heightCm: height,
+    );
+    try {
+      await LocalStore.saveProfile(next);
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('The profile could not be saved: $error')),
+      );
+      return;
+    }
     if (!mounted) return;
-    setState(() => _lastSavedMood = entry);
+    setState(() => _profile = next);
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Daily mood & energy logged successfully!')),
+      const SnackBar(content: Text('Saved to your profile on this phone.')),
     );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Lifestyle & Health Tools'),
-        backgroundColor: AppColors.surface,
-        elevation: 0,
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          // Banner
-          Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: AppColors.primary.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
+      appBar: AppBar(title: const Text('Lifestyle tools')),
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : DsPage(child: _content(context)),
+    );
+  }
+
+  Widget _content(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        if (_loadError != null) ...<Widget>[
+          DsCard(
+            child: Text(
+              'Your saved entries could not be read: $_loadError',
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
             ),
-            child: const Row(
-              children: [
-                Icon(Icons.self_improvement, color: AppColors.primary, size: 28),
-                SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    'Daily health routines, circadian tracking, and metabolic tools.',
-                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
-                  ),
+          ),
+          const SizedBox(height: Space.xl),
+        ],
+        _fastingSection(context),
+        const SizedBox(height: Space.xl),
+        _moodSection(context),
+        const SizedBox(height: Space.xl),
+        _bmrSection(context),
+        const SizedBox(height: Space.xl),
+        _breaksSection(context),
+        const SizedBox(height: Space.xxl),
+        const DsSection(
+          title: 'About these tools',
+          child: DsCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  'The fast counts time since you started it. It has no way '
+                  'to observe metabolism, so it makes no claims about what '
+                  'your body is doing beyond the clock.',
+                ),
+                SizedBox(height: Space.sm),
+                Text(
+                  'Mood, energy and breaks are what you record. BMR and TDEE '
+                  'are estimates calculated from the numbers you enter, not '
+                  'measurements, and no calorie target is suggested.',
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 16),
-
-          // 1. Intermittent Fasting Tracker (#4)
-          _buildFastingCard(),
-          const SizedBox(height: 16),
-
-          // 2. Sleep Debt & Recovery (#8)
-          _buildSleepDebtCard(),
-          const SizedBox(height: 16),
-
-          // 3. Noise Exposure & Hearing Safety (#9)
-          _buildNoiseSafetyCard(),
-          const SizedBox(height: 16),
-
-          // 4. Daily Mood & Energy Logger (#16)
-          _buildMoodLoggerCard(),
-          const SizedBox(height: 16),
-
-          // 5. BMR & Calorie Burn Calculator (#18)
-          _buildBmrCard(),
-          const SizedBox(height: 16),
-
-          // 6. Posture & Sedentary Break Timer (#19)
-          _buildPostureCard(),
-          const SizedBox(height: 24),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
-  Widget _buildCard({required String title, required IconData icon, required List<Widget> children}) {
-    return Card(
-      elevation: 1,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
+  Widget _fastingSection(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    final bool running = _fastingStart != null;
+    final Duration elapsed = _elapsed;
+    final int targetHours = _targetHours;
+    final double progress = running && targetHours > 0
+        ? (elapsed.inSeconds / (targetHours * 3600)).clamp(0.0, 1.0)
+        : 0.0;
+
+    return DsSection(
+      title: 'Fasting timer',
+      subtitle: 'Elapsed time against the window you chose. No stage claims.',
+      child: DsCard(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+          children: <Widget>[
+            const DsLabel('Plan'),
+            const SizedBox(height: Space.xs),
+            DsSegmented<String>(
+              value: _plan,
+              options: <DsSegment<String>>[
+                for (final String plan in _plans)
+                  DsSegment<String>(value: plan, label: plan),
+              ],
+              onChanged: _setPlan,
+            ),
+            const SizedBox(height: Space.md),
             Row(
-              children: [
-                Icon(icon, color: AppColors.primary, size: 22),
-                const SizedBox(width: 8),
-                Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+              children: <Widget>[
+                Expanded(
+                  child: Text(
+                    running ? _formatElapsed(elapsed) : '--:--:--',
+                    style: Type.metricSmall.copyWith(
+                      color: running
+                          ? theme.colorScheme.onSurface
+                          : theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+                DsStatusPill(
+                  label: running ? 'Running' : 'Not started',
+                  color: running
+                      ? theme.colorScheme.primary
+                      : theme.colorScheme.onSurfaceVariant,
+                  dense: true,
+                ),
               ],
             ),
-            const Divider(height: 20),
-            ...children,
+            const SizedBox(height: Space.xs),
+            Text(
+              running
+                  ? 'Elapsed. Target: $targetHours hours.'
+                  : 'Target: $targetHours hours.',
+              style: theme.textTheme.bodySmall,
+            ),
+            const SizedBox(height: Space.sm),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(Radii.pill),
+              child: LinearProgressIndicator(
+                value: progress,
+                minHeight: 8,
+                backgroundColor: theme.colorScheme.surfaceContainerHigh,
+                valueColor: AlwaysStoppedAnimation<Color>(
+                  theme.colorScheme.primary,
+                ),
+              ),
+            ),
+            const SizedBox(height: Space.md),
+            FilledButton.icon(
+              onPressed: _toggleFast,
+              icon: Icon(
+                running ? Icons.stop_rounded : Icons.play_arrow_rounded,
+                size: 18,
+              ),
+              label: Text(running ? 'End fast' : 'Start fast'),
+            ),
           ],
         ),
       ),
     );
   }
 
-  // Feature 1 (#4): Intermittent Fasting
-  Widget _buildFastingCard() {
-    int elapsedSec = 0;
-    if (_isFasting && _fastingStartTime != null) {
-      elapsedSec = DateTime.now().difference(_fastingStartTime!).inSeconds;
-    }
-    final targetSec = _fastingDurationHours * 3600;
-    final progress = (elapsedSec / targetSec).clamp(0.0, 1.0);
-    final hours = elapsedSec ~/ 3600;
-    final mins = (elapsedSec % 3600) ~/ 60;
-    final secs = elapsedSec % 60;
-
-    String stage = 'Digestion Window';
-    if (hours >= 12) {
-      stage = 'Ketosis & Fat-Burning';
-    } else if (hours >= 8) stage = 'Blood Sugar Normalizing';
-    else if (hours >= 4) stage = 'Early Fasting Stage';
-
-    return _buildCard(
-      title: 'Intermittent Fasting Tracker (#4)',
-      icon: Icons.timer_outlined,
-      children: [
-        Row(
-          children: [
-            const Text('Fasting Protocol: ', style: TextStyle(fontWeight: FontWeight.w500)),
-            DropdownButton<String>(
-              value: _fastingPlan,
-              underline: const SizedBox(),
-              items: ['14:10', '16:8', '18:6', '20:4'].map((p) {
-                return DropdownMenuItem(value: p, child: Text(p));
-              }).toList(),
-              onChanged: _isFasting ? null : (v) {
-                if (v != null) {
-                  setState(() {
-                    _fastingPlan = v;
-                    _fastingDurationHours = int.tryParse(v.split(':').first) ?? 16;
-                  });
-                }
-              },
+  Widget _moodSection(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    return DsSection(
+      title: 'Mood and energy',
+      subtitle: 'One entry a day. Saving again replaces today\'s.',
+      child: DsCard(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            const DsLabel('How are you feeling?'),
+            const SizedBox(height: Space.xs),
+            DsSegmented<String?>(
+              value: _mood,
+              options: <DsSegment<String?>>[
+                for (final String mood in _moods)
+                  DsSegment<String?>(value: mood, label: mood),
+              ],
+              onChanged: (String? value) => setState(() => _mood = value),
             ),
-            const Spacer(),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: _isFasting ? Colors.green.withValues(alpha: 0.1) : Colors.grey.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(
-                _isFasting ? 'FASTING ACTIVE' : 'EATING WINDOW',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 11,
-                  color: _isFasting ? Colors.green : Colors.grey,
-                ),
-              ),
+            const SizedBox(height: Space.md),
+            Row(
+              children: <Widget>[
+                const Expanded(child: DsLabel('Energy')),
+                Text('$_energy / 10', style: theme.textTheme.labelLarge),
+              ],
             ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        LinearProgressIndicator(
-          value: progress,
-          backgroundColor: Colors.grey.withValues(alpha: 0.2),
-          valueColor: const AlwaysStoppedAnimation(AppColors.primary),
-          minHeight: 8,
-          borderRadius: BorderRadius.circular(4),
-        ),
-        const SizedBox(height: 12),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
+            Slider(
+              value: _energy.toDouble(),
+              min: 1,
+              max: 10,
+              divisions: 9,
+              label: '$_energy',
+              onChanged: (double value) =>
+                  setState(() => _energy = value.round()),
+            ),
+            const SizedBox(height: Space.sm),
+            const DsLabel('What shaped it'),
+            const SizedBox(height: Space.xs),
+            Wrap(
+              spacing: Space.sm,
+              runSpacing: Space.sm,
+              children: <Widget>[
+                for (final String tag in _availableTags)
+                  FilterChip(
+                    label: Text(tag),
+                    selected: _tags.contains(tag),
+                    onSelected: (bool selected) {
+                      setState(() {
+                        if (selected) {
+                          _tags.add(tag);
+                        } else {
+                          _tags.remove(tag);
+                        }
+                      });
+                    },
+                  ),
+              ],
+            ),
+            const SizedBox(height: Space.md),
+            FilledButton.icon(
+              onPressed: _mood == null ? null : _saveMood,
+              icon: const Icon(Icons.check_rounded, size: 18),
+              label: const Text('Save today'),
+            ),
+            const SizedBox(height: Space.sm),
             Text(
-              _isFasting
-                  ? '${hours.toString().padLeft(2, '0')}:${mins.toString().padLeft(2, '0')}:${secs.toString().padLeft(2, '0')} Elapsed'
-                  : 'Fast not started',
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-            ),
-            Text(
-              'Target: ${_fastingDurationHours}h',
-              style: const TextStyle(fontSize: 12, color: Colors.grey),
+              _savedSummary ?? 'Nothing saved for today yet.',
+              style: theme.textTheme.bodySmall,
             ),
           ],
         ),
-        const SizedBox(height: 4),
-        Text('Biological Status: $stage', style: const TextStyle(fontSize: 12, color: AppColors.primary)),
-        const SizedBox(height: 12),
-        SizedBox(
-          width: double.infinity,
-          child: ElevatedButton.icon(
-            onPressed: _toggleFasting,
-            icon: Icon(_isFasting ? Icons.stop : Icons.play_arrow),
-            label: Text(_isFasting ? 'End Fasting Session' : 'Start Fasting Timer'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: _isFasting ? Colors.red.shade600 : AppColors.primary,
-              foregroundColor: Colors.white,
-            ),
-          ),
-        ),
-      ],
+      ),
     );
   }
 
-  // Feature 2 (#8): Sleep Debt & Recovery
-  Widget _buildSleepDebtCard() {
-    return _buildCard(
-      title: 'Sleep Debt & Recovery (#8)',
-      icon: Icons.bedtime_outlined,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('7-Day Avg Sleep', style: TextStyle(fontSize: 12, color: Colors.grey)),
-                Text('${_actualSleepAvg.toStringAsFixed(1)} hrs/night', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-              ],
-            ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('Daily Sleep Target', style: TextStyle(fontSize: 12, color: Colors.grey)),
-                Text('${_targetSleep.toStringAsFixed(1)} hrs/night', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-              ],
-            ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                const Text('Accumulated Debt', style: TextStyle(fontSize: 12, color: Colors.grey)),
-                Text(
-                  '+${_sleepDebtHours.toStringAsFixed(1)} hrs',
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.orange),
-                ),
-              ],
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        Container(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: Colors.orange.withValues(alpha: 0.08),
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: Colors.orange.withValues(alpha: 0.2)),
-          ),
-          child: Row(
-            children: [
-              const Icon(Icons.wb_sunny_outlined, color: Colors.orange, size: 20),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'Catch-up strategy: Add 45-60 min sleep over the next 4 nights to clear debt without circadian shift.',
-                  style: TextStyle(fontSize: 12, color: Colors.orange.shade800),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
+  Widget _bmrSection(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    final double? bmr = _bmr;
+    final double? tdee = bmr == null ? null : bmr * _activityFactor;
 
-  // Feature 3 (#9): Noise Exposure & Hearing Safety
-  Widget _buildNoiseSafetyCard() {
-    return _buildCard(
-      title: 'Hearing Health & Sound Exposure (#9)',
-      icon: Icons.hearing_outlined,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Column(
+    return DsSection(
+      title: 'Basal metabolic rate',
+      subtitle: 'Mifflin-St Jeor, from the numbers below. Estimates, not '
+          'measurements.',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          DsCard(
+            child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('$_currentDbLevel dB SPL', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: AppColors.primary)),
-                Text(_hearingSafetyRating, style: const TextStyle(fontSize: 12, color: Colors.green, fontWeight: FontWeight.w600)),
-              ],
-            ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              decoration: BoxDecoration(
-                color: Colors.green.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: const Text('WHO Limit: 85 dB (8h)', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        const Text(
-          'Ambient sound estimated via Veyro microphone sensor. Prolonged exposure above 85 dB can cause temporary threshold shifts.',
-          style: TextStyle(fontSize: 12, color: Colors.grey),
-        ),
-      ],
-    );
-  }
-
-  // Feature 4 (#16): Daily Mood & Energy Logger
-  Widget _buildMoodLoggerCard() {
-    return _buildCard(
-      title: 'Daily Mood & Energy Journal (#16)',
-      icon: Icons.sentiment_satisfied_alt,
-      children: [
-        const Text('How are you feeling right now?', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
-        const SizedBox(height: 10),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: List.generate(_moodIcons.length, (idx) {
-            final isSelected = _selectedMoodIndex == idx;
-            return GestureDetector(
-              onTap: () => setState(() => _selectedMoodIndex = idx),
-              child: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: isSelected ? AppColors.primary.withValues(alpha: 0.15) : Colors.transparent,
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: isSelected ? AppColors.primary : Colors.grey.withValues(alpha: 0.3)),
-                ),
-                child: Column(
-                  children: [
-                    Text(_moodIcons[idx], style: const TextStyle(fontSize: 24)),
-                    const SizedBox(height: 4),
-                    Text(_moodLabels[idx], style: TextStyle(fontSize: 10, fontWeight: isSelected ? FontWeight.bold : FontWeight.normal)),
+              children: <Widget>[
+                DsGrid(
+                  minTileWidth: 170,
+                  children: <Widget>[
+                    _NumberField(
+                      controller: _age,
+                      label: 'Age',
+                      suffix: 'years',
+                      onChanged: () => setState(() {}),
+                    ),
+                    _NumberField(
+                      controller: _weight,
+                      label: 'Weight',
+                      suffix: 'kg',
+                      onChanged: () => setState(() {}),
+                    ),
+                    _NumberField(
+                      controller: _height,
+                      label: 'Height',
+                      suffix: 'cm',
+                      onChanged: () => setState(() {}),
+                    ),
                   ],
                 ),
-              ),
-            );
-          }),
-        ),
-        const SizedBox(height: 14),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            const Text('Energy Level:', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
-            Text('${_energyLevel.toInt()} / 10', style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary)),
-          ],
-        ),
-        Slider(
-          value: _energyLevel,
-          min: 1,
-          max: 10,
-          divisions: 9,
-          label: '${_energyLevel.toInt()}',
-          activeColor: AppColors.primary,
-          onChanged: (v) => setState(() => _energyLevel = v),
-        ),
-        const SizedBox(height: 8),
-        Wrap(
-          spacing: 6,
-          children: _availableTags.map((tag) {
-            final isChosen = _selectedTags.contains(tag);
-            return FilterChip(
-              label: Text(tag, style: TextStyle(fontSize: 11, color: isChosen ? Colors.white : Colors.black87)),
-              selected: isChosen,
-              selectedColor: AppColors.primary,
-              onSelected: (selected) {
-                setState(() {
-                  if (selected) {
-                    _selectedTags.add(tag);
-                  } else {
-                    _selectedTags.remove(tag);
-                  }
-                });
-              },
-            );
-          }).toList(),
-        ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(
-              child: OutlinedButton.icon(
-                onPressed: _saveMoodEntry,
-                icon: const Icon(Icons.check, size: 16),
-                label: const Text('Log Today\'s Mood'),
-                style: OutlinedButton.styleFrom(foregroundColor: AppColors.primary),
-              ),
-            ),
-          ],
-        ),
-        if (_lastSavedMood.isNotEmpty) ...[
-          const SizedBox(height: 6),
-          Text('Last Logged: $_lastSavedMood', style: const TextStyle(fontSize: 11, color: Colors.grey)),
-        ],
-      ],
-    );
-  }
-
-  // Feature 5 (#18): BMR & Caloric Expenditure Calculator
-  Widget _buildBmrCard() {
-    return _buildCard(
-      title: 'BMR & Caloric Burn Calculator (#18)',
-      icon: Icons.local_fire_department_outlined,
-      children: [
-        Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('Age', style: TextStyle(fontSize: 11, color: Colors.grey)),
-                  TextFormField(
-                    initialValue: '$_calcAge',
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(isDense: true),
-                    onChanged: (v) {
-                      _calcAge = int.tryParse(v) ?? _calcAge;
-                      _recalcBmr();
-                    },
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('Weight (kg)', style: TextStyle(fontSize: 11, color: Colors.grey)),
-                  TextFormField(
-                    initialValue: '${_calcWeightKg.toInt()}',
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(isDense: true),
-                    onChanged: (v) {
-                      _calcWeightKg = double.tryParse(v) ?? _calcWeightKg;
-                      _recalcBmr();
-                    },
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('Height (cm)', style: TextStyle(fontSize: 11, color: Colors.grey)),
-                  TextFormField(
-                    initialValue: '${_calcHeightCm.toInt()}',
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(isDense: true),
-                    onChanged: (v) {
-                      _calcHeightCm = double.tryParse(v) ?? _calcHeightCm;
-                      _recalcBmr();
-                    },
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 14),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.blue.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('Basal Metabolic Rate', style: TextStyle(fontSize: 11, color: Colors.grey)),
-                  Text('${_bmrResult.toInt()} kcal', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.blue)),
-                  const Text('Calories burned at rest', style: TextStyle(fontSize: 10, color: Colors.grey)),
-                ],
-              ),
-            ),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.orange.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('Est. Daily Burn (TDEE)', style: TextStyle(fontSize: 11, color: Colors.grey)),
-                  Text('${_tdeeResult.toInt()} kcal', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.orange)),
-                  const Text('With daily movement', style: TextStyle(fontSize: 10, color: Colors.grey)),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  // Feature 6 (#19): Posture & Sedentary Break Timer
-  Widget _buildPostureCard() {
-    final mins = _postureSecondsRemaining ~/ 60;
-    final secs = _postureSecondsRemaining % 60;
-
-    return _buildCard(
-      title: 'Posture & Ergonomic Breaks (#19)',
-      icon: Icons.accessibility_new_outlined,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '${mins.toString().padLeft(2, '0')}:${secs.toString().padLeft(2, '0')}',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 22,
-                    color: _postureTimerActive ? AppColors.primary : Colors.grey,
-                  ),
+                const SizedBox(height: Space.md),
+                const DsLabel('Equation constant'),
+                const SizedBox(height: Space.xs),
+                DsSegmented<bool>(
+                  value: _femaleConstant,
+                  options: const <DsSegment<bool>>[
+                    DsSegment<bool>(value: false, label: 'Male (+5)'),
+                    DsSegment<bool>(value: true, label: 'Female (−161)'),
+                  ],
+                  onChanged: (bool value) =>
+                      setState(() => _femaleConstant = value),
                 ),
+                const SizedBox(height: Space.md),
+                const DsLabel('Daily activity'),
+                const SizedBox(height: Space.xs),
+                DsSegmented<double>(
+                  value: _activityFactor,
+                  options: <DsSegment<double>>[
+                    for (final ({String label, double factor}) level
+                        in _activityLevels)
+                      DsSegment<double>(
+                        value: level.factor,
+                        label: level.label,
+                      ),
+                  ],
+                  onChanged: (double value) =>
+                      setState(() => _activityFactor = value),
+                ),
+                const SizedBox(height: Space.md),
                 Text(
-                  _postureTimerActive ? 'Active Desk Countdown' : 'Timer Paused',
-                  style: const TextStyle(fontSize: 12, color: Colors.grey),
+                  'Mifflin-St Jeor: 10 × weight (kg) + 6.25 × height (cm) '
+                  '− 5 × age + the constant above. TDEE is that estimate '
+                  'multiplied by the activity factor.',
+                  style: theme.textTheme.bodySmall,
+                ),
+                const SizedBox(height: Space.md),
+                OutlinedButton.icon(
+                  onPressed: _saveProfileNumbers,
+                  icon: const Icon(Icons.save_outlined, size: 18),
+                  label: const Text('Save these numbers to my profile'),
+                ),
+                const SizedBox(height: Space.sm),
+                Text(
+                  'These are the only numbers used. Nothing is inferred from '
+                  'the watch.',
+                  style: theme.textTheme.bodySmall,
                 ),
               ],
-            ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text('$_breaksCompletedToday Completed', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.green)),
-                const Text('Daily Goal: 6 breaks', style: TextStyle(fontSize: 11, color: Colors.grey)),
-              ],
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        SizedBox(
-          width: double.infinity,
-          child: ElevatedButton.icon(
-            onPressed: _togglePostureTimer,
-            icon: Icon(_postureTimerActive ? Icons.pause : Icons.play_arrow),
-            label: Text(_postureTimerActive ? 'Pause Break Timer' : 'Start 30-Min Posture Timer'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: _postureTimerActive ? Colors.orange : AppColors.primary,
-              foregroundColor: Colors.white,
             ),
           ),
-        ),
-      ],
+          const SizedBox(height: Space.md),
+          if (bmr == null || tdee == null)
+            const DsCard(
+              child: DsEmptyState(
+                icon: Icons.calculate_outlined,
+                title: 'No estimate yet',
+                message: 'Enter an age, weight and height above. BMR is '
+                    'calculated from them; it is never measured.',
+              ),
+            )
+          else
+            DsGrid(
+              minTileWidth: 200,
+              children: <Widget>[
+                DsMetricTile(
+                  label: 'BMR estimate',
+                  value: _formatKcal(bmr),
+                  unit: 'kcal/day',
+                  accent: theme.colorScheme.primary,
+                  icon: Icons.local_fire_department_outlined,
+                ),
+                DsMetricTile(
+                  label: 'TDEE estimate',
+                  value: _formatKcal(tdee),
+                  unit: 'kcal/day',
+                  accent: theme.colorScheme.tertiary,
+                  icon: Icons.directions_walk_rounded,
+                ),
+              ],
+            ),
+          const SizedBox(height: Space.sm),
+          Text(
+            'An estimate of energy use, not a target. This screen gives no '
+            'advice about how much to eat.',
+            style: theme.textTheme.bodySmall,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _breaksSection(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    return DsSection(
+      title: 'Movement breaks',
+      subtitle: 'A desk countdown. A break is logged when you acknowledge it.',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          DsCard(
+            padding: const EdgeInsets.all(Space.lg),
+            child: Row(
+              children: <Widget>[
+                Icon(
+                  Icons.accessibility_new_outlined,
+                  size: 18,
+                  color: theme.colorScheme.primary,
+                ),
+                const SizedBox(width: Space.sm),
+                Expanded(
+                  child: Text(
+                    _breaks == 1
+                        ? '1 break logged today'
+                        : '$_breaks breaks logged today',
+                    style: theme.textTheme.titleMedium,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: Space.md),
+          DsCountdown(
+            title: 'Stand up and move',
+            icon: Icons.timer_outlined,
+            duration: const Duration(minutes: 30),
+            description: 'Thirty minutes at the desk, then a short movement '
+                'list. The count is stored with today.',
+            finishedLabel: 'Time to move',
+            onFinished: _onBreakFinished,
+          ),
+        ],
+      ),
+    );
+  }
+
+  int get _targetHours {
+    final String first = _plan.split(':').first;
+    return int.tryParse(first) ?? 16;
+  }
+
+  Duration get _elapsed {
+    final DateTime? start = _fastingStart;
+    if (start == null) return Duration.zero;
+    final Duration value = DateTime.now().difference(start);
+    return value.isNegative ? Duration.zero : value;
+  }
+
+  /// Mifflin-St Jeor, or null until all three inputs are plausible.
+  double? get _bmr {
+    final int? age = int.tryParse(_age.text.trim());
+    final double? weight = double.tryParse(_weight.text.trim());
+    final double? height = double.tryParse(_height.text.trim());
+    if (age == null || age < 1 || age > 120) return null;
+    if (weight == null || weight < 20 || weight > 300) return null;
+    if (height == null || height < 100 || height > 250) return null;
+    final double base = 10 * weight + 6.25 * height - 5 * age;
+    return base + (_femaleConstant ? -161 : 5);
+  }
+
+  static String _formatElapsed(Duration value) {
+    final int total = value.inSeconds < 0 ? 0 : value.inSeconds;
+    final String hours = (total ~/ 3600).toString().padLeft(2, '0');
+    final String minutes = ((total % 3600) ~/ 60).toString().padLeft(2, '0');
+    final String seconds = (total % 60).toString().padLeft(2, '0');
+    return '$hours:$minutes:$seconds';
+  }
+
+  static String _formatKcal(double value) {
+    final String digits = value.round().toString();
+    final StringBuffer out = StringBuffer();
+    for (int i = 0; i < digits.length; i++) {
+      if (i > 0 && (digits.length - i) % 3 == 0) out.write(',');
+      out.write(digits[i]);
+    }
+    return out.toString();
+  }
+
+  static String _formatNumber(double value) {
+    if (value == value.roundToDouble()) return '${value.round()}';
+    return value.toString();
+  }
+}
+
+/// A labelled numeric field for the calculator inputs.
+class _NumberField extends StatelessWidget {
+  const _NumberField({
+    required this.controller,
+    required this.label,
+    required this.suffix,
+    required this.onChanged,
+  });
+
+  final TextEditingController controller;
+  final String label;
+  final String suffix;
+  final VoidCallback onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return TextField(
+      controller: controller,
+      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+      onChanged: (String value) => onChanged(),
+      decoration: InputDecoration(
+        labelText: label,
+        suffixText: suffix,
+        border: const OutlineInputBorder(),
+        isDense: true,
+      ),
     );
   }
 }

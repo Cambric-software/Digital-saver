@@ -145,7 +145,7 @@ class _HealthHubScreenState extends State<HealthHubScreen> {
               children: <Widget>[
                 _SuiteCard(
                   title: 'Wellness',
-                  subtitle: 'Breathing, stretching, hydration and calm',
+                  subtitle: 'Breathing, hydration, caffeine and a rest timer',
                   icon: Icons.spa_outlined,
                   onTap: () => _open(const WellnessToolsScreen()),
                 ),
@@ -157,7 +157,7 @@ class _HealthHubScreenState extends State<HealthHubScreen> {
                 ),
                 _SuiteCard(
                   title: 'Lifestyle',
-                  subtitle: 'Eating, sleep, screen time and daily habits',
+                  subtitle: 'Fasting, mood, movement breaks and a BMR estimate',
                   icon: Icons.self_improvement_outlined,
                   onTap: () => _open(const LifestyleToolsScreen()),
                 ),
