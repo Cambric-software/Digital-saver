@@ -12,8 +12,16 @@ was executed on 2026-10-21 from what was only read.
 | Framework | Arduino, PlatformIO env `esp32dev` | ESP-IDF + FreeRTOS + LVGL 8.3.11, env `esp32s3_watch` |
 | Version | `4.1.0` (`VEYRO_FW_VERSION`) | `5.0.0` |
 | Display | SSD1306 128×64 over I2C | 360×360 panel over SPI, LVGL |
-| Sensors | MAX30102, MPU6050 | VC31B, QMI8658C, BMP581, STTS22H, DRV2605L, BQ25895, FT6336G |
+| Sensors | MAX30102, MPU6050 | VC31B, QMI6858C in the code comment (the BOM says QMI8658CULT — unresolvable from the repo), BMP581, STTS22H, DRV2605L, BQ25895, FT6336G |
 | Builds today | **Yes** | **No** |
+
+## Safety
+
+1. Do not flash while the watch is worn, and disconnect the LiPo before
+   connecting USB on a bench build.
+2. Never flash a board with a swollen, damaged or unprotected cell attached.
+3. Read [HARDWARE.md](HARDWARE.md) before applying power for the first time;
+   the power-path check there is a measurement, not an assumption.
 
 ## What was executed
 
@@ -21,8 +29,8 @@ Toolchain: PlatformIO Core `6.1.19`, platform `espressif32@6.8.1`.
 
 | Command | Working directory | Result |
 |---|---|---|
-| `pio run` | `firmware/esp32/DigitalSaverWatch` | **SUCCESS**, 45–82 s |
-| `pio run` | `firmware/esp32s3` | **FAILED** (see blockers below) |
+| `pio run` | `firmware/esp32/DigitalSaverWatch` | **SUCCESS**, 28.21 s on 2026-10-21 |
+| `pio run` | `firmware/esp32s3` | **FAILED**, 50.60 s: `'I2C_NUM_2' undeclared` (see blockers below) |
 
 Prototype binary, from the successful build:
 
@@ -120,42 +128,24 @@ before them.
 Both were found by building, not by reading.
 
 1. `DigitalSaverWatch.ino:110` did not compile: `max(vibeUntil, millis() + …)`
-   mixed `uint32_t` and `unsigned long`, so `max` could not deduce one type.
-   The sum is now cast to `uint32_t`. Before this, the firmware in the
-   repository could not be built at all.
-2. The BLE `face` command wrapped at `% 4` while the mode button and the stored
-   preference use all eight screens, so the app could only select screens 0–3.
-   It now wraps at `% 8`.
+   mixed `uint32_t` and `unsigned long`. The sum is now cast; before this, the
+   repository's firmware could not be built at all.
+2. The BLE `face` command wrapped at `% 4` while the screens number eight, so
+   the app could not select screens 4–7. It now wraps at `% 8`.
 
 ## What the prototype actually implements
 
-Read from `firmware/esp32/DigitalSaverWatch`, not from the guides.
-
-| Capability | Status | Limit |
-|---|---|---|
-| Eight OLED screens | Implemented | Persisted in `Preferences`; cycled by the mode button |
-| BLE service `4fafc201-…` | Implemented | Live and history notify, info read, command write |
-| Encrypted pairing | Implemented | Static six-digit PIN, Secure Connections, bonding, MITM |
-| Commands | Implemented | `pair`, `time`, `face` (0–7), `sync`, `next`, `prune` |
-| Local log | Implemented | CSV per day on LittleFS, pruned after 60 days |
-| Heart rate | Implemented | MAX30102, smoothed |
-| SpO2 | **Estimate** | Weighted estimate, not a calibrated reading |
-| Blood pressure | **Not measured** | `bps` and `bpd` are always 0 |
-| HRV | Implemented | RMSSD from RR intervals |
-| Steps | Implemented | MPU6050 step interrupt |
-| Fall detection | **Threshold heuristic** | Acceleration magnitude and timing, not validated |
-| SOS button | Implemented | Two-second hold raises the flag and vibration |
-| Wi-Fi / cloud | **Absent** | Local only, by design |
-
-The watch is wellness hardware, not a medical device. None of these readings is
-a diagnosis, and the fall detector is not a lifeline.
+The watch is wellness hardware, not a medical device. It measures heart rate, an
+SpO₂ estimate, HRV, steps, fall events and battery voltage; blood pressure is
+always `0/0`. The feature-by-feature table, including what each number really
+is, is in [FIRMWARE_FEATURES.md](FIRMWARE_FEATURES.md).
 
 ## ESP32-S3 target (v5.0.0): does not build
 
 `firmware/esp32s3` contains the production-shaped firmware: sensor tasks, a
 storage task, haptics, power management, a watchdog, buttons, an SPI display
-with LVGL, NVS, LittleFS and NimBLE initialisation. It also contains four
-blockers that make it unbuildable or non-functional as written. Do not flash it.
+with LVGL, NVS, SPIFFS and NimBLE initialisation. It also contains five blockers
+that make it unbuildable or non-functional as written. Do not flash it.
 
 ### 1. Three I2C buses on a chip with two
 
@@ -190,13 +180,23 @@ empty and had the wrong parameter types (`int` against the enums in
 six palettes exist only as ids. The display itself is initialised over SPI with
 LVGL in `display_init()`.
 
-### 4. The committed SDK config was wrong
+### 4. Some declared display functions have no definition
+
+`main/display.h:55-58` declares `display_set_brightness()`,
+`display_set_complication()`, `display_toggle_aod()` and
+`display_get_config()`. `main/display.c` defines none of them, so even after the
+bus and GATT work the target cannot link until they are written or removed. They
+are listed here rather than deleted because the UI config struct they belong to
+is the shape the five-face design needs.
+
+### 5. The committed SDK config was wrong
 
 `sdkconfig.esp32s3_watch` had Bluetooth disabled and 2 MB of flash, which is why
 the NimBLE headers were missing and the 16 MB partition table could not fit. It
 has been replaced by `sdkconfig.defaults` (16 MB, NimBLE with all four roles,
-custom partition table). The generated `sdkconfig.esp32s3_watch` was deleted so
-it is regenerated from the defaults.
+custom partition table). The generated `sdkconfig.esp32s3_watch` is not tracked in
+git; it is regenerated from the defaults by each build (the failed build above
+produced one locally).
 
 ### Reproduce
 

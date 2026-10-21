@@ -1,97 +1,95 @@
-# Digital Saver & Veyro Smartwatch Ecosystem
+# Digital Saver and Veyro
 
-> **Proprietary Smartwatch Hardware, Embedded Firmware & Flutter Companion Application**  
-> Developed by **Cambric** (Lead Architect: Asser Karim)  
-> *Protected under the Cambric Proprietary Licence (2026)*
+Digital Saver is a Flutter companion app for a health-tracking watch. Veyro is
+the watch. Two firmware targets exist in this repository, and they are at very
+different stages.
 
----
+| Part | Where | State on 2026-10-21 |
+|---|---|---|
+| Companion app | `app/` | Built on Flutter; 346 tests pass, analyzer reports no errors |
+| Veyro prototype | `firmware/esp32/` | Builds (Flash 62.0%, RAM 12.6%); not hardware-tested in this repository |
+| Veyro production target | `firmware/esp32s3/` | **Does not build**; the hardware is under redesign |
+| Documentation | `docs/` | Rewritten; start at [docs/README.md](docs/README.md) |
 
-## 🌟 Overview
+The production watch is a design goal, not a shipped product. The app talks to
+the ESP32 prototype over Bluetooth; the ESP32-S3 target has no GATT service yet,
+so it cannot be paired with, and its pin map assigns three I2C buses to a chip
+with two. [docs/FIRMWARE.md](docs/FIRMWARE.md) records the exact blockers rather
+than presenting the target as finished. The redesign, with sourced parts, is
+item 4.5 in [docs/ROADMAP.md](docs/ROADMAP.md).
 
-**Digital Saver & Veyro** is an integrated health-monitoring smartwatch platform designed and engineered from the ground up by Cambric. It pairs high-efficiency embedded firmware with an offline-first Flutter companion application, offering biometric tracking, continuous vitals logging, customizable circular UI faces, and emergency SOS fall telemetry.
+## What the app does
 
-The repository supports two hardware development tiers:
-1. **Production Platform (`firmware/esp32s3`)**: ESP32-S3-MINI-1U-N16R8, 360×360 round AMOLED (FT6336G capacitive touch), VC31B PPG, QMI6858C 6-axis IMU + pedometer, BMP581 barometer, STTS22H temperature sensor, DRV2605L haptics, BQ25895 PMIC, and magnetic charging. Runs FreeRTOS + NimBLE GATT Protocol v2.
-2. **Evaluation Prototype (`firmware/esp32`)**: ESP32-WROOM-32 DevKit, SSD1306 OLED, MAX30102 PPG, MPU6050 IMU, LittleFS 60-day circular flash logging, and BLE Protocol v1.
+- Shows live and stored heart rate, an SpO2 estimate, HRV, steps, activity and
+  a blood-pressure screen that reads the values the watch sends.
+- Stores watch history on the phone, with a defined retention window, and works
+  without an account or a cloud service.
+- Groups everyday tools under a health hub: wellness (breathing, hydration,
+  caffeine, a rest timer), fitness (recovery test, zones, workout timer, RPE),
+  lifestyle (fasting timer, mood, movement breaks, a BMR estimate) and device
+  diagnostics.
+- Includes an app lock, an emergency contact card, a daily reflection log and a
+  watch-face preview.
+- Has an assistant screen that calls a hosted endpoint. It is not an offline
+  model, and it says so when the call fails.
 
----
+## What it is not
 
-## 🏗 Architecture & Repository Layout
+- Not a medical device. Nothing in the app or the firmware diagnoses,
+  treats or replaces professional care. SpO2 is an estimate; the prototype
+  reports no blood pressure; fall detection is a threshold heuristic.
+- Not an account system. Data stays on the phone and the watch unless you export
+  it. The app lock PIN is checked on the device and cannot be recovered: it can
+  only be cleared by reinstalling, which removes the stored data.
+- Not finished. The roadmap is ordered and states what is open, including the
+  production hardware redesign.
 
+## Repository layout
+
+```text
+app/                     Flutter companion app
+firmware/esp32/          Veyro prototype (Arduino, PlatformIO, esp32dev)
+firmware/esp32s3/        Veyro production target (ESP-IDF, LVGL) - does not build
+docs/                    All documentation, including the roadmap
 ```
-├── app/                              # Flutter companion app (Android, iOS, Desktop)
-│   ├── lib/
-│   │   ├── screens/                  # Health, settings, watchfaces, analytics UI
-│   │   ├── services/                 # BLE service, VeyroProtocol v2, auto-update, sync
-│   │   └── models/                   # Vitals, activity, and historical records
-│   └── pubspec.yaml                  # Flutter 3.x dependencies
-├── firmware/
-│   ├── esp32s3/                      # Production Watch Firmware (FreeRTOS / ESP-IDF 5.2 / NimBLE)
-│   │   ├── main/                     # veyro_main.c, display drivers, LVGL 8.3/9.x UI
-│   │   └── partitions.csv            # 16MB dual-OTA flash partition table
-│   └── esp32/                        # Evaluation Prototype (Arduino / PlatformIO)
-│       └── DigitalSaverWatch/        # Core WROOM-32 sketches and pinouts
-├── docs/                             # All documentation (see docs/README.md)
-│   ├── README.md                     # Documentation index — start here
-│   ├── ROADMAP.md                    # Authoritative ordered plan
-│   ├── 01_PRODUCT_VISION.md … 11_PRODUCTION_WATCH_SPEC.md
-│   ├── manual.md                     # Step-by-step prototype build and assembly
-│   ├── company-manual.md             # Production-watch manufacturing manual
-│   ├── GUIDE.md                      # Developer and operator quickstart
-│   ├── MASTER_GUIDE.md               # Technical reference
-│   ├── UPGRADE_GUIDE.md              # Firmware and app migration & rollback
-│   ├── APP_GUIDE.md                  # Flutter app internals
-│   └── FIRMWARE_FEATURES.md          # Prototype firmware feature inventory
-├── SECURITY.md                       # Threat model, BLE security & vulnerability reporting
-└── LICENSE                           # Cambric Proprietary Licence
-```
 
----
+## Quick start
 
-## ⚡ Core Features
+App, from `app/`:
 
-- **Biometric Monitoring**: Live continuous heart rate, blood oxygen (SpO2), HRV, steps, skin temperature, and barometric elevation.
-- **60-Day Onboard Flash Retention**: Local LittleFS/SPIFFS circular storage retains up to 2 months of compressed telemetry without phone connection.
-- **Veyro BLE Protocol v2**: Ultra-fast live vitals stream (250ms), background history synchronization, custom UI theme sync, notification bridge, and authenticated OTA endpoints.
-- **Circular AMOLED Custom UI**: 5 switchable watchfaces, 6 dynamic color palettes, complication slots, and gesture-driven navigation.
-- **Emergency SOS & Fall Telemetry**: Multi-axis acceleration impact analysis with automatic emergency contact alerting.
-- **Privacy & Security**: Zero mandatory cloud dependency; health records remain on-device with optional local encrypted export.
-
----
-
-## 🚀 Getting Started
-
-### 1. Companion App Setup (Flutter)
-```bash
-cd app
+```powershell
 flutter pub get
+flutter test
 flutter run
 ```
 
-### 2. Production Firmware (ESP32-S3)
-```bash
-cd firmware/esp32s3
-idf.py set-target esp32s3
-idf.py build
-idf.py -p /dev/ttyUSB0 flash monitor
-```
+Prototype firmware, from `firmware/esp32/DigitalSaverWatch/`:
 
-### 3. Evaluation Prototype (ESP32-WROOM)
-```bash
-cd firmware/esp32/DigitalSaverWatch
+```powershell
+pio run
+pio device list
 pio run --target upload
+pio device monitor
 ```
 
----
+The build and flash steps, the expected boot line and the recovery table are in
+[docs/FIRMWARE.md](docs/FIRMWARE.md). Hardware and wiring are in
+[docs/HARDWARE.md](docs/HARDWARE.md).
 
-## 📜 Intellectual Property & Licensing
+## Documentation
 
-Copyright (c) 2026 **Cambric Software & Hardware Systems**. All rights reserved.  
-Author & Proprietor: **Asser Karim**.
+- [docs/README.md](docs/README.md) - the index, and which document to read when.
+- [docs/ROADMAP.md](docs/ROADMAP.md) - the ordered plan; shared verbatim with
+  Max Tools, Cambric's other product.
+- [docs/FIRMWARE.md](docs/FIRMWARE.md) - what each firmware target does, and how
+  to build and flash the one that builds.
+- [docs/HARDWARE.md](docs/HARDWARE.md) - the bench prototype, sourcing and
+  power safety, and what the production redesign must decide.
+- [docs/SYSTEM.md](docs/SYSTEM.md) - the watch-to-phone data path, BLE contract,
+  storage and release checks.
 
-This repository is licensed under the **Cambric Proprietary Licence (2026)**.
-- **Personal & Educational Use**: Free to install, use, study and evaluate on devices you control.
-- **Commercial Use & Manufacturing**: Strictly prohibited without an executed commercial licensing agreement from Cambric. Commercial replication, sale, rebranding, or resale is strictly reserved.
-- **Medical Disclaimer**: Digital Saver is a consumer wellness platform and is **not** a certified medical diagnostic device.
+## Licence and security
 
-For commercial licensing, partnerships, or hardware inquiries, contact Cambric: `asser.k.dev@gmail.com`.
+This is proprietary software; the source is published for inspection and
+personal use under the terms in [LICENSE](LICENSE). Security reporting and the
+security model are described in [SECURITY.md](SECURITY.md).

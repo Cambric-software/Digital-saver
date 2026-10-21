@@ -173,22 +173,47 @@ Nothing below this matters if the product tells lies or has dead controls.
       `display_set_watchface`/`display_set_theme` as stubs. Its committed
       sdkconfig had Bluetooth off and 2 MB flash; it was replaced with
       `sdkconfig.defaults`. Both targets are real; only one runs.
-- [ ] **4.2 Rewrite `docs/`.** All ten numbered documents are ~940 lines of which
-      most is generated checkerboard — one file repeats "acceptance:" 860 times.
-      Replace the padding with real procedures written as Step 1, Step 2 …
-      so that following one document end to end produces a working watch.
-      **Nothing may be left UNKNOWN** — every step carries its answer and
-      the datasheet or resource that answer came from.
-- [ ] **4.3 Verify every fact** in `docs/` and `firmware/` against the component
-      datasheets. Mark UNKNOWN where a datasheet cannot settle it. Remove the
-      commercial spec's contradictions (the spec says LVGL 9.x; the build uses
-      LVGL 8.3.11).
+- [x] **4.2 Rewrite `docs/`.** Done 2026-10-21. All ten numbered documents are
+      deleted (9,435 lines, ~1.2 MB, 92–95% of each file a repeated checklist).
+      The surviving set — `README`, `HARDWARE`, `SYSTEM`, `APP_GUIDE`,
+      `FIRMWARE`, `FIRMWARE_FEATURES`, `UPGRADE_GUIDE`, `INTERACTION-TESTS`,
+      `ROADMAP`, production spec — is under 2,000 lines. `manual.md`,
+      `MASTER_GUIDE.md`, `GUIDE.md` and `company-manual.md` were folded in and
+      deleted. **The original “nothing may be left UNKNOWN” rule was wrong for
+      this repository**: where no datasheet, measurement or decision exists, the
+      documents say UNKNOWN or MUST MEASURE instead of inventing a value.
+- [x] **4.3 Verify every fact** in `docs/` and `firmware/`, for the parts the
+      repository can settle. Done 2026-10-21: the prototype builds (Flash 62.0%,
+      RAM 12.6%), the S3 target fails on `I2C_NUM_2`, and the app runs 346 tests
+      with 0 analyzer errors. The commercial spec's contradictions are removed
+      (LVGL 8.3.11, N16R8, VC31B, MCP73831-class charger) and it is marked as an
+      input to 4.5. Datasheet and bench facts remain UNKNOWN/MUST MEASURE until
+      the 4.5 part selection chooses parts — see `docs/HARDWARE.md` §7.
 - [ ] **4.4 Expand the firmware** to the documented feature set on the decided
       target, and make it build clean. The S3 blockers recorded in 4.1 come
       first: settle the third I2C bus against the schematic (share a bus, add a
       mux, or bit-bang), write the NimBLE GATT service table so the app can
       read anything, implement the five faces and six themes, then hardware-test
       the result. Do not flash the S3 image until the bus question is answered.
+- [ ] **4.5 Redesign the hardware system for the 7,500 EGP product.** The
+      mission, stated 2026-10-21: a watch that competes on a shelf with the
+      Apple Watch and its peers at about 7,500 EGP — touchscreen, a large custom
+      operating system with its own system apps, internet and Bluetooth, and
+      features that serve any age, language, interest and job. This supersedes
+      patching the S3's three-bus pin map: the electronics get designed around
+      the product, not the other way round.
+      Rules for the redesign: every part must carry its source (datasheet or
+      distributor page) and its price; every capability must name the part that
+      provides it; anything not sourceable is marked UNKNOWN rather than
+      guessed. The decisions to make explicitly: whether the OS needs a
+      Linux-class application processor (and therefore a companion MCU for
+      radios, sensors and power) or whether an RTOS on a microcontroller can
+      meet it; Wi-Fi and BLE versus cellular; display technology, size and
+      touch controller; battery, thermal and water-resistance budget; and the
+      bill of materials at the target price. `11_PRODUCTION_WATCH_SPEC.md` is
+      the input, not the answer.
+      4.4 is paused until this is settled, because the bus question is answered
+      by the new architecture.
 
 ### Phase 5 — Customisation and polish
 

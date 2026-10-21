@@ -1,1034 +1,218 @@
-# Digital Saver Flutter App Guide
+# App — Digital Saver
 
-Build order and exact firmware/app file locations are in [manual.md](manual.md). The app is local-only; watch data is transferred over BLE and stored on the device.
+The Flutter app. Version `1.0.3+3`, displayed as `1.0.3-beta`
+(`app/pubspec.yaml:4`, `app/lib/services/app_version.dart:28-46`). Android is the
+working target; the web build serves a landing page, not the app, and desktop is
+not a supported target.
 
-## Purpose
-A developer guide to the Flutter application structure, local-first data path, BLE contract, demo path, and platform caveats.
-This document is an operational companion to the ten canonical guides in docs/.
-It is written for a prototype and records evidence limits instead of guessing.
+The app is a viewer for a watch plus a local health diary. It stores what the
+watch sends, draws it on twenty screens, and can ask an AI assistant about it.
+The BLE contract is in [SYSTEM.md](SYSTEM.md) §3; this page is about working
+inside the app.
 
-## Evidence labels
-UNKNOWN means the repository does not establish the fact.
-MUST MEASURE means a bench, fit, runtime, or comparison measurement is required.
-MUST CONFIRM means the datasheet, platform behavior, or release record is required.
-IMPLEMENTED means visible in the current source, not merely described in a plan.
-PLANNED means a proposal or follow-up, not a current capability.
+## Safety
 
-## Verified repository facts
-- The firmware identifies itself as Veyro firmware 4.1.0 and uses an ESP32-WROOM-32 DevKit target.
-- The firmware includes MAX30102, MPU6050, and SSD1306 support on I2C.
-- I2C is configured on GPIO21 SDA and GPIO22 SCL at 400 kHz.
-- GPIO25 drives vibration; GPIO4 and GPIO16 drive red and green LEDs.
-- GPIO17 is the mode button; GPIO32 is the SOS button with a two-second hold.
-- GPIO34 reads a two-resistor battery divider; an unwired divider reports zero.
-- The display constants are 128 by 64 with OLED address 0x3C.
-- The protocol advertises service UUID 4fafc201-1fb5-459e-8fcc-c5c9c331914b.
-- The protocol has live, command, history, and info characteristics and protocol version 1.
-- The watch writes one CSV sample per minute when heart rate is above 30 or steps are nonzero.
-- LittleFS logs are pruned using a 60-day retention constant.
-- The phone sends time, pair, sync, next, and prune commands through the command characteristic.
-- The app parses CSV fields unix, hr, spo2, bps, bpd, hrv, steps, fall, and battery.
-- The app stores imported day files below its application support directory and profile data in shared preferences.
-- The app requests Bluetooth scan, Bluetooth connect, and location-when-in-use permissions on native platforms.
-- The app has a demo mode that generates synthetic values and must not be mistaken for watch data.
+1. **The app is not a medical device and does not diagnose.** Every value on
+   screen is a wellness estimate. The assistant is told not to give a diagnosis,
+   but a language model can still be wrong; treat its answer as text, not advice.
+2. **No automatic emergency call is made.** The SOS button on the watch records
+   an event. Emergency contacts are stored for the reader to dial, not dialled
+   by the app.
+3. **Demo mode fabricates numbers.** `startDemo()` produces 68–75 bpm and 97%
+   SpO₂ on a timer (`ble_service.dart:417-427`). Never show a demo screen to
+   someone who thinks it is their own reading.
+4. **The AI conversation leaves the phone.** See §7 before enabling it with real
+   health data.
+5. **A reinstall can delete 60 days of history.** There is no cloud backup.
 
-## Safety boundary
-This prototype is wellness hardware and is not a medical device.
-Do not diagnose, triage, or replace professional care with its readings.
-Stop for smoke, swelling, odor, heat, exposed conductors, shorts, or unstable current.
-Battery chemistry, protection, water resistance, enclosure fit, and skin safety are UNKNOWN until evidenced.
+## 1. What the app does
 
-## 1. App purpose
-Use this section as a small work package; record the result before moving on.
-Owner: UNKNOWN. Date: UNKNOWN. Evidence path: UNKNOWN.
-- [ ] State the exact question for App purpose.
-- [ ] Identify the source file, component, or test fixture that controls the answer.
-- [ ] Separate IMPLEMENTED behavior from PLANNED behavior.
-- [ ] Mark physical values as MUST MEASURE rather than estimating them.
-- [ ] Mark ratings and component behavior as MUST CONFIRM from a datasheet.
-- [ ] Record firmware version, app version, board identity, and test date.
-- [ ] Test the normal path with a known-good fixture.
-- [ ] Test interruption, missing hardware, and malformed input.
-- [ ] Capture logs, screenshots, readings, or hashes as evidence.
-- [ ] Assign every failure an owner and a retest condition.
-- [ ] Do not call the work complete while a safety-critical item is UNKNOWN.
-- [ ] Write PASS, FAIL, or BLOCKED and explain the disposition.
-- [ ] Link the result to the canonical guide that owns the requirement.
-- [ ] Review privacy, user consent, and data deletion implications.
-- [ ] Repeat the check after changing firmware, app, wiring, or storage format.
-- [ ] Have a second reviewer challenge the evidence.
-- [ ] Preserve the smallest reproducible command or procedure.
-- [ ] Record what this section does not prove.
-- [ ] Stop and escalate if the result could cause unsafe use.
-- [ ] Close the section only after the evidence location is non-UNKNOWN.
-- [ ] Write the expected input and expected output in plain ASCII.
-- [ ] Include the firmware and app protocol versions in the test note.
-- [ ] Check behavior when the watch is disconnected before the operation.
-- [ ] Check behavior when Bluetooth is disabled or permission is denied.
-- [ ] Check behavior when a sensor is absent at boot.
-- [ ] Check behavior when storage is full or a file cannot be opened.
-- [ ] Check that a failed operation does not silently create a false success.
-- [ ] Record timestamps in UTC when comparing watch and phone records.
-- [ ] Verify that a demo value is visibly separated from a real sample.
-- [ ] Verify that zero means unavailable where the source uses zero.
-- [ ] Do not convert a rough estimate into a diagnosis or alarm.
-- [ ] Check the user-facing label against the actual source field.
-- [ ] Check malformed JSON and truncated BLE notifications.
-- [ ] Check duplicate history rows and interrupted history transfers.
-- [ ] Check retention behavior without deleting evidence needed for the test.
-- [ ] Keep test data synthetic unless consent and handling are documented.
-- [ ] Remove copied secrets, phone numbers, and identifiers from shared logs.
-- [ ] Record the exact command used to build or flash when applicable.
-- [ ] Check that the change has no unreviewed generated-file impact.
-- [ ] Review the relevant source diff before signing the result.
-- [ ] Note the device model and operating system for app checks.
-- [ ] Note the board and sensor revisions for hardware checks.
-- [ ] Reproduce the result twice, including one cold start.
-- [ ] Record the known limitation beside the result, not in a hidden note.
-- [ ] Set a follow-up date for every UNKNOWN or MUST MEASURE item.
-## 2. Flutter layout
-Use this section as a small work package; record the result before moving on.
-Owner: UNKNOWN. Date: UNKNOWN. Evidence path: UNKNOWN.
-- [ ] State the exact question for Flutter layout.
-- [ ] Identify the source file, component, or test fixture that controls the answer.
-- [ ] Separate IMPLEMENTED behavior from PLANNED behavior.
-- [ ] Mark physical values as MUST MEASURE rather than estimating them.
-- [ ] Mark ratings and component behavior as MUST CONFIRM from a datasheet.
-- [ ] Record firmware version, app version, board identity, and test date.
-- [ ] Test the normal path with a known-good fixture.
-- [ ] Test interruption, missing hardware, and malformed input.
-- [ ] Capture logs, screenshots, readings, or hashes as evidence.
-- [ ] Assign every failure an owner and a retest condition.
-- [ ] Do not call the work complete while a safety-critical item is UNKNOWN.
-- [ ] Write PASS, FAIL, or BLOCKED and explain the disposition.
-- [ ] Link the result to the canonical guide that owns the requirement.
-- [ ] Review privacy, user consent, and data deletion implications.
-- [ ] Repeat the check after changing firmware, app, wiring, or storage format.
-- [ ] Have a second reviewer challenge the evidence.
-- [ ] Preserve the smallest reproducible command or procedure.
-- [ ] Record what this section does not prove.
-- [ ] Stop and escalate if the result could cause unsafe use.
-- [ ] Close the section only after the evidence location is non-UNKNOWN.
-- [ ] Write the expected input and expected output in plain ASCII.
-- [ ] Include the firmware and app protocol versions in the test note.
-- [ ] Check behavior when the watch is disconnected before the operation.
-- [ ] Check behavior when Bluetooth is disabled or permission is denied.
-- [ ] Check behavior when a sensor is absent at boot.
-- [ ] Check behavior when storage is full or a file cannot be opened.
-- [ ] Check that a failed operation does not silently create a false success.
-- [ ] Record timestamps in UTC when comparing watch and phone records.
-- [ ] Verify that a demo value is visibly separated from a real sample.
-- [ ] Verify that zero means unavailable where the source uses zero.
-- [ ] Do not convert a rough estimate into a diagnosis or alarm.
-- [ ] Check the user-facing label against the actual source field.
-- [ ] Check malformed JSON and truncated BLE notifications.
-- [ ] Check duplicate history rows and interrupted history transfers.
-- [ ] Check retention behavior without deleting evidence needed for the test.
-- [ ] Keep test data synthetic unless consent and handling are documented.
-- [ ] Remove copied secrets, phone numbers, and identifiers from shared logs.
-- [ ] Record the exact command used to build or flash when applicable.
-- [ ] Check that the change has no unreviewed generated-file impact.
-- [ ] Review the relevant source diff before signing the result.
-- [ ] Note the device model and operating system for app checks.
-- [ ] Note the board and sensor revisions for hardware checks.
-- [ ] Reproduce the result twice, including one cold start.
-- [ ] Record the known limitation beside the result, not in a hidden note.
-- [ ] Set a follow-up date for every UNKNOWN or MUST MEASURE item.
-## 3. Entry point
-Use this section as a small work package; record the result before moving on.
-Owner: UNKNOWN. Date: UNKNOWN. Evidence path: UNKNOWN.
-- [ ] State the exact question for Entry point.
-- [ ] Identify the source file, component, or test fixture that controls the answer.
-- [ ] Separate IMPLEMENTED behavior from PLANNED behavior.
-- [ ] Mark physical values as MUST MEASURE rather than estimating them.
-- [ ] Mark ratings and component behavior as MUST CONFIRM from a datasheet.
-- [ ] Record firmware version, app version, board identity, and test date.
-- [ ] Test the normal path with a known-good fixture.
-- [ ] Test interruption, missing hardware, and malformed input.
-- [ ] Capture logs, screenshots, readings, or hashes as evidence.
-- [ ] Assign every failure an owner and a retest condition.
-- [ ] Do not call the work complete while a safety-critical item is UNKNOWN.
-- [ ] Write PASS, FAIL, or BLOCKED and explain the disposition.
-- [ ] Link the result to the canonical guide that owns the requirement.
-- [ ] Review privacy, user consent, and data deletion implications.
-- [ ] Repeat the check after changing firmware, app, wiring, or storage format.
-- [ ] Have a second reviewer challenge the evidence.
-- [ ] Preserve the smallest reproducible command or procedure.
-- [ ] Record what this section does not prove.
-- [ ] Stop and escalate if the result could cause unsafe use.
-- [ ] Close the section only after the evidence location is non-UNKNOWN.
-- [ ] Write the expected input and expected output in plain ASCII.
-- [ ] Include the firmware and app protocol versions in the test note.
-- [ ] Check behavior when the watch is disconnected before the operation.
-- [ ] Check behavior when Bluetooth is disabled or permission is denied.
-- [ ] Check behavior when a sensor is absent at boot.
-- [ ] Check behavior when storage is full or a file cannot be opened.
-- [ ] Check that a failed operation does not silently create a false success.
-- [ ] Record timestamps in UTC when comparing watch and phone records.
-- [ ] Verify that a demo value is visibly separated from a real sample.
-- [ ] Verify that zero means unavailable where the source uses zero.
-- [ ] Do not convert a rough estimate into a diagnosis or alarm.
-- [ ] Check the user-facing label against the actual source field.
-- [ ] Check malformed JSON and truncated BLE notifications.
-- [ ] Check duplicate history rows and interrupted history transfers.
-- [ ] Check retention behavior without deleting evidence needed for the test.
-- [ ] Keep test data synthetic unless consent and handling are documented.
-- [ ] Remove copied secrets, phone numbers, and identifiers from shared logs.
-- [ ] Record the exact command used to build or flash when applicable.
-- [ ] Check that the change has no unreviewed generated-file impact.
-- [ ] Review the relevant source diff before signing the result.
-- [ ] Note the device model and operating system for app checks.
-- [ ] Note the board and sensor revisions for hardware checks.
-- [ ] Reproduce the result twice, including one cold start.
-- [ ] Record the known limitation beside the result, not in a hidden note.
-- [ ] Set a follow-up date for every UNKNOWN or MUST MEASURE item.
-## 4. Provider state
-Use this section as a small work package; record the result before moving on.
-Owner: UNKNOWN. Date: UNKNOWN. Evidence path: UNKNOWN.
-- [ ] State the exact question for Provider state.
-- [ ] Identify the source file, component, or test fixture that controls the answer.
-- [ ] Separate IMPLEMENTED behavior from PLANNED behavior.
-- [ ] Mark physical values as MUST MEASURE rather than estimating them.
-- [ ] Mark ratings and component behavior as MUST CONFIRM from a datasheet.
-- [ ] Record firmware version, app version, board identity, and test date.
-- [ ] Test the normal path with a known-good fixture.
-- [ ] Test interruption, missing hardware, and malformed input.
-- [ ] Capture logs, screenshots, readings, or hashes as evidence.
-- [ ] Assign every failure an owner and a retest condition.
-- [ ] Do not call the work complete while a safety-critical item is UNKNOWN.
-- [ ] Write PASS, FAIL, or BLOCKED and explain the disposition.
-- [ ] Link the result to the canonical guide that owns the requirement.
-- [ ] Review privacy, user consent, and data deletion implications.
-- [ ] Repeat the check after changing firmware, app, wiring, or storage format.
-- [ ] Have a second reviewer challenge the evidence.
-- [ ] Preserve the smallest reproducible command or procedure.
-- [ ] Record what this section does not prove.
-- [ ] Stop and escalate if the result could cause unsafe use.
-- [ ] Close the section only after the evidence location is non-UNKNOWN.
-- [ ] Write the expected input and expected output in plain ASCII.
-- [ ] Include the firmware and app protocol versions in the test note.
-- [ ] Check behavior when the watch is disconnected before the operation.
-- [ ] Check behavior when Bluetooth is disabled or permission is denied.
-- [ ] Check behavior when a sensor is absent at boot.
-- [ ] Check behavior when storage is full or a file cannot be opened.
-- [ ] Check that a failed operation does not silently create a false success.
-- [ ] Record timestamps in UTC when comparing watch and phone records.
-- [ ] Verify that a demo value is visibly separated from a real sample.
-- [ ] Verify that zero means unavailable where the source uses zero.
-- [ ] Do not convert a rough estimate into a diagnosis or alarm.
-- [ ] Check the user-facing label against the actual source field.
-- [ ] Check malformed JSON and truncated BLE notifications.
-- [ ] Check duplicate history rows and interrupted history transfers.
-- [ ] Check retention behavior without deleting evidence needed for the test.
-- [ ] Keep test data synthetic unless consent and handling are documented.
-- [ ] Remove copied secrets, phone numbers, and identifiers from shared logs.
-- [ ] Record the exact command used to build or flash when applicable.
-- [ ] Check that the change has no unreviewed generated-file impact.
-- [ ] Review the relevant source diff before signing the result.
-- [ ] Note the device model and operating system for app checks.
-- [ ] Note the board and sensor revisions for hardware checks.
-- [ ] Reproduce the result twice, including one cold start.
-- [ ] Record the known limitation beside the result, not in a hidden note.
-- [ ] Set a follow-up date for every UNKNOWN or MUST MEASURE item.
-## 5. BLE permissions
-Use this section as a small work package; record the result before moving on.
-Owner: UNKNOWN. Date: UNKNOWN. Evidence path: UNKNOWN.
-- [ ] State the exact question for BLE permissions.
-- [ ] Identify the source file, component, or test fixture that controls the answer.
-- [ ] Separate IMPLEMENTED behavior from PLANNED behavior.
-- [ ] Mark physical values as MUST MEASURE rather than estimating them.
-- [ ] Mark ratings and component behavior as MUST CONFIRM from a datasheet.
-- [ ] Record firmware version, app version, board identity, and test date.
-- [ ] Test the normal path with a known-good fixture.
-- [ ] Test interruption, missing hardware, and malformed input.
-- [ ] Capture logs, screenshots, readings, or hashes as evidence.
-- [ ] Assign every failure an owner and a retest condition.
-- [ ] Do not call the work complete while a safety-critical item is UNKNOWN.
-- [ ] Write PASS, FAIL, or BLOCKED and explain the disposition.
-- [ ] Link the result to the canonical guide that owns the requirement.
-- [ ] Review privacy, user consent, and data deletion implications.
-- [ ] Repeat the check after changing firmware, app, wiring, or storage format.
-- [ ] Have a second reviewer challenge the evidence.
-- [ ] Preserve the smallest reproducible command or procedure.
-- [ ] Record what this section does not prove.
-- [ ] Stop and escalate if the result could cause unsafe use.
-- [ ] Close the section only after the evidence location is non-UNKNOWN.
-- [ ] Write the expected input and expected output in plain ASCII.
-- [ ] Include the firmware and app protocol versions in the test note.
-- [ ] Check behavior when the watch is disconnected before the operation.
-- [ ] Check behavior when Bluetooth is disabled or permission is denied.
-- [ ] Check behavior when a sensor is absent at boot.
-- [ ] Check behavior when storage is full or a file cannot be opened.
-- [ ] Check that a failed operation does not silently create a false success.
-- [ ] Record timestamps in UTC when comparing watch and phone records.
-- [ ] Verify that a demo value is visibly separated from a real sample.
-- [ ] Verify that zero means unavailable where the source uses zero.
-- [ ] Do not convert a rough estimate into a diagnosis or alarm.
-- [ ] Check the user-facing label against the actual source field.
-- [ ] Check malformed JSON and truncated BLE notifications.
-- [ ] Check duplicate history rows and interrupted history transfers.
-- [ ] Check retention behavior without deleting evidence needed for the test.
-- [ ] Keep test data synthetic unless consent and handling are documented.
-- [ ] Remove copied secrets, phone numbers, and identifiers from shared logs.
-- [ ] Record the exact command used to build or flash when applicable.
-- [ ] Check that the change has no unreviewed generated-file impact.
-- [ ] Review the relevant source diff before signing the result.
-- [ ] Note the device model and operating system for app checks.
-- [ ] Note the board and sensor revisions for hardware checks.
-- [ ] Reproduce the result twice, including one cold start.
-- [ ] Record the known limitation beside the result, not in a hidden note.
-- [ ] Set a follow-up date for every UNKNOWN or MUST MEASURE item.
-## 6. Scanning
-Use this section as a small work package; record the result before moving on.
-Owner: UNKNOWN. Date: UNKNOWN. Evidence path: UNKNOWN.
-- [ ] State the exact question for Scanning.
-- [ ] Identify the source file, component, or test fixture that controls the answer.
-- [ ] Separate IMPLEMENTED behavior from PLANNED behavior.
-- [ ] Mark physical values as MUST MEASURE rather than estimating them.
-- [ ] Mark ratings and component behavior as MUST CONFIRM from a datasheet.
-- [ ] Record firmware version, app version, board identity, and test date.
-- [ ] Test the normal path with a known-good fixture.
-- [ ] Test interruption, missing hardware, and malformed input.
-- [ ] Capture logs, screenshots, readings, or hashes as evidence.
-- [ ] Assign every failure an owner and a retest condition.
-- [ ] Do not call the work complete while a safety-critical item is UNKNOWN.
-- [ ] Write PASS, FAIL, or BLOCKED and explain the disposition.
-- [ ] Link the result to the canonical guide that owns the requirement.
-- [ ] Review privacy, user consent, and data deletion implications.
-- [ ] Repeat the check after changing firmware, app, wiring, or storage format.
-- [ ] Have a second reviewer challenge the evidence.
-- [ ] Preserve the smallest reproducible command or procedure.
-- [ ] Record what this section does not prove.
-- [ ] Stop and escalate if the result could cause unsafe use.
-- [ ] Close the section only after the evidence location is non-UNKNOWN.
-- [ ] Write the expected input and expected output in plain ASCII.
-- [ ] Include the firmware and app protocol versions in the test note.
-- [ ] Check behavior when the watch is disconnected before the operation.
-- [ ] Check behavior when Bluetooth is disabled or permission is denied.
-- [ ] Check behavior when a sensor is absent at boot.
-- [ ] Check behavior when storage is full or a file cannot be opened.
-- [ ] Check that a failed operation does not silently create a false success.
-- [ ] Record timestamps in UTC when comparing watch and phone records.
-- [ ] Verify that a demo value is visibly separated from a real sample.
-- [ ] Verify that zero means unavailable where the source uses zero.
-- [ ] Do not convert a rough estimate into a diagnosis or alarm.
-- [ ] Check the user-facing label against the actual source field.
-- [ ] Check malformed JSON and truncated BLE notifications.
-- [ ] Check duplicate history rows and interrupted history transfers.
-- [ ] Check retention behavior without deleting evidence needed for the test.
-- [ ] Keep test data synthetic unless consent and handling are documented.
-- [ ] Remove copied secrets, phone numbers, and identifiers from shared logs.
-- [ ] Record the exact command used to build or flash when applicable.
-- [ ] Check that the change has no unreviewed generated-file impact.
-- [ ] Review the relevant source diff before signing the result.
-- [ ] Note the device model and operating system for app checks.
-- [ ] Note the board and sensor revisions for hardware checks.
-- [ ] Reproduce the result twice, including one cold start.
-- [ ] Record the known limitation beside the result, not in a hidden note.
-- [ ] Set a follow-up date for every UNKNOWN or MUST MEASURE item.
-## 7. Connection
-Use this section as a small work package; record the result before moving on.
-Owner: UNKNOWN. Date: UNKNOWN. Evidence path: UNKNOWN.
-- [ ] State the exact question for Connection.
-- [ ] Identify the source file, component, or test fixture that controls the answer.
-- [ ] Separate IMPLEMENTED behavior from PLANNED behavior.
-- [ ] Mark physical values as MUST MEASURE rather than estimating them.
-- [ ] Mark ratings and component behavior as MUST CONFIRM from a datasheet.
-- [ ] Record firmware version, app version, board identity, and test date.
-- [ ] Test the normal path with a known-good fixture.
-- [ ] Test interruption, missing hardware, and malformed input.
-- [ ] Capture logs, screenshots, readings, or hashes as evidence.
-- [ ] Assign every failure an owner and a retest condition.
-- [ ] Do not call the work complete while a safety-critical item is UNKNOWN.
-- [ ] Write PASS, FAIL, or BLOCKED and explain the disposition.
-- [ ] Link the result to the canonical guide that owns the requirement.
-- [ ] Review privacy, user consent, and data deletion implications.
-- [ ] Repeat the check after changing firmware, app, wiring, or storage format.
-- [ ] Have a second reviewer challenge the evidence.
-- [ ] Preserve the smallest reproducible command or procedure.
-- [ ] Record what this section does not prove.
-- [ ] Stop and escalate if the result could cause unsafe use.
-- [ ] Close the section only after the evidence location is non-UNKNOWN.
-- [ ] Write the expected input and expected output in plain ASCII.
-- [ ] Include the firmware and app protocol versions in the test note.
-- [ ] Check behavior when the watch is disconnected before the operation.
-- [ ] Check behavior when Bluetooth is disabled or permission is denied.
-- [ ] Check behavior when a sensor is absent at boot.
-- [ ] Check behavior when storage is full or a file cannot be opened.
-- [ ] Check that a failed operation does not silently create a false success.
-- [ ] Record timestamps in UTC when comparing watch and phone records.
-- [ ] Verify that a demo value is visibly separated from a real sample.
-- [ ] Verify that zero means unavailable where the source uses zero.
-- [ ] Do not convert a rough estimate into a diagnosis or alarm.
-- [ ] Check the user-facing label against the actual source field.
-- [ ] Check malformed JSON and truncated BLE notifications.
-- [ ] Check duplicate history rows and interrupted history transfers.
-- [ ] Check retention behavior without deleting evidence needed for the test.
-- [ ] Keep test data synthetic unless consent and handling are documented.
-- [ ] Remove copied secrets, phone numbers, and identifiers from shared logs.
-- [ ] Record the exact command used to build or flash when applicable.
-- [ ] Check that the change has no unreviewed generated-file impact.
-- [ ] Review the relevant source diff before signing the result.
-- [ ] Note the device model and operating system for app checks.
-- [ ] Note the board and sensor revisions for hardware checks.
-- [ ] Reproduce the result twice, including one cold start.
-- [ ] Record the known limitation beside the result, not in a hidden note.
-- [ ] Set a follow-up date for every UNKNOWN or MUST MEASURE item.
-## 8. Pairing
-Use this section as a small work package; record the result before moving on.
-Owner: UNKNOWN. Date: UNKNOWN. Evidence path: UNKNOWN.
-- [ ] State the exact question for Pairing.
-- [ ] Identify the source file, component, or test fixture that controls the answer.
-- [ ] Separate IMPLEMENTED behavior from PLANNED behavior.
-- [ ] Mark physical values as MUST MEASURE rather than estimating them.
-- [ ] Mark ratings and component behavior as MUST CONFIRM from a datasheet.
-- [ ] Record firmware version, app version, board identity, and test date.
-- [ ] Test the normal path with a known-good fixture.
-- [ ] Test interruption, missing hardware, and malformed input.
-- [ ] Capture logs, screenshots, readings, or hashes as evidence.
-- [ ] Assign every failure an owner and a retest condition.
-- [ ] Do not call the work complete while a safety-critical item is UNKNOWN.
-- [ ] Write PASS, FAIL, or BLOCKED and explain the disposition.
-- [ ] Link the result to the canonical guide that owns the requirement.
-- [ ] Review privacy, user consent, and data deletion implications.
-- [ ] Repeat the check after changing firmware, app, wiring, or storage format.
-- [ ] Have a second reviewer challenge the evidence.
-- [ ] Preserve the smallest reproducible command or procedure.
-- [ ] Record what this section does not prove.
-- [ ] Stop and escalate if the result could cause unsafe use.
-- [ ] Close the section only after the evidence location is non-UNKNOWN.
-- [ ] Write the expected input and expected output in plain ASCII.
-- [ ] Include the firmware and app protocol versions in the test note.
-- [ ] Check behavior when the watch is disconnected before the operation.
-- [ ] Check behavior when Bluetooth is disabled or permission is denied.
-- [ ] Check behavior when a sensor is absent at boot.
-- [ ] Check behavior when storage is full or a file cannot be opened.
-- [ ] Check that a failed operation does not silently create a false success.
-- [ ] Record timestamps in UTC when comparing watch and phone records.
-- [ ] Verify that a demo value is visibly separated from a real sample.
-- [ ] Verify that zero means unavailable where the source uses zero.
-- [ ] Do not convert a rough estimate into a diagnosis or alarm.
-- [ ] Check the user-facing label against the actual source field.
-- [ ] Check malformed JSON and truncated BLE notifications.
-- [ ] Check duplicate history rows and interrupted history transfers.
-- [ ] Check retention behavior without deleting evidence needed for the test.
-- [ ] Keep test data synthetic unless consent and handling are documented.
-- [ ] Remove copied secrets, phone numbers, and identifiers from shared logs.
-- [ ] Record the exact command used to build or flash when applicable.
-- [ ] Check that the change has no unreviewed generated-file impact.
-- [ ] Review the relevant source diff before signing the result.
-- [ ] Note the device model and operating system for app checks.
-- [ ] Note the board and sensor revisions for hardware checks.
-- [ ] Reproduce the result twice, including one cold start.
-- [ ] Record the known limitation beside the result, not in a hidden note.
-- [ ] Set a follow-up date for every UNKNOWN or MUST MEASURE item.
-## 9. Live notifications
-Use this section as a small work package; record the result before moving on.
-Owner: UNKNOWN. Date: UNKNOWN. Evidence path: UNKNOWN.
-- [ ] State the exact question for Live notifications.
-- [ ] Identify the source file, component, or test fixture that controls the answer.
-- [ ] Separate IMPLEMENTED behavior from PLANNED behavior.
-- [ ] Mark physical values as MUST MEASURE rather than estimating them.
-- [ ] Mark ratings and component behavior as MUST CONFIRM from a datasheet.
-- [ ] Record firmware version, app version, board identity, and test date.
-- [ ] Test the normal path with a known-good fixture.
-- [ ] Test interruption, missing hardware, and malformed input.
-- [ ] Capture logs, screenshots, readings, or hashes as evidence.
-- [ ] Assign every failure an owner and a retest condition.
-- [ ] Do not call the work complete while a safety-critical item is UNKNOWN.
-- [ ] Write PASS, FAIL, or BLOCKED and explain the disposition.
-- [ ] Link the result to the canonical guide that owns the requirement.
-- [ ] Review privacy, user consent, and data deletion implications.
-- [ ] Repeat the check after changing firmware, app, wiring, or storage format.
-- [ ] Have a second reviewer challenge the evidence.
-- [ ] Preserve the smallest reproducible command or procedure.
-- [ ] Record what this section does not prove.
-- [ ] Stop and escalate if the result could cause unsafe use.
-- [ ] Close the section only after the evidence location is non-UNKNOWN.
-- [ ] Write the expected input and expected output in plain ASCII.
-- [ ] Include the firmware and app protocol versions in the test note.
-- [ ] Check behavior when the watch is disconnected before the operation.
-- [ ] Check behavior when Bluetooth is disabled or permission is denied.
-- [ ] Check behavior when a sensor is absent at boot.
-- [ ] Check behavior when storage is full or a file cannot be opened.
-- [ ] Check that a failed operation does not silently create a false success.
-- [ ] Record timestamps in UTC when comparing watch and phone records.
-- [ ] Verify that a demo value is visibly separated from a real sample.
-- [ ] Verify that zero means unavailable where the source uses zero.
-- [ ] Do not convert a rough estimate into a diagnosis or alarm.
-- [ ] Check the user-facing label against the actual source field.
-- [ ] Check malformed JSON and truncated BLE notifications.
-- [ ] Check duplicate history rows and interrupted history transfers.
-- [ ] Check retention behavior without deleting evidence needed for the test.
-- [ ] Keep test data synthetic unless consent and handling are documented.
-- [ ] Remove copied secrets, phone numbers, and identifiers from shared logs.
-- [ ] Record the exact command used to build or flash when applicable.
-- [ ] Check that the change has no unreviewed generated-file impact.
-- [ ] Review the relevant source diff before signing the result.
-- [ ] Note the device model and operating system for app checks.
-- [ ] Note the board and sensor revisions for hardware checks.
-- [ ] Reproduce the result twice, including one cold start.
-- [ ] Record the known limitation beside the result, not in a hidden note.
-- [ ] Set a follow-up date for every UNKNOWN or MUST MEASURE item.
-## 10. History sync
-Use this section as a small work package; record the result before moving on.
-Owner: UNKNOWN. Date: UNKNOWN. Evidence path: UNKNOWN.
-- [ ] State the exact question for History sync.
-- [ ] Identify the source file, component, or test fixture that controls the answer.
-- [ ] Separate IMPLEMENTED behavior from PLANNED behavior.
-- [ ] Mark physical values as MUST MEASURE rather than estimating them.
-- [ ] Mark ratings and component behavior as MUST CONFIRM from a datasheet.
-- [ ] Record firmware version, app version, board identity, and test date.
-- [ ] Test the normal path with a known-good fixture.
-- [ ] Test interruption, missing hardware, and malformed input.
-- [ ] Capture logs, screenshots, readings, or hashes as evidence.
-- [ ] Assign every failure an owner and a retest condition.
-- [ ] Do not call the work complete while a safety-critical item is UNKNOWN.
-- [ ] Write PASS, FAIL, or BLOCKED and explain the disposition.
-- [ ] Link the result to the canonical guide that owns the requirement.
-- [ ] Review privacy, user consent, and data deletion implications.
-- [ ] Repeat the check after changing firmware, app, wiring, or storage format.
-- [ ] Have a second reviewer challenge the evidence.
-- [ ] Preserve the smallest reproducible command or procedure.
-- [ ] Record what this section does not prove.
-- [ ] Stop and escalate if the result could cause unsafe use.
-- [ ] Close the section only after the evidence location is non-UNKNOWN.
-- [ ] Write the expected input and expected output in plain ASCII.
-- [ ] Include the firmware and app protocol versions in the test note.
-- [ ] Check behavior when the watch is disconnected before the operation.
-- [ ] Check behavior when Bluetooth is disabled or permission is denied.
-- [ ] Check behavior when a sensor is absent at boot.
-- [ ] Check behavior when storage is full or a file cannot be opened.
-- [ ] Check that a failed operation does not silently create a false success.
-- [ ] Record timestamps in UTC when comparing watch and phone records.
-- [ ] Verify that a demo value is visibly separated from a real sample.
-- [ ] Verify that zero means unavailable where the source uses zero.
-- [ ] Do not convert a rough estimate into a diagnosis or alarm.
-- [ ] Check the user-facing label against the actual source field.
-- [ ] Check malformed JSON and truncated BLE notifications.
-- [ ] Check duplicate history rows and interrupted history transfers.
-- [ ] Check retention behavior without deleting evidence needed for the test.
-- [ ] Keep test data synthetic unless consent and handling are documented.
-- [ ] Remove copied secrets, phone numbers, and identifiers from shared logs.
-- [ ] Record the exact command used to build or flash when applicable.
-- [ ] Check that the change has no unreviewed generated-file impact.
-- [ ] Review the relevant source diff before signing the result.
-- [ ] Note the device model and operating system for app checks.
-- [ ] Note the board and sensor revisions for hardware checks.
-- [ ] Reproduce the result twice, including one cold start.
-- [ ] Record the known limitation beside the result, not in a hidden note.
-- [ ] Set a follow-up date for every UNKNOWN or MUST MEASURE item.
-## 11. CSV parsing
-Use this section as a small work package; record the result before moving on.
-Owner: UNKNOWN. Date: UNKNOWN. Evidence path: UNKNOWN.
-- [ ] State the exact question for CSV parsing.
-- [ ] Identify the source file, component, or test fixture that controls the answer.
-- [ ] Separate IMPLEMENTED behavior from PLANNED behavior.
-- [ ] Mark physical values as MUST MEASURE rather than estimating them.
-- [ ] Mark ratings and component behavior as MUST CONFIRM from a datasheet.
-- [ ] Record firmware version, app version, board identity, and test date.
-- [ ] Test the normal path with a known-good fixture.
-- [ ] Test interruption, missing hardware, and malformed input.
-- [ ] Capture logs, screenshots, readings, or hashes as evidence.
-- [ ] Assign every failure an owner and a retest condition.
-- [ ] Do not call the work complete while a safety-critical item is UNKNOWN.
-- [ ] Write PASS, FAIL, or BLOCKED and explain the disposition.
-- [ ] Link the result to the canonical guide that owns the requirement.
-- [ ] Review privacy, user consent, and data deletion implications.
-- [ ] Repeat the check after changing firmware, app, wiring, or storage format.
-- [ ] Have a second reviewer challenge the evidence.
-- [ ] Preserve the smallest reproducible command or procedure.
-- [ ] Record what this section does not prove.
-- [ ] Stop and escalate if the result could cause unsafe use.
-- [ ] Close the section only after the evidence location is non-UNKNOWN.
-- [ ] Write the expected input and expected output in plain ASCII.
-- [ ] Include the firmware and app protocol versions in the test note.
-- [ ] Check behavior when the watch is disconnected before the operation.
-- [ ] Check behavior when Bluetooth is disabled or permission is denied.
-- [ ] Check behavior when a sensor is absent at boot.
-- [ ] Check behavior when storage is full or a file cannot be opened.
-- [ ] Check that a failed operation does not silently create a false success.
-- [ ] Record timestamps in UTC when comparing watch and phone records.
-- [ ] Verify that a demo value is visibly separated from a real sample.
-- [ ] Verify that zero means unavailable where the source uses zero.
-- [ ] Do not convert a rough estimate into a diagnosis or alarm.
-- [ ] Check the user-facing label against the actual source field.
-- [ ] Check malformed JSON and truncated BLE notifications.
-- [ ] Check duplicate history rows and interrupted history transfers.
-- [ ] Check retention behavior without deleting evidence needed for the test.
-- [ ] Keep test data synthetic unless consent and handling are documented.
-- [ ] Remove copied secrets, phone numbers, and identifiers from shared logs.
-- [ ] Record the exact command used to build or flash when applicable.
-- [ ] Check that the change has no unreviewed generated-file impact.
-- [ ] Review the relevant source diff before signing the result.
-- [ ] Note the device model and operating system for app checks.
-- [ ] Note the board and sensor revisions for hardware checks.
-- [ ] Reproduce the result twice, including one cold start.
-- [ ] Record the known limitation beside the result, not in a hidden note.
-- [ ] Set a follow-up date for every UNKNOWN or MUST MEASURE item.
-## 12. Local files
-Use this section as a small work package; record the result before moving on.
-Owner: UNKNOWN. Date: UNKNOWN. Evidence path: UNKNOWN.
-- [ ] State the exact question for Local files.
-- [ ] Identify the source file, component, or test fixture that controls the answer.
-- [ ] Separate IMPLEMENTED behavior from PLANNED behavior.
-- [ ] Mark physical values as MUST MEASURE rather than estimating them.
-- [ ] Mark ratings and component behavior as MUST CONFIRM from a datasheet.
-- [ ] Record firmware version, app version, board identity, and test date.
-- [ ] Test the normal path with a known-good fixture.
-- [ ] Test interruption, missing hardware, and malformed input.
-- [ ] Capture logs, screenshots, readings, or hashes as evidence.
-- [ ] Assign every failure an owner and a retest condition.
-- [ ] Do not call the work complete while a safety-critical item is UNKNOWN.
-- [ ] Write PASS, FAIL, or BLOCKED and explain the disposition.
-- [ ] Link the result to the canonical guide that owns the requirement.
-- [ ] Review privacy, user consent, and data deletion implications.
-- [ ] Repeat the check after changing firmware, app, wiring, or storage format.
-- [ ] Have a second reviewer challenge the evidence.
-- [ ] Preserve the smallest reproducible command or procedure.
-- [ ] Record what this section does not prove.
-- [ ] Stop and escalate if the result could cause unsafe use.
-- [ ] Close the section only after the evidence location is non-UNKNOWN.
-- [ ] Write the expected input and expected output in plain ASCII.
-- [ ] Include the firmware and app protocol versions in the test note.
-- [ ] Check behavior when the watch is disconnected before the operation.
-- [ ] Check behavior when Bluetooth is disabled or permission is denied.
-- [ ] Check behavior when a sensor is absent at boot.
-- [ ] Check behavior when storage is full or a file cannot be opened.
-- [ ] Check that a failed operation does not silently create a false success.
-- [ ] Record timestamps in UTC when comparing watch and phone records.
-- [ ] Verify that a demo value is visibly separated from a real sample.
-- [ ] Verify that zero means unavailable where the source uses zero.
-- [ ] Do not convert a rough estimate into a diagnosis or alarm.
-- [ ] Check the user-facing label against the actual source field.
-- [ ] Check malformed JSON and truncated BLE notifications.
-- [ ] Check duplicate history rows and interrupted history transfers.
-- [ ] Check retention behavior without deleting evidence needed for the test.
-- [ ] Keep test data synthetic unless consent and handling are documented.
-- [ ] Remove copied secrets, phone numbers, and identifiers from shared logs.
-- [ ] Record the exact command used to build or flash when applicable.
-- [ ] Check that the change has no unreviewed generated-file impact.
-- [ ] Review the relevant source diff before signing the result.
-- [ ] Note the device model and operating system for app checks.
-- [ ] Note the board and sensor revisions for hardware checks.
-- [ ] Reproduce the result twice, including one cold start.
-- [ ] Record the known limitation beside the result, not in a hidden note.
-- [ ] Set a follow-up date for every UNKNOWN or MUST MEASURE item.
-## 13. Profiles
-Use this section as a small work package; record the result before moving on.
-Owner: UNKNOWN. Date: UNKNOWN. Evidence path: UNKNOWN.
-- [ ] State the exact question for Profiles.
-- [ ] Identify the source file, component, or test fixture that controls the answer.
-- [ ] Separate IMPLEMENTED behavior from PLANNED behavior.
-- [ ] Mark physical values as MUST MEASURE rather than estimating them.
-- [ ] Mark ratings and component behavior as MUST CONFIRM from a datasheet.
-- [ ] Record firmware version, app version, board identity, and test date.
-- [ ] Test the normal path with a known-good fixture.
-- [ ] Test interruption, missing hardware, and malformed input.
-- [ ] Capture logs, screenshots, readings, or hashes as evidence.
-- [ ] Assign every failure an owner and a retest condition.
-- [ ] Do not call the work complete while a safety-critical item is UNKNOWN.
-- [ ] Write PASS, FAIL, or BLOCKED and explain the disposition.
-- [ ] Link the result to the canonical guide that owns the requirement.
-- [ ] Review privacy, user consent, and data deletion implications.
-- [ ] Repeat the check after changing firmware, app, wiring, or storage format.
-- [ ] Have a second reviewer challenge the evidence.
-- [ ] Preserve the smallest reproducible command or procedure.
-- [ ] Record what this section does not prove.
-- [ ] Stop and escalate if the result could cause unsafe use.
-- [ ] Close the section only after the evidence location is non-UNKNOWN.
-- [ ] Write the expected input and expected output in plain ASCII.
-- [ ] Include the firmware and app protocol versions in the test note.
-- [ ] Check behavior when the watch is disconnected before the operation.
-- [ ] Check behavior when Bluetooth is disabled or permission is denied.
-- [ ] Check behavior when a sensor is absent at boot.
-- [ ] Check behavior when storage is full or a file cannot be opened.
-- [ ] Check that a failed operation does not silently create a false success.
-- [ ] Record timestamps in UTC when comparing watch and phone records.
-- [ ] Verify that a demo value is visibly separated from a real sample.
-- [ ] Verify that zero means unavailable where the source uses zero.
-- [ ] Do not convert a rough estimate into a diagnosis or alarm.
-- [ ] Check the user-facing label against the actual source field.
-- [ ] Check malformed JSON and truncated BLE notifications.
-- [ ] Check duplicate history rows and interrupted history transfers.
-- [ ] Check retention behavior without deleting evidence needed for the test.
-- [ ] Keep test data synthetic unless consent and handling are documented.
-- [ ] Remove copied secrets, phone numbers, and identifiers from shared logs.
-- [ ] Record the exact command used to build or flash when applicable.
-- [ ] Check that the change has no unreviewed generated-file impact.
-- [ ] Review the relevant source diff before signing the result.
-- [ ] Note the device model and operating system for app checks.
-- [ ] Note the board and sensor revisions for hardware checks.
-- [ ] Reproduce the result twice, including one cold start.
-- [ ] Record the known limitation beside the result, not in a hidden note.
-- [ ] Set a follow-up date for every UNKNOWN or MUST MEASURE item.
-## 14. Emergency links
-Use this section as a small work package; record the result before moving on.
-Owner: UNKNOWN. Date: UNKNOWN. Evidence path: UNKNOWN.
-- [ ] State the exact question for Emergency links.
-- [ ] Identify the source file, component, or test fixture that controls the answer.
-- [ ] Separate IMPLEMENTED behavior from PLANNED behavior.
-- [ ] Mark physical values as MUST MEASURE rather than estimating them.
-- [ ] Mark ratings and component behavior as MUST CONFIRM from a datasheet.
-- [ ] Record firmware version, app version, board identity, and test date.
-- [ ] Test the normal path with a known-good fixture.
-- [ ] Test interruption, missing hardware, and malformed input.
-- [ ] Capture logs, screenshots, readings, or hashes as evidence.
-- [ ] Assign every failure an owner and a retest condition.
-- [ ] Do not call the work complete while a safety-critical item is UNKNOWN.
-- [ ] Write PASS, FAIL, or BLOCKED and explain the disposition.
-- [ ] Link the result to the canonical guide that owns the requirement.
-- [ ] Review privacy, user consent, and data deletion implications.
-- [ ] Repeat the check after changing firmware, app, wiring, or storage format.
-- [ ] Have a second reviewer challenge the evidence.
-- [ ] Preserve the smallest reproducible command or procedure.
-- [ ] Record what this section does not prove.
-- [ ] Stop and escalate if the result could cause unsafe use.
-- [ ] Close the section only after the evidence location is non-UNKNOWN.
-- [ ] Write the expected input and expected output in plain ASCII.
-- [ ] Include the firmware and app protocol versions in the test note.
-- [ ] Check behavior when the watch is disconnected before the operation.
-- [ ] Check behavior when Bluetooth is disabled or permission is denied.
-- [ ] Check behavior when a sensor is absent at boot.
-- [ ] Check behavior when storage is full or a file cannot be opened.
-- [ ] Check that a failed operation does not silently create a false success.
-- [ ] Record timestamps in UTC when comparing watch and phone records.
-- [ ] Verify that a demo value is visibly separated from a real sample.
-- [ ] Verify that zero means unavailable where the source uses zero.
-- [ ] Do not convert a rough estimate into a diagnosis or alarm.
-- [ ] Check the user-facing label against the actual source field.
-- [ ] Check malformed JSON and truncated BLE notifications.
-- [ ] Check duplicate history rows and interrupted history transfers.
-- [ ] Check retention behavior without deleting evidence needed for the test.
-- [ ] Keep test data synthetic unless consent and handling are documented.
-- [ ] Remove copied secrets, phone numbers, and identifiers from shared logs.
-- [ ] Record the exact command used to build or flash when applicable.
-- [ ] Check that the change has no unreviewed generated-file impact.
-- [ ] Review the relevant source diff before signing the result.
-- [ ] Note the device model and operating system for app checks.
-- [ ] Note the board and sensor revisions for hardware checks.
-- [ ] Reproduce the result twice, including one cold start.
-- [ ] Record the known limitation beside the result, not in a hidden note.
-- [ ] Set a follow-up date for every UNKNOWN or MUST MEASURE item.
-## 15. Demo mode
-Use this section as a small work package; record the result before moving on.
-Owner: UNKNOWN. Date: UNKNOWN. Evidence path: UNKNOWN.
-- [ ] State the exact question for Demo mode.
-- [ ] Identify the source file, component, or test fixture that controls the answer.
-- [ ] Separate IMPLEMENTED behavior from PLANNED behavior.
-- [ ] Mark physical values as MUST MEASURE rather than estimating them.
-- [ ] Mark ratings and component behavior as MUST CONFIRM from a datasheet.
-- [ ] Record firmware version, app version, board identity, and test date.
-- [ ] Test the normal path with a known-good fixture.
-- [ ] Test interruption, missing hardware, and malformed input.
-- [ ] Capture logs, screenshots, readings, or hashes as evidence.
-- [ ] Assign every failure an owner and a retest condition.
-- [ ] Do not call the work complete while a safety-critical item is UNKNOWN.
-- [ ] Write PASS, FAIL, or BLOCKED and explain the disposition.
-- [ ] Link the result to the canonical guide that owns the requirement.
-- [ ] Review privacy, user consent, and data deletion implications.
-- [ ] Repeat the check after changing firmware, app, wiring, or storage format.
-- [ ] Have a second reviewer challenge the evidence.
-- [ ] Preserve the smallest reproducible command or procedure.
-- [ ] Record what this section does not prove.
-- [ ] Stop and escalate if the result could cause unsafe use.
-- [ ] Close the section only after the evidence location is non-UNKNOWN.
-- [ ] Write the expected input and expected output in plain ASCII.
-- [ ] Include the firmware and app protocol versions in the test note.
-- [ ] Check behavior when the watch is disconnected before the operation.
-- [ ] Check behavior when Bluetooth is disabled or permission is denied.
-- [ ] Check behavior when a sensor is absent at boot.
-- [ ] Check behavior when storage is full or a file cannot be opened.
-- [ ] Check that a failed operation does not silently create a false success.
-- [ ] Record timestamps in UTC when comparing watch and phone records.
-- [ ] Verify that a demo value is visibly separated from a real sample.
-- [ ] Verify that zero means unavailable where the source uses zero.
-- [ ] Do not convert a rough estimate into a diagnosis or alarm.
-- [ ] Check the user-facing label against the actual source field.
-- [ ] Check malformed JSON and truncated BLE notifications.
-- [ ] Check duplicate history rows and interrupted history transfers.
-- [ ] Check retention behavior without deleting evidence needed for the test.
-- [ ] Keep test data synthetic unless consent and handling are documented.
-- [ ] Remove copied secrets, phone numbers, and identifiers from shared logs.
-- [ ] Record the exact command used to build or flash when applicable.
-- [ ] Check that the change has no unreviewed generated-file impact.
-- [ ] Review the relevant source diff before signing the result.
-- [ ] Note the device model and operating system for app checks.
-- [ ] Note the board and sensor revisions for hardware checks.
-- [ ] Reproduce the result twice, including one cold start.
-- [ ] Record the known limitation beside the result, not in a hidden note.
-- [ ] Set a follow-up date for every UNKNOWN or MUST MEASURE item.
-## 16. Screens
-Use this section as a small work package; record the result before moving on.
-Owner: UNKNOWN. Date: UNKNOWN. Evidence path: UNKNOWN.
-- [ ] State the exact question for Screens.
-- [ ] Identify the source file, component, or test fixture that controls the answer.
-- [ ] Separate IMPLEMENTED behavior from PLANNED behavior.
-- [ ] Mark physical values as MUST MEASURE rather than estimating them.
-- [ ] Mark ratings and component behavior as MUST CONFIRM from a datasheet.
-- [ ] Record firmware version, app version, board identity, and test date.
-- [ ] Test the normal path with a known-good fixture.
-- [ ] Test interruption, missing hardware, and malformed input.
-- [ ] Capture logs, screenshots, readings, or hashes as evidence.
-- [ ] Assign every failure an owner and a retest condition.
-- [ ] Do not call the work complete while a safety-critical item is UNKNOWN.
-- [ ] Write PASS, FAIL, or BLOCKED and explain the disposition.
-- [ ] Link the result to the canonical guide that owns the requirement.
-- [ ] Review privacy, user consent, and data deletion implications.
-- [ ] Repeat the check after changing firmware, app, wiring, or storage format.
-- [ ] Have a second reviewer challenge the evidence.
-- [ ] Preserve the smallest reproducible command or procedure.
-- [ ] Record what this section does not prove.
-- [ ] Stop and escalate if the result could cause unsafe use.
-- [ ] Close the section only after the evidence location is non-UNKNOWN.
-- [ ] Write the expected input and expected output in plain ASCII.
-- [ ] Include the firmware and app protocol versions in the test note.
-- [ ] Check behavior when the watch is disconnected before the operation.
-- [ ] Check behavior when Bluetooth is disabled or permission is denied.
-- [ ] Check behavior when a sensor is absent at boot.
-- [ ] Check behavior when storage is full or a file cannot be opened.
-- [ ] Check that a failed operation does not silently create a false success.
-- [ ] Record timestamps in UTC when comparing watch and phone records.
-- [ ] Verify that a demo value is visibly separated from a real sample.
-- [ ] Verify that zero means unavailable where the source uses zero.
-- [ ] Do not convert a rough estimate into a diagnosis or alarm.
-- [ ] Check the user-facing label against the actual source field.
-- [ ] Check malformed JSON and truncated BLE notifications.
-- [ ] Check duplicate history rows and interrupted history transfers.
-- [ ] Check retention behavior without deleting evidence needed for the test.
-- [ ] Keep test data synthetic unless consent and handling are documented.
-- [ ] Remove copied secrets, phone numbers, and identifiers from shared logs.
-- [ ] Record the exact command used to build or flash when applicable.
-- [ ] Check that the change has no unreviewed generated-file impact.
-- [ ] Review the relevant source diff before signing the result.
-- [ ] Note the device model and operating system for app checks.
-- [ ] Note the board and sensor revisions for hardware checks.
-- [ ] Reproduce the result twice, including one cold start.
-- [ ] Record the known limitation beside the result, not in a hidden note.
-- [ ] Set a follow-up date for every UNKNOWN or MUST MEASURE item.
-## 17. Themes
-Use this section as a small work package; record the result before moving on.
-Owner: UNKNOWN. Date: UNKNOWN. Evidence path: UNKNOWN.
-- [ ] State the exact question for Themes.
-- [ ] Identify the source file, component, or test fixture that controls the answer.
-- [ ] Separate IMPLEMENTED behavior from PLANNED behavior.
-- [ ] Mark physical values as MUST MEASURE rather than estimating them.
-- [ ] Mark ratings and component behavior as MUST CONFIRM from a datasheet.
-- [ ] Record firmware version, app version, board identity, and test date.
-- [ ] Test the normal path with a known-good fixture.
-- [ ] Test interruption, missing hardware, and malformed input.
-- [ ] Capture logs, screenshots, readings, or hashes as evidence.
-- [ ] Assign every failure an owner and a retest condition.
-- [ ] Do not call the work complete while a safety-critical item is UNKNOWN.
-- [ ] Write PASS, FAIL, or BLOCKED and explain the disposition.
-- [ ] Link the result to the canonical guide that owns the requirement.
-- [ ] Review privacy, user consent, and data deletion implications.
-- [ ] Repeat the check after changing firmware, app, wiring, or storage format.
-- [ ] Have a second reviewer challenge the evidence.
-- [ ] Preserve the smallest reproducible command or procedure.
-- [ ] Record what this section does not prove.
-- [ ] Stop and escalate if the result could cause unsafe use.
-- [ ] Close the section only after the evidence location is non-UNKNOWN.
-- [ ] Write the expected input and expected output in plain ASCII.
-- [ ] Include the firmware and app protocol versions in the test note.
-- [ ] Check behavior when the watch is disconnected before the operation.
-- [ ] Check behavior when Bluetooth is disabled or permission is denied.
-- [ ] Check behavior when a sensor is absent at boot.
-- [ ] Check behavior when storage is full or a file cannot be opened.
-- [ ] Check that a failed operation does not silently create a false success.
-- [ ] Record timestamps in UTC when comparing watch and phone records.
-- [ ] Verify that a demo value is visibly separated from a real sample.
-- [ ] Verify that zero means unavailable where the source uses zero.
-- [ ] Do not convert a rough estimate into a diagnosis or alarm.
-- [ ] Check the user-facing label against the actual source field.
-- [ ] Check malformed JSON and truncated BLE notifications.
-- [ ] Check duplicate history rows and interrupted history transfers.
-- [ ] Check retention behavior without deleting evidence needed for the test.
-- [ ] Keep test data synthetic unless consent and handling are documented.
-- [ ] Remove copied secrets, phone numbers, and identifiers from shared logs.
-- [ ] Record the exact command used to build or flash when applicable.
-- [ ] Check that the change has no unreviewed generated-file impact.
-- [ ] Review the relevant source diff before signing the result.
-- [ ] Note the device model and operating system for app checks.
-- [ ] Note the board and sensor revisions for hardware checks.
-- [ ] Reproduce the result twice, including one cold start.
-- [ ] Record the known limitation beside the result, not in a hidden note.
-- [ ] Set a follow-up date for every UNKNOWN or MUST MEASURE item.
-## 18. Dependencies
-Use this section as a small work package; record the result before moving on.
-Owner: UNKNOWN. Date: UNKNOWN. Evidence path: UNKNOWN.
-- [ ] State the exact question for Dependencies.
-- [ ] Identify the source file, component, or test fixture that controls the answer.
-- [ ] Separate IMPLEMENTED behavior from PLANNED behavior.
-- [ ] Mark physical values as MUST MEASURE rather than estimating them.
-- [ ] Mark ratings and component behavior as MUST CONFIRM from a datasheet.
-- [ ] Record firmware version, app version, board identity, and test date.
-- [ ] Test the normal path with a known-good fixture.
-- [ ] Test interruption, missing hardware, and malformed input.
-- [ ] Capture logs, screenshots, readings, or hashes as evidence.
-- [ ] Assign every failure an owner and a retest condition.
-- [ ] Do not call the work complete while a safety-critical item is UNKNOWN.
-- [ ] Write PASS, FAIL, or BLOCKED and explain the disposition.
-- [ ] Link the result to the canonical guide that owns the requirement.
-- [ ] Review privacy, user consent, and data deletion implications.
-- [ ] Repeat the check after changing firmware, app, wiring, or storage format.
-- [ ] Have a second reviewer challenge the evidence.
-- [ ] Preserve the smallest reproducible command or procedure.
-- [ ] Record what this section does not prove.
-- [ ] Stop and escalate if the result could cause unsafe use.
-- [ ] Close the section only after the evidence location is non-UNKNOWN.
-- [ ] Write the expected input and expected output in plain ASCII.
-- [ ] Include the firmware and app protocol versions in the test note.
-- [ ] Check behavior when the watch is disconnected before the operation.
-- [ ] Check behavior when Bluetooth is disabled or permission is denied.
-- [ ] Check behavior when a sensor is absent at boot.
-- [ ] Check behavior when storage is full or a file cannot be opened.
-- [ ] Check that a failed operation does not silently create a false success.
-- [ ] Record timestamps in UTC when comparing watch and phone records.
-- [ ] Verify that a demo value is visibly separated from a real sample.
-- [ ] Verify that zero means unavailable where the source uses zero.
-- [ ] Do not convert a rough estimate into a diagnosis or alarm.
-- [ ] Check the user-facing label against the actual source field.
-- [ ] Check malformed JSON and truncated BLE notifications.
-- [ ] Check duplicate history rows and interrupted history transfers.
-- [ ] Check retention behavior without deleting evidence needed for the test.
-- [ ] Keep test data synthetic unless consent and handling are documented.
-- [ ] Remove copied secrets, phone numbers, and identifiers from shared logs.
-- [ ] Record the exact command used to build or flash when applicable.
-- [ ] Check that the change has no unreviewed generated-file impact.
-- [ ] Review the relevant source diff before signing the result.
-- [ ] Note the device model and operating system for app checks.
-- [ ] Note the board and sensor revisions for hardware checks.
-- [ ] Reproduce the result twice, including one cold start.
-- [ ] Record the known limitation beside the result, not in a hidden note.
-- [ ] Set a follow-up date for every UNKNOWN or MUST MEASURE item.
-## 19. Testing
-Use this section as a small work package; record the result before moving on.
-Owner: UNKNOWN. Date: UNKNOWN. Evidence path: UNKNOWN.
-- [ ] State the exact question for Testing.
-- [ ] Identify the source file, component, or test fixture that controls the answer.
-- [ ] Separate IMPLEMENTED behavior from PLANNED behavior.
-- [ ] Mark physical values as MUST MEASURE rather than estimating them.
-- [ ] Mark ratings and component behavior as MUST CONFIRM from a datasheet.
-- [ ] Record firmware version, app version, board identity, and test date.
-- [ ] Test the normal path with a known-good fixture.
-- [ ] Test interruption, missing hardware, and malformed input.
-- [ ] Capture logs, screenshots, readings, or hashes as evidence.
-- [ ] Assign every failure an owner and a retest condition.
-- [ ] Do not call the work complete while a safety-critical item is UNKNOWN.
-- [ ] Write PASS, FAIL, or BLOCKED and explain the disposition.
-- [ ] Link the result to the canonical guide that owns the requirement.
-- [ ] Review privacy, user consent, and data deletion implications.
-- [ ] Repeat the check after changing firmware, app, wiring, or storage format.
-- [ ] Have a second reviewer challenge the evidence.
-- [ ] Preserve the smallest reproducible command or procedure.
-- [ ] Record what this section does not prove.
-- [ ] Stop and escalate if the result could cause unsafe use.
-- [ ] Close the section only after the evidence location is non-UNKNOWN.
-- [ ] Write the expected input and expected output in plain ASCII.
-- [ ] Include the firmware and app protocol versions in the test note.
-- [ ] Check behavior when the watch is disconnected before the operation.
-- [ ] Check behavior when Bluetooth is disabled or permission is denied.
-- [ ] Check behavior when a sensor is absent at boot.
-- [ ] Check behavior when storage is full or a file cannot be opened.
-- [ ] Check that a failed operation does not silently create a false success.
-- [ ] Record timestamps in UTC when comparing watch and phone records.
-- [ ] Verify that a demo value is visibly separated from a real sample.
-- [ ] Verify that zero means unavailable where the source uses zero.
-- [ ] Do not convert a rough estimate into a diagnosis or alarm.
-- [ ] Check the user-facing label against the actual source field.
-- [ ] Check malformed JSON and truncated BLE notifications.
-- [ ] Check duplicate history rows and interrupted history transfers.
-- [ ] Check retention behavior without deleting evidence needed for the test.
-- [ ] Keep test data synthetic unless consent and handling are documented.
-- [ ] Remove copied secrets, phone numbers, and identifiers from shared logs.
-- [ ] Record the exact command used to build or flash when applicable.
-- [ ] Check that the change has no unreviewed generated-file impact.
-- [ ] Review the relevant source diff before signing the result.
-- [ ] Note the device model and operating system for app checks.
-- [ ] Note the board and sensor revisions for hardware checks.
-- [ ] Reproduce the result twice, including one cold start.
-- [ ] Record the known limitation beside the result, not in a hidden note.
-- [ ] Set a follow-up date for every UNKNOWN or MUST MEASURE item.
-## 20. Release
-Use this section as a small work package; record the result before moving on.
-Owner: UNKNOWN. Date: UNKNOWN. Evidence path: UNKNOWN.
-- [ ] State the exact question for Release.
-- [ ] Identify the source file, component, or test fixture that controls the answer.
-- [ ] Separate IMPLEMENTED behavior from PLANNED behavior.
-- [ ] Mark physical values as MUST MEASURE rather than estimating them.
-- [ ] Mark ratings and component behavior as MUST CONFIRM from a datasheet.
-- [ ] Record firmware version, app version, board identity, and test date.
-- [ ] Test the normal path with a known-good fixture.
-- [ ] Test interruption, missing hardware, and malformed input.
-- [ ] Capture logs, screenshots, readings, or hashes as evidence.
-- [ ] Assign every failure an owner and a retest condition.
-- [ ] Do not call the work complete while a safety-critical item is UNKNOWN.
-- [ ] Write PASS, FAIL, or BLOCKED and explain the disposition.
-- [ ] Link the result to the canonical guide that owns the requirement.
-- [ ] Review privacy, user consent, and data deletion implications.
-- [ ] Repeat the check after changing firmware, app, wiring, or storage format.
-- [ ] Have a second reviewer challenge the evidence.
-- [ ] Preserve the smallest reproducible command or procedure.
-- [ ] Record what this section does not prove.
-- [ ] Stop and escalate if the result could cause unsafe use.
-- [ ] Close the section only after the evidence location is non-UNKNOWN.
-- [ ] Write the expected input and expected output in plain ASCII.
-- [ ] Include the firmware and app protocol versions in the test note.
-- [ ] Check behavior when the watch is disconnected before the operation.
-- [ ] Check behavior when Bluetooth is disabled or permission is denied.
-- [ ] Check behavior when a sensor is absent at boot.
-- [ ] Check behavior when storage is full or a file cannot be opened.
-- [ ] Check that a failed operation does not silently create a false success.
-- [ ] Record timestamps in UTC when comparing watch and phone records.
-- [ ] Verify that a demo value is visibly separated from a real sample.
-- [ ] Verify that zero means unavailable where the source uses zero.
-- [ ] Do not convert a rough estimate into a diagnosis or alarm.
-- [ ] Check the user-facing label against the actual source field.
-- [ ] Check malformed JSON and truncated BLE notifications.
-- [ ] Check duplicate history rows and interrupted history transfers.
-- [ ] Check retention behavior without deleting evidence needed for the test.
-- [ ] Keep test data synthetic unless consent and handling are documented.
-- [ ] Remove copied secrets, phone numbers, and identifiers from shared logs.
-- [ ] Record the exact command used to build or flash when applicable.
-- [ ] Check that the change has no unreviewed generated-file impact.
-- [ ] Review the relevant source diff before signing the result.
-- [ ] Note the device model and operating system for app checks.
-- [ ] Note the board and sensor revisions for hardware checks.
-- [ ] Reproduce the result twice, including one cold start.
-- [ ] Record the known limitation beside the result, not in a hidden note.
-- [ ] Set a follow-up date for every UNKNOWN or MUST MEASURE item.
-## Final release record
-A release is blocked by missing measurements, missing review, unsafe battery behavior, or unsupported medical claims.
-Firmware artifact hash: UNKNOWN. App artifact hash: UNKNOWN. Production signing: UNKNOWN.
-Battery life: MUST MEASURE. Water resistance: MUST CONFIRM by a documented test; do not infer it.
-Firmware requests encrypted BLE Secure Connections using the existing six-digit static passkey. Android pairing, bonding persistence, disconnect/reconnect, wrong-PIN rejection, and on-device behavior still require hardware-in-the-loop validation. No production security certification is claimed.
-Clinical accuracy, diagnostic accuracy, and emergency response reliability: UNKNOWN.
+| Area | Behaviour |
+|---|---|
+| Pairing | Scans for BLE devices, connects, sends the six-digit watch PIN, then syncs |
+| Live | Decodes one JSON notification per second into HR, SpO₂, HRV, steps, fall, battery |
+| History | Pulls `/d/YYYYMMDD.csv` rows one at a time, dedupes by timestamp, keeps 60 days |
+| Screens | 20 screens (the lock is one of them) plus a web landing page |
+| Assistant | Gemini with health context; offline template answers when the request fails |
+| Updates | Polls GitHub releases, verifies a published SHA-256, hands off to the OS installer |
+| Storage | Local CSVs and preferences; only the watch PIN is in secure storage |
 
-## Canonical references
-- Canonical guide 1: docs/01_*.md
-- Canonical guide 2: docs/02_*.md
-- Canonical guide 3: docs/03_*.md
-- Canonical guide 4: docs/04_*.md
-- Canonical guide 5: docs/05_*.md
-- Canonical guide 6: docs/06_*.md
-- Canonical guide 7: docs/07_*.md
-- Canonical guide 8: docs/08_*.md
-- Canonical guide 9: docs/09_*.md
-- Canonical guide 10: docs/10_*.md
-- [firmware/esp32/DigitalSaverWatch/DigitalSaverWatch.ino](../firmware/esp32/DigitalSaverWatch/DigitalSaverWatch.ino)
-- [app/lib/services/ble_service.dart](../app/lib/services/ble_service.dart)
+It does **not** measure blood pressure (`0/0` from the watch, shown as N/A), does
+not work without a watch except in demo mode, and does not upload history.
 
-## App developer path
-The entry point is `lib/main.dart`; screens live under `lib/screens` and reusable widgets under `lib/widgets`.
-`BleService` owns scanning, connection state, service discovery, live notifications, pairing, and history sync.
-`VeyroProtocol` mirrors the UUID and retention constants in firmware `protocol.h`.
-`LocalStore` parses CSV rows, deduplicates by Unix timestamp, writes day files, and prunes older records.
-`SharedPreferences` stores the profile and emergency contact JSON; this is not documented as encrypted storage.
-Native scans request Bluetooth scan, Bluetooth connect, and location-when-in-use permissions.
-Run `flutter pub get`, `flutter analyze`, `flutter test`, and `flutter run` from `app`.
-Test real BLE on a physical phone; web demo mode does not prove native permissions or radio behavior.
-The live payload contains `hr`, `spo2`, `bps`, `bpd`, `hrv`, `steps`, `fall`, `bat`, and `ts`.
-History notifications carry a `row` string and end with a `done` marker.
-Malformed payloads are ignored by current parsing paths; add visible diagnostics before relying on silent recovery.
-The app UI may display analysis or advice, but those calculations are not clinical validation.
+## 2. Procedure — run the app from source
+
+Run each command in `app/`. You need Flutter with an Android toolchain;
+`flutter doctor` should show Flutter and the Android toolchain green.
+
+1. **Fetch packages.** `flutter pub get`. You should see `Got dependencies!`.
+2. **Check for errors.** `flutter analyze lib test`. Every line should be `info`
+   or `warning`; there must be no `error`. On 2026-10-21 the result was
+   `14 issues found` — 2 warnings, 12 infos, no errors — and the command exits 1
+   because issues exist. Info-level lints are not a reason to stop; an error is.
+3. **Run the tests.** `flutter test`. You should see
+   `All tests passed!` — 346 on the verified run.
+4. **Start on a phone or emulator.** `flutter run`. You should see the splash,
+   then either the lock screen or Today. An emulator has no Bluetooth: scanning
+   will report that Bluetooth is off, which is correct there.
+5. **Build a release APK.** `flutter build apk --release`. You should get
+   `build/app/outputs/flutter-apk/app-release.apk`.
+6. **Record the hash.** `Get-FileHash build\app\outputs\flutter-apk\app-release.apk -Algorithm SHA256`
+   (Windows) or `sha256sum` elsewhere. You should get one 64-character digest;
+   publish it with the APK so a download can be checked.
+
+To compile in a Gemini key, add `--dart-define=GEMINI_API_KEY=...` to step 4 or
+5. Without it the app uses the compiled-in relay described in §7.
+
+## 3. Structure
+
+```
+app/lib/   main.dart, models/, services/, screens/, widgets/
+app/test/  interaction/ (74), screens/, services/, support/app_harness.dart
+```
+
+Providers are set up once in `main.dart:31-40`:
+
+| Provider | Supplies |
+|---|---|
+| `BleService` | connection state, live values, sync progress, demo mode |
+| `AppLock` | app PIN, watch PIN in secure storage, lock state |
+| `ThemeService` | light/dark themes, theme mode |
+| `LocaleService` | locale and text direction |
+| `AutoUpdateService` | release check, download, manual-install hand-off |
+| `HeartRateTracker` | session min/max/average heart rate |
+
+Screens read these with `context.watch`/`context.read`. A screen must not create
+its own `BleService`; a second instance would show a disconnected watch while
+the real one is connected.
+
+`home` is `WebLandingPage` on web, and `LockGate → _UpdateWrapper →
+EnhancedSplashScreen` everywhere else (`main.dart:96-116`). The update dialog
+appears four seconds after start if a newer release is known
+(`main.dart:130-141`).
+
+## 4. Screens
+
+All twenty are reachable. The bottom bar holds Today, Vitals, Insights, Coach
+and More; More lists every destination the bar cannot hold, and the rail appears
+at 1100 px and up (`ROADMAP.md` 3.1a).
+
+| Screen | What it is for |
+|---|---|
+| Today (`dashboard_screen`) | Summary: current HR, steps, battery, quick actions, recent state |
+| Vitals (`vitals_screen`, `heart_screen`) | HR, SpO₂, HRV, temperature slot, status; heart detail with pulse ring and session range |
+| Activity and sleep (`activity_screen`, `sleep_screen`) | Steps and hourly activity; sleep derived from history, empty when there is none |
+| Insights (`insights_screen`, `health_trends_screen`, `health_tips_screen`) | Trends, guidance, progress, longer-range charts and static tips |
+| Health hub (`health_hub_screen`, `bp_screen`, `fitness_tools_screen`, `lifestyle_tools_screen`, `wellness_tools_screen`, `achievements_screen`) | Door to the tool suites, BP explanation (N/A), fitness/lifestyle/wellness helpers, milestones |
+| Memory and device (`memory_screen`, `device_diagnostics_screen`, `watch_simulator_screen`) | Sync and stored rows; connection/firmware/sample/free-space; eight watch faces without hardware |
+| Settings and assistant (`settings_screen`, `ai_assistant_screen`) | Profile, pairing, lock, contacts, theme, updates; the Gemini chat |
+| Lock (`lock_screen`) | App PIN gate, shown before the splash content |
+
+Screens with no data show an empty state naming what is missing rather than
+invented numbers (`ROADMAP.md` 3.1). A zero reading always renders as `--`
+(`ROADMAP.md`, standing rules).
+
+## 5. BLE behaviour, app side
+
+The wire contract is in [SYSTEM.md](SYSTEM.md) §3. The app's side:
+
+1. **Scan** requests Bluetooth scan/connect and location permission, refuses to
+   scan with the adapter off, and runs a 20-second scan
+   (`ble_service.dart:103-156`). A device is marked Veyro if its name contains
+   “veyro” or it advertises the Veyro service prefix.
+2. **Connect** has a 20-second timeout, then discovers services
+   (`ble_service.dart:164-187`).
+3. **Wire** subscribes to live and history, reads info, and locates the command
+   characteristic. It throws `Incomplete Veyro BLE service` unless all five
+   exist (`ble_service.dart:189-243`).
+4. **Pair** is automatic when a PIN is already saved, otherwise the user types
+   the six digits from the watch (`ble_service.dart:244-286`). On success the
+   app saves the PIN to secure storage, sends the time, and starts sync.
+5. **Sync** sends `sync`, stores each row, and acknowledges with `next` until
+   `done` (`ble_service.dart:288-294, 361-381`). Progress is `syncingMemory` and
+   `memoryRows`.
+6. **Disconnect** clears subscriptions, command handles and sync progress
+   (`ble_service.dart:383-415`). The watch forgets the pairing on its side, so a
+   reconnect re-sends the saved PIN.
+
+The app never negotiates an MTU and never checks the protocol version byte. Both
+are gaps, recorded in [SYSTEM.md](SYSTEM.md) §6, not features.
+
+## 6. Storage
+
+History lives in `<application support>/veyro/days/YYYYMMDD.csv`, named by the
+**local** date, with the same nine columns the watch writes. Reads dedupe by
+timestamp prefix; the store prunes files older than 60 days. Profile and
+emergency contacts are JSON in `SharedPreferences`; the watch PIN is in
+`flutter_secure_storage`. Full detail and file/line citations are in
+[SYSTEM.md](SYSTEM.md) §4.
+
+Two traps when debugging “missing” data:
+
+- The watch names files by UTC day and the phone by local day, so the file
+  names differ by one around midnight.
+- Nothing is stored until the watch clock has been set by the `time` command.
+  A watch that has never paired writes nothing at all.
+
+## 7. The assistant
+
+`gemini_service.dart` is the only network code path that carries health data.
+
+| Fact | Value |
+|---|---|
+| Primary model | `gemini-3.8-flash` |
+| Fallbacks, in order | `gemini-2.5-flash`, `gemini-1.5-flash` (the last is legacy) |
+| Endpoint with a key | `https://generativelanguage.googleapis.com/v1beta/models/<model>:generateContent` |
+| Endpoint without a key | The compiled-in Cloudflare Worker URL `https://digital-saver-ai.asser-k-dev.workers.dev` |
+| Key source | `--dart-define=GEMINI_API_KEY=...`, compiled in; there is no in-app key field |
+| Sampling | temperature 0.7, topP 0.9, max 1024 output tokens |
+| History window | `_maxHistoryTurns * 2` turns, oldest removed |
+| On failure | `_offlineHealthAdvisor` local template answer |
+
+The health context sent with a question includes the profile (name, age, gender,
+BMI, conditions, medications) and current health values
+(`gemini_service.dart:298-340`). The Worker URL is non-empty, so “no key” does
+not mean “no network”: the request goes to the Worker, and only a failed request
+falls back to local text. The old manual's “works with or without a key, locally”
+is wrong.
+
+## 8. Tests
+
+| Command (in `app/`) | Verified result, 2026-10-21 |
+|---|---|
+| `flutter test` | 346 passed |
+| `flutter test test/interaction` | 74 passed |
+| `flutter analyze lib test` | 14 issues, 0 errors (2 warnings, 12 infos) |
+
+The interaction suite drives controls at 390×844 and 1440×900 through one
+harness, `test/support/app_harness.dart`, and asserts against the service or
+store that owns each effect. [INTERACTION-TESTS.md](INTERACTION-TESTS.md) lists
+what is covered and what cannot honestly be driven in a widget test.
+
+## 9. Limits
+
+- **Bluetooth cannot be tested in the suite.** No test connects to a real watch;
+  BLE paths are exercised with fakes and the demo timer.
+- **The build is not warning-free.** Two analyzer warnings and twelve infos
+  remain. They are not errors, and this document does not claim a clean
+  analyzer.
+- **Web is a landing page, not the app.** `kIsWeb` returns `WebLandingPage`, and
+  storage calls return early on web because there is no application-support
+  directory.
+- **The update download is not covered by tests.** The OS installer hand-off is
+  platform code that a widget test cannot complete.
+- **The protocol version constant is dead code.** `VeyroProtocol.version = 2`
+  is never read; the wire format is v1.
+
+## 10. Troubleshooting
+
+| You see | Cause | Do this |
+|---|---|---|
+| `Turn Bluetooth on` | Adapter off, or an emulator | Use a real phone |
+| `Incomplete Veyro BLE service` | Watch firmware lacks a characteristic, or is the S3 target | Flash the ESP32 prototype build |
+| Scan list empty | Permission denied, or watch not advertising | Grant “Nearby devices”; reboot the watch; move within 2 m |
+| `Wrong PIN` | Digits do not match the watch | Read the six digits from the OLED; the PIN persists across reboots |
+| Sync stuck at 0 rows | Clock never set, or no sample qualifies | Pair again (sends `time`), then leave the watch running for a few minutes |
+| Screens blank after sync | Store pruned or app data cleared | Check the Memory screen's row count before assuming the watch lost data |
+| Assistant answers in templates | Worker or Gemini request failed | Check connectivity; a missing key is not the only cause |
+| `flutter run` fails with a Gradle error | Toolchain mismatch | Run `flutter doctor`, fix the Android toolchain, then `flutter clean` |
