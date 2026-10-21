@@ -82,6 +82,7 @@ class _SleepScreenState extends State<SleepScreen> {
   _RestPeriod? _period;
   bool _loading = true;
   bool _demoEnabled = false;
+  String? _loadError;
 
   @override
   void initState() {
@@ -90,18 +91,31 @@ class _SleepScreenState extends State<SleepScreen> {
   }
 
   Future<void> _load() async {
-    final prefs = await SharedPreferences.getInstance();
-    // Defaults to off. Showing invented data as a person's own night by default
-    // is not a demonstration, it is misleading.
-    final demo = prefs.getBool('demo_mode') ?? false;
-    final samples = await LocalStore.loadAll();
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      // Defaults to off. Showing invented data as a person's own night by default
+      // is not a demonstration, it is misleading.
+      final demo = prefs.getBool('demo_mode') ?? false;
+      final samples = await LocalStore.loadAll();
 
-    if (!mounted) return;
-    setState(() {
-      _demoEnabled = demo;
-      _period = _findRestPeriod(samples);
-      _loading = false;
-    });
+      if (!mounted) return;
+      setState(() {
+        _demoEnabled = demo;
+        _period = _findRestPeriod(samples);
+        _loading = false;
+        _loadError = null;
+      });
+    } catch (error) {
+      // Without this the screen sat on its spinner forever when the stored
+      // history could not be opened, which looks like a slow load rather than a
+      // failure. The capture harness found it: every other history screen has a
+      // catch, and this one did not.
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _loadError = '$error';
+      });
+    }
   }
 
   /// Finds the longest run of low heart rate overnight.
@@ -192,7 +206,9 @@ class _SleepScreenState extends State<SleepScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        if (period == null)
+        if (_loadError != null)
+          _UnreadableHistory(error: _loadError!)
+        else if (period == null)
           const _NothingRecorded()
         else ...<Widget>[
           _WindowCard(period: period),
@@ -416,6 +432,25 @@ class _NothingRecorded extends StatelessWidget {
         message: 'Wear the watch overnight with it in contact with your skin. '
             'Readings taken between 8pm and midday are used to find a low '
             'activity window.',
+      ),
+    );
+  }
+}
+
+/// The stored history could not be opened.
+class _UnreadableHistory extends StatelessWidget {
+  const _UnreadableHistory({required this.error});
+
+  final String error;
+
+  @override
+  Widget build(BuildContext context) {
+    return DsCard(
+      child: DsEmptyState(
+        icon: Icons.folder_off_outlined,
+        title: 'Stored history could not be read',
+        message: 'The overnight samples saved on this phone could not be '
+            'opened ($error). Nothing is estimated or invented in their place.',
       ),
     );
   }

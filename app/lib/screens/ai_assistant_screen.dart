@@ -374,6 +374,7 @@ class _AIAssistantScreenState extends State<AIAssistantScreen> with SingleTicker
                 const SizedBox(height: 14),
                 DropdownButtonFormField<String>(
                   initialValue: _personalityTone,
+                  isExpanded: true,
                   decoration: const InputDecoration(
                     labelText: 'Tone of Voice',
                     border: OutlineInputBorder(),
@@ -384,7 +385,7 @@ class _AIAssistantScreenState extends State<AIAssistantScreen> with SingleTicker
                     'Clinical & Medical (Doctor-like)',
                     'Direct & Fact-Only',
                     'Motivational Fitness Coach',
-                  ].map((e) => DropdownMenuItem(value: e, child: Text(e, style: const TextStyle(fontSize: 13)))).toList(),
+                  ].map((e) => DropdownMenuItem(value: e, child: Text(e, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13)))).toList(),
                   onChanged: (v) {
                     if (v != null) setState(() => _personalityTone = v);
                   },
@@ -392,6 +393,7 @@ class _AIAssistantScreenState extends State<AIAssistantScreen> with SingleTicker
                 const SizedBox(height: 14),
                 DropdownButtonFormField<String>(
                   initialValue: _medicalFocus,
+                  isExpanded: true,
                   decoration: const InputDecoration(
                     labelText: 'Primary Health Focus',
                     border: OutlineInputBorder(),
@@ -402,7 +404,7 @@ class _AIAssistantScreenState extends State<AIAssistantScreen> with SingleTicker
                     'Sleep & Stress Recovery',
                     'Athletic Training & Steps',
                     'General Wellness & Ergonomics',
-                  ].map((e) => DropdownMenuItem(value: e, child: Text(e, style: const TextStyle(fontSize: 13)))).toList(),
+                  ].map((e) => DropdownMenuItem(value: e, child: Text(e, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13)))).toList(),
                   onChanged: (v) {
                     if (v != null) setState(() => _medicalFocus = v);
                   },
@@ -410,6 +412,7 @@ class _AIAssistantScreenState extends State<AIAssistantScreen> with SingleTicker
                 const SizedBox(height: 14),
                 DropdownButtonFormField<String>(
                   initialValue: _preferredLanguage,
+                  isExpanded: true,
                   decoration: const InputDecoration(
                     labelText: 'Conversation Language',
                     border: OutlineInputBorder(),
@@ -419,7 +422,7 @@ class _AIAssistantScreenState extends State<AIAssistantScreen> with SingleTicker
                     'English (Auto-detect)',
                     'العربية (Egyptian Arabic / Fusha)',
                     'Bilingual (English + Arabic terms)',
-                  ].map((e) => DropdownMenuItem(value: e, child: Text(e, style: const TextStyle(fontSize: 13)))).toList(),
+                  ].map((e) => DropdownMenuItem(value: e, child: Text(e, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13)))).toList(),
                   onChanged: (v) {
                     if (v != null) setState(() => _preferredLanguage = v);
                   },

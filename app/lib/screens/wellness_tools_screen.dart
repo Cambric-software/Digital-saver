@@ -133,85 +133,10 @@ class _WellnessToolsScreenState extends State<WellnessToolsScreen> {
   }
 
   Future<void> _editIce() async {
-    final TextEditingController blood =
-        TextEditingController(text: _ice.bloodType);
-    final TextEditingController contact =
-        TextEditingController(text: _ice.contact);
-    final TextEditingController allergies =
-        TextEditingController(text: _ice.allergies);
-    final TextEditingController notes =
-        TextEditingController(text: _ice.notes);
-
     final _IceDetails? next = await showDialog<_IceDetails>(
       context: context,
-      builder: (BuildContext ctx) {
-        return AlertDialog(
-          title: const Text('Emergency card'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                TextField(
-                  controller: blood,
-                  decoration: const InputDecoration(
-                    labelText: 'Blood type',
-                    hintText: 'For example, O+',
-                  ),
-                ),
-                const SizedBox(height: Space.md),
-                TextField(
-                  controller: contact,
-                  keyboardType: TextInputType.phone,
-                  decoration: const InputDecoration(
-                    labelText: 'Emergency contact',
-                    hintText: 'Phone number',
-                  ),
-                ),
-                const SizedBox(height: Space.md),
-                TextField(
-                  controller: allergies,
-                  decoration: const InputDecoration(
-                    labelText: 'Allergies',
-                  ),
-                ),
-                const SizedBox(height: Space.md),
-                TextField(
-                  controller: notes,
-                  minLines: 2,
-                  maxLines: 4,
-                  decoration: const InputDecoration(
-                    labelText: 'Medical notes',
-                  ),
-                ),
-              ],
-            ),
-          ),
-          actions: <Widget>[
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Cancel'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.pop(
-                ctx,
-                _IceDetails(
-                  bloodType: blood.text.trim(),
-                  contact: contact.text.trim(),
-                  allergies: allergies.text.trim(),
-                  notes: notes.text.trim(),
-                ),
-              ),
-              child: const Text('Save'),
-            ),
-          ],
-        );
-      },
+      builder: (BuildContext ctx) => _IceDialog(existing: _ice),
     );
-
-    blood.dispose();
-    contact.dispose();
-    allergies.dispose();
-    notes.dispose();
 
     if (next == null) return;
     await next.save();
@@ -590,6 +515,110 @@ class _IceRow extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// The emergency-card form, owning its text controllers for the life of the
+/// route.
+///
+/// Disposing them as soon as `showDialog` returns is too early: the route's exit
+/// animation still builds the fields, and a disposed controller throws from that
+/// rebuild ("A TextEditingController was used after being disposed"). A small
+/// StatefulWidget disposes them when the route is actually gone.
+class _IceDialog extends StatefulWidget {
+  const _IceDialog({required this.existing});
+
+  final _IceDetails existing;
+
+  @override
+  State<_IceDialog> createState() => _IceDialogState();
+}
+
+class _IceDialogState extends State<_IceDialog> {
+  late final TextEditingController _blood =
+      TextEditingController(text: widget.existing.bloodType);
+  late final TextEditingController _contact =
+      TextEditingController(text: widget.existing.contact);
+  late final TextEditingController _allergies =
+      TextEditingController(text: widget.existing.allergies);
+  late final TextEditingController _notes =
+      TextEditingController(text: widget.existing.notes);
+
+  @override
+  void dispose() {
+    _blood.dispose();
+    _contact.dispose();
+    _allergies.dispose();
+    _notes.dispose();
+    super.dispose();
+  }
+
+  void _save() {
+    Navigator.pop(
+      context,
+      _IceDetails(
+        bloodType: _blood.text.trim(),
+        contact: _contact.text.trim(),
+        allergies: _allergies.text.trim(),
+        notes: _notes.text.trim(),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Emergency card'),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            TextField(
+              controller: _blood,
+              decoration: const InputDecoration(
+                labelText: 'Blood type',
+                hintText: 'For example, O+',
+              ),
+            ),
+            const SizedBox(height: Space.md),
+            TextField(
+              controller: _contact,
+              keyboardType: TextInputType.phone,
+              decoration: const InputDecoration(
+                labelText: 'Emergency contact',
+                hintText: 'Phone number',
+              ),
+            ),
+            const SizedBox(height: Space.md),
+            TextField(
+              controller: _allergies,
+              decoration: const InputDecoration(
+                labelText: 'Allergies',
+              ),
+            ),
+            const SizedBox(height: Space.md),
+            TextField(
+              controller: _notes,
+              minLines: 2,
+              maxLines: 4,
+              decoration: const InputDecoration(
+                labelText: 'Medical notes',
+              ),
+            ),
+          ],
+        ),
+      ),
+      actions: <Widget>[
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed: _save,
+          child: const Text('Save'),
+        ),
+      ],
     );
   }
 }

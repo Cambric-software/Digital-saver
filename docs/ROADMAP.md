@@ -147,13 +147,18 @@ Nothing below this matters if the product tells lies or has dead controls.
       glow icon button and pulsing dot ran animations that never stopped and
       duplicated controls the page already had, so they were removed rather than
       left unused.
-- [ ] **3.2 Interaction harness.** Rendering is verified; *behaviour* is only
-      partly so. Each rebuilt screen has tests for its main path at 390px and
-      1440px (hub, settings, lock, memory, wellness, lifestyle, fitness, device,
-      simulator, insights, dashboard), but "every button, tab, form and dialog
-      exercised, and its effect asserted" is not yet true. The remaining work is
-      a per-screen pass over the controls those tests do not touch, including
-      dialogs and the disabled-state reasons.
+- [x] **3.2 Interaction harness.** Rendering and behaviour are both verified.
+      One shared rig in `test/support/app_harness.dart` supplies the providers,
+      the two viewports and the finders the suite needs; 74 interaction tests in
+      `test/interaction/` drive the controls on all twenty screens at 390px and
+      1440px, and each effect is checked against the service or store that owns
+      it rather than only against the pixels. The pass found and fixed a dead
+      dashboard data-source icon, Sleep's endless spinner on an unreadable log,
+      the wellness emergency dialog disposing its controllers mid-animation, and
+      three AI settings dropdowns clipping at 390px. `docs/INTERACTION-TESTS.md`
+      records the control-by-control coverage, those findings, and what is not
+      exercised and why (real Bluetooth, OS installers, the update download).
+      Pipeline: 346 tests green, analyzer 0 errors.
 
 ### Phase 4 — Veyro product
 

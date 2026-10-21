@@ -45,9 +45,12 @@ class DashboardScreen extends StatelessWidget {
     return DsPage(
       title: 'Today',
       actions: <Widget>[
+        // Switches between the watch's readings and the app's generated sample
+        // data. The icon has always said which of the two is showing; until now
+        // it did nothing, so the only way to change it was another screen.
         IconButton(
           tooltip: ble.demoMode ? 'Showing sample data' : 'Live readings',
-          onPressed: () {},
+          onPressed: ble.demoMode ? ble.stopDemo : ble.startDemo,
           icon: Icon(
             ble.demoMode ? Icons.science_outlined : Icons.sensors_rounded,
             color: ble.demoMode ? AppColors.warning : null,

@@ -33,21 +33,13 @@ import 'package:digital_saver/screens/sleep_screen.dart';
 import 'package:digital_saver/screens/vitals_screen.dart';
 import 'package:digital_saver/screens/watch_simulator_screen.dart';
 import 'package:digital_saver/screens/wellness_tools_screen.dart';
-import 'package:digital_saver/services/app_lock.dart';
-import 'package:digital_saver/services/auto_update_service.dart';
-import 'package:digital_saver/services/ble_service.dart';
-import 'package:digital_saver/services/heart_rate_tracker.dart';
-import 'package:digital_saver/services/locale_service.dart';
-import 'package:digital_saver/services/theme_service.dart';
-import 'package:digital_saver/theme/app_theme.dart';
-import 'package:digital_saver/widgets/ds_widgets.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../support/app_harness.dart';
 import 'stub_notifications.dart';
-import 'package:provider/provider.dart';
 
 /// Whether to write the rendered images.
 ///
@@ -146,45 +138,6 @@ Future<void> loadRealFonts() async {
   await load('MaterialIcons', 'materialicons-regular.otf');
 }
 
-/// Wraps a screen in the providers the app supplies, and paints the real theme
-/// so the capture reflects what someone would see.
-///
-/// [isEmbedded] says the screen is a body inside another page; it is given a
-/// [DsPage] here because that is what its host gives it in the app. A full page
-/// is given only a Scaffold, because it supplies its own frame and the real
-/// shell always has a Scaffold above it. Either way there is a Scaffold, because
-/// material widgets need a Material ancestor; without one, the first TextField
-/// or button added to a screen failed with "No Material widget found".
-Widget harness(Widget child, {required bool isEmbedded}) {
-  return MultiProvider(
-    providers: <ChangeNotifierProvider<ChangeNotifier>>[
-      ChangeNotifierProvider<BleService>(create: (_) => BleService()),
-      // Supplied by main.dart, and the heart screen reads it for the session
-      // minimum and maximum. Omitting it produced a ProviderNotFoundException
-      // rather than a missing-value message, which is a poor way to find out a
-      // screen needs a provider.
-      ChangeNotifierProvider<HeartRateTracker>(create: (_) => HeartRateTracker()),
-      ChangeNotifierProvider<AppLock>(create: (_) => AppLock()),
-      ChangeNotifierProvider<ThemeService>(create: (_) => ThemeService()),
-      // Settings reads the current language from this during initState.
-      // Without it the lookup threw inside a setState callback, the exception
-      // never surfaced, and the screen sat on its loading spinner forever -
-      // which is exactly how a person would report "settings is broken".
-      ChangeNotifierProvider<LocaleService>(create: (_) => LocaleService()),
-      ChangeNotifierProvider<AutoUpdateService>(
-        create: (_) => AutoUpdateService(),
-      ),
-    ],
-    child: MaterialApp(
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.light,
-      home: Scaffold(
-        body: isEmbedded ? DsPage(child: child) : child,
-      ),
-    ),
-  );
-}
-
 /// Writes the rendered frame to disk.
 ///
 /// Uses Flutter's own golden mechanism rather than a hand-rolled toImage call.
@@ -280,29 +233,27 @@ void main() {
             _startCollecting();
             addTearDown(_stopCollecting);
 
-            // Inside the body, not in a teardown: the binding checks for live animations as
-            // soon as the body returns, which is before tearDowns run.
+            // Inside the body, not in a teardown: the binding checks for live
+            // animations as soon as the body returns, which is before tearDowns
+            // run.
             //
             // watch_simulator runs two AnimationControllers with repeat(). They
             // are disposed correctly in the widget's own dispose(), but that
             // only runs once the tree is torn down. Without doing it here, the
             // scheduler reported "an animation is still running even after the
-            // widget tree was disposed" against whichever test ran next, so one
-            // screen's animation made every screen after it look broken.
+            // widget tree was disposed" against whichever test ran next.
             await tester.pumpWidget(const SizedBox.shrink());
             await tester.pump(const Duration(milliseconds: 20));
 
             await tester.pumpWidget(
-              harness(
+              appHarness(
                 entry.value(),
-                isEmbedded: _embeddedScreens.contains(entry.key),
+                embedded: _embeddedScreens.contains(entry.key),
               ),
             );
             // Fixed pumps, not settle: an indeterminate progress indicator
             // never settles, so pumpAndSettle would hang until timeout.
-            for (var i = 0; i < 6; i++) {
-              await tester.pump(const Duration(milliseconds: 120));
-            }
+            await settleLoads(tester);
 
             final thrown = tester.takeException();
             final overflows = _collectedErrors
