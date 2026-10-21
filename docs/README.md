@@ -13,8 +13,9 @@ Read the document that matches what you are doing.
 
 | Document | Read it when |
 |---|---|
-| [HARDWARE.md](HARDWARE.md) | You are buying parts, wiring the ESP32 bench prototype, or checking what the production redesign still has to decide. Start here for hardware. |
-| [11_PRODUCTION_WATCH_SPEC.md](11_PRODUCTION_WATCH_SPEC.md) | You need the 7,500 EGP commercial target and the parts it proposes. It is an input to the 4.5 redesign, not a settled design. |
+| [HARDWARE.md](HARDWARE.md) | You are buying parts, wiring the ESP32 bench prototype, or checking what the bench build still has to measure. Start here for the bench. |
+| [HARDWARE_DESIGN.md](HARDWARE_DESIGN.md) | You are deciding or buying production hardware. It selects the architecture, sources the parts and prices 1,000 and 10,000 units. Start here for the product. |
+| [11_PRODUCTION_WATCH_SPEC.md](11_PRODUCTION_WATCH_SPEC.md) | You need the 7,500 EGP commercial target and the acceptance gates. Its hardware sections are superseded by `HARDWARE_DESIGN.md`. |
 
 ## Firmware
 

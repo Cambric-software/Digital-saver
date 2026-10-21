@@ -202,18 +202,28 @@ Nothing below this matters if the product tells lies or has dead controls.
       features that serve any age, language, interest and job. This supersedes
       patching the S3's three-bus pin map: the electronics get designed around
       the product, not the other way round.
-      Rules for the redesign: every part must carry its source (datasheet or
-      distributor page) and its price; every capability must name the part that
-      provides it; anything not sourceable is marked UNKNOWN rather than
-      guessed. The decisions to make explicitly: whether the OS needs a
-      Linux-class application processor (and therefore a companion MCU for
-      radios, sensors and power) or whether an RTOS on a microcontroller can
-      meet it; Wi-Fi and BLE versus cellular; display technology, size and
-      touch controller; battery, thermal and water-resistance budget; and the
-      bill of materials at the target price. `11_PRODUCTION_WATCH_SPEC.md` is
-      the input, not the answer.
-      4.4 is paused until this is settled, because the bus question is answered
+      The proposal is `docs/HARDWARE_DESIGN.md`: RV1106G3 Linux application
+      processor plus an ESP32-C6 companion, a 1.43″ 466×466 AMOLED, and a
+      1,000/10,000-unit bill of materials. It is a sourced proposal, not a built
+      device — nothing has been ordered, measured or certified.
+      4.4 is paused until 4.5b is approved, because the bus question is answered
       by the new architecture.
+  - [x] **4.5a Write the sourced hardware design.** Done 2026-10-21: three
+        compute options compared (MCU + RTOS, Linux AP + companion MCU,
+        wearable Android SoC), one recommended; every part, price and datasheet
+        value carries a source and access date; unknowns are marked UNKNOWN or
+        MUST MEASURE. The three-I2C-bus problem is resolved by design: the
+        RV1106 has five I2C masters and the IMU moves to the companion, so no
+        mux and no collision. The design does not claim a built device.
+  - [ ] **4.5b Owner approves the architecture and the price.** Choose between
+        Linux at a higher retail price, Option A (RTOS, no Linux) at a lower
+        BOM, and committing to 10,000 units. The arithmetic is in
+        `HARDWARE_DESIGN.md` §9 and `11_PRODUCTION_WATCH_SPEC.md` §2: at 1,000
+        units the present BOM loses 145 EGP gross per watch at 7,500 EGP.
+  - [ ] **4.5c Build an EVT unit and measure it.** Order the 1,000-piece parts,
+        lay out the board and run the gates in `HARDWARE_DESIGN.md` §10 and
+        `11_PRODUCTION_WATCH_SPEC.md` §6. Until then the power, thermal, optical
+        and ingress figures are MUST MEASURE, not specifications.
 
 ### Phase 5 — Customisation and polish
 

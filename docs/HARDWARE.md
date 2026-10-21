@@ -221,69 +221,33 @@ Do not wear the device at any point in this procedure.
 | Case temperature | No case exists | UNKNOWN |
 
 A value in the UNKNOWN rows must not be quoted as a product specification. The
-production acceptance gates in
-[11_PRODUCTION_WATCH_SPEC.md](11_PRODUCTION_WATCH_SPEC.md) are targets for the
-future design; no unit has been measured against them.
+production gates are in [HARDWARE_DESIGN.md](HARDWARE_DESIGN.md) §10 and
+[11_PRODUCTION_WATCH_SPEC.md](11_PRODUCTION_WATCH_SPEC.md) §6; no unit has been
+measured against them.
 
-## 8. The production target is under redesign (Phase 4.5)
+## 8. The production design is decided; this bench build is not it
 
-What exists in `firmware/esp32s3/` is a **sketch**, not a build. It assumes an
-ESP32-S3-MINI-1U-N16R8 (`veyro_main.c:3`, 16 MB flash / 8 MB PSRAM — the spec's
-`N8R8` is wrong), a 360×360 round AMOLED over SPI, and these I²C devices:
+The Phase 4.5 proposal is [HARDWARE_DESIGN.md](HARDWARE_DESIGN.md). It selects a
+**Rockchip RV1106G3** Linux application processor plus an **ESP32-C6** companion
+for Wi-Fi/BLE and always-on motion, a **1.43-inch 466×466 QSPI AMOLED** with
+on-cell touch, and **BQ25619 + AXP313A + BQ27427** for charging, rails and fuel
+gauging. The OS is Buildroot Linux with LVGL 9, not Android and not Flutter.
 
-| Device | Role | Address | Bus (code) |
-|---|---|---:|---|
-| VC31B | Wrist PPG: HR, SpO₂, HRV | `0x33` | B, GPIO 1/2 |
-| QMI6858C | IMU with hardware pedometer (the code comment says 6858; the BOM says QMI8658CULT — **UNKNOWN which**) | `0x6A` | B |
-| BMP581 | Pressure / altitude | `0x47` | B |
-| STTS22H | Skin temperature | `0x3C` | B |
-| DRV2605L | Haptic driver | `0x5A` | B |
-| FT6336G | Touch controller | `0x38` | A, GPIO 4/5 |
-| BQ25895 | PMIC | `0x6B` | C, GPIO 17/18 |
+The new bus plan uses the RV1106's five I²C masters and moves the IMU to the C6,
+so the S3's `I2C_NUM_2` blocker does not exist in the production design. The
+firmware in `firmware/esp32s3/` is unchanged and still fails to build that bus.
 
-Source: `firmware/esp32s3/main/veyro_main.c:1-18, 61-93`. The bus lettering is
-the code's own. Bus C is declared as `I2C_NUM_2`, which does not exist on a
-chip with two I²C controllers — one of the blockers recorded in
-[ROADMAP.md](ROADMAP.md) 4.1. Phase 4.5 may replace this architecture entirely,
-so **do not order parts from this table**.
+The sourced BOM is **$91.27 at 1,000 units** and **$59.17 at 10,000** (a
+negotiation target). With 4% freight and 30% duty that is **6,724 EGP landed at
+1k** — a **145 EGP loss** at 7,500 EGP retail — and **4,359 EGP at 10k**, a
+2,220 EGP gross contribution. The arithmetic is in
+[HARDWARE_DESIGN.md](HARDWARE_DESIGN.md) §9.
 
-The redesign has to decide, explicitly: whether a Linux-class application
-processor plus a companion MCU is needed for the large custom OS, or whether an
-RTOS on a microcontroller is enough; Wi-Fi/BLE versus cellular; display
-technology, size and touch controller; battery, thermal and water-resistance
-budget; and the BOM at 7,500 EGP. The acceptance gates (80 µA sleep, 9-point
-touch, optical SNR, ≤38 °C case, IP67 vacuum) are the tests that design must
-pass, not results.
-
-### Proposed production BOM — carried over, not re-verified
-
-These rows are the previous proposal, kept because each names a source and a
-quantity-1000 price. They are inputs to 4.5, and no row has been re-checked
-against a current distributor page. Treat every price as stale until quoted.
-
-| Part | Suggested part number | Source named in `company-manual.md` | USD @1k |
-|---|---|---|---:|
-| MCU | ESP32-S3-MINI-1U-N16R8 | Mouser `972-ESP32-S3-MINI-1U-N16R8`, Digi-Key, LCSC | 4.00–5.00 |
-| PPG | VC31B | LCSC `C2678164`; vcare-tech.com | 1.80–2.80 |
-| IMU | QMI8658CULT | LCSC `C2851264` | 0.80–1.20 |
-| Pressure | BMP581BEAA | Digi-Key `828-BMP581BEAA-ND`; LCSC `C2842781` | 1.20–1.80 |
-| Skin temp | STTS22HQTR | Digi-Key `497-STTS22HQTR-ND` | 0.60–1.00 |
-| Display | 1.43″ AMOLED 360×360 round, SPI | Alibaba/AliExpress OEM panel, driver JD9613 or compatible | 12.00–18.00 |
-| Touch | FT6336GQQ | LCSC `C2678163` | 0.60–1.00 |
-| PMIC | BQ25895RTWR | Mouser `595-BQ25895RTWR` | 1.50–2.50 |
-| Haptics | DRV2605LYZF4 + JMC0630A LRA | Digi-Key `296-38834-1-ND`; LCSC | 1.70–3.00 |
-| Cell | GREPOW 654040, 600 mAh, PCM | grepowsales; Alibaba | 3.50–5.00 |
-| NTC | NCP15WF104F03RC | Digi-Key `490-2143-1-ND` | 0.05–0.10 |
-| LDO | AP2112K-3.3TRG1 | Digi-Key `1262-1082-1-ND` | 0.10–0.20 |
-| USB-C + ESD | UJC-HP-3-SMT-TR, PRTR5V0U2XS | Digi-Key; LCSC | 0.30–0.60 |
-| Passives, LED, buttons | 0402 R/C, WS2812B-2020, TS-1187A | LCSC | ~1.00 |
-
-The recorded total was **$28–46 per unit at 1,000 pieces**, before enclosure,
-assembly, tax and warranty. The 7,500 EGP model in
-[11_PRODUCTION_WATCH_SPEC.md](11_PRODUCTION_WATCH_SPEC.md) allocates 1,850 EGP
-to the PCBA, which at the September 2026 rate is about $37: the BOM fits only if
-it lands below that. That is an arithmetic observation on stale ranges, not a
-quote.
+The previous "proposed production BOM" table was removed rather than carried
+forward: its `company-manual.md` source no longer exists, none of its prices had
+been re-checked, and several parts (SPI AMOLED, BQ25895, FT6336G) are
+contradicted by the selected design. **Do not order production parts from this
+page.** The only hardware that exists is the bench prototype in §1–§6.
 
 ## 9. Troubleshooting
 

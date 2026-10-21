@@ -1,66 +1,62 @@
 # Veyro production watch — commercial target
 
-**Status: under redesign (ROADMAP 4.5).** This is the input to that work, not a
-settled design and not a description of anything built. No unit exists, no part
-below has been ordered for production, and no acceptance gate has been measured.
-Where this page and `firmware/` disagree, the firmware describes what the code
-currently assumes; neither is a final decision.
+**Status: commercial target, hardware superseded (2026-10-21).** The hardware
+proposal is now [HARDWARE_DESIGN.md](HARDWARE_DESIGN.md). It selects the
+architecture, sources every part and prices 1,000 and 10,000 units. This page
+keeps the **7,500 EGP** commercial target and the acceptance gates, and records
+what the old ESP32-S3 sketch assumed. Nothing here describes a built device: no
+unit exists, no production part has been ordered, and no gate has been measured.
 
 ## 1. The mission
 
 Stated 2026-10-21: a watch that competes on a shelf with the Apple Watch and its
-peers at about **7,500 EGP**, with a touchscreen, a large custom operating system
-with its own system apps, internet and Bluetooth, and features that serve any
-age, language, interest and job.
+peers at about **7,500 EGP**, with a touchscreen, a large custom operating
+system with its own system apps, internet and Bluetooth, and features that serve
+any age, language, interest and job.
 
-That mission is broader than the ESP32-S3 sketch in `firmware/esp32s3`. The
-redesign therefore has to decide explicitly:
-
-1. Whether the OS needs a Linux-class application processor with a companion MCU
-   for radios, sensors and power, or whether an RTOS on a microcontroller can
-   meet it.
-2. Wi-Fi and BLE, or cellular.
-3. Display technology, size and touch controller.
-4. Battery, thermal and water-resistance budget.
-5. The BOM at the target price.
-
-Every part chosen must carry its source and its price. Every capability must
-name the part that provides it. Anything that cannot be sourced is marked
-UNKNOWN.
+The hardware decision is made in [HARDWARE_DESIGN.md](HARDWARE_DESIGN.md) §1:
+a **Linux application processor plus a companion MCU** (RV1106G3 + ESP32-C6).
+The alternative — an RTOS on a microcontroller — is cheaper and smaller but
+cannot host a multi-process OS. That trade-off is for the owner to approve under
+ROADMAP 4.5b.
 
 ## 2. Unit economics at 7,500 EGP
 
-The price is fixed as the planning target. The allocations are internal targets,
-not quotes.
+VAT is **output tax**, not a cost. The seller collects 14% from the customer and
+remits it, so it must be removed from revenue before any margin is calculated.
+The earlier version of this page counted "taxes and payment fees" as a 1,200 EGP
+cost, which double-counted VAT and understated the available margin.
 
-| Cost element | EGP | % of retail | Basis |
+| Item | EGP | USD | Basis |
 |---|---:|---:|---|
-| Electronics BOM (PCBA) | 1,850 | 24.7% | Module, display, PMIC, sensors, passives, 4-layer PCB |
-| Enclosure and glass | 450 | 6.0% | CNC aluminium chassis, 2.5D glass, gasket |
-| Strap and charger | 300 | 4.0% | Quick-release band, 2-pin magnetic pogo cable |
-| Assembly, calibration, yield | 400 | 5.3% | Optical calibration, leak test, 5% scrap reserve |
-| Packaging and documentation | 200 | 2.7% | Box, insert, compliance guide |
-| Taxes and payment fees | 1,200 | 16.0% | 14% VAT plus ~2% gateway |
-| Warranty and support reserve | 300 | 4.0% | One-year limited hardware warranty |
-| Net gross profit | 2,800 | 37.3% | R&D and operating reserve |
-| **Retail** | **7,500** | **100.0%** | |
+| Retail price | 7,500 | 137.64 | Fixed target |
+| VAT at 14% | 921 | 16.90 | Output tax, remitted |
+| Revenue ex-VAT | 6,579 | 120.74 | Arithmetic |
+| Payment gateway at 2.5% | 164 | 3.02 | Assumption |
+| Warranty reserve at 3% | 197 | 3.62 | Assumption |
+| Available for landed BOM and margin | 6,218 | 114.10 | Arithmetic |
 
-The previous version of this table listed 3,000 EGP (40.0%) profit and a 7,500
-total, but its rows summed to 7,700 (102.7%). Profit is the balancing line here;
-the other allocations are unchanged. Correcting it reduces the profit target,
-which is the honest direction: the price is fixed, so an arithmetic error cannot
-be paid for by raising it.
+The FX rate is 1 USD = 54.488856 EGP on 2026-10-21 (source S1 in
+[HARDWARE_DESIGN.md](HARDWARE_DESIGN.md) §12).
 
-The previous production BOM recorded $28–46 per unit at 1,000 pieces, before
-enclosure, assembly, tax and warranty. At the September 2026 planning rate of
-about 50 EGP/USD that is roughly 1,400–2,300 EGP. The 1,850 EGP PCBA allocation
-is about $37, so the BOM fits only if it lands below that. That is arithmetic on
-carried-over numbers, not a current quote. See [HARDWARE.md](HARDWARE.md) §8.
+The sourced BOM is **$91.27 at 1,000 units** and **$59.17 at 10,000** (a
+negotiation target, not a quote). With 4% freight and 30% duty:
 
-## 3. What the current code assumes
+| | 1,000 units | 10,000 units |
+|---|---:|---:|
+| Landed BOM | 6,724 EGP | 4,359 EGP |
+| Gross contribution | **−145 EGP** | **2,220 EGP (29.6%)** |
+| After gateway and warranty | **−507 EGP** | **1,858 EGP (24.8%)** |
+| Retail needed for 30% after fees | **11,884 EGP** | **7,704 EGP** |
 
-This column is what `firmware/esp32s3` is written against. It is a sketch, not a
-decision; Phase 4.5 may replace all of it.
+The BOM, the duty sensitivity and the arithmetic are in
+[HARDWARE_DESIGN.md](HARDWARE_DESIGN.md) §9. The 30% duty is an indicative rate
+for HS 9102, not a ruling; the classification is **UNKNOWN**.
+
+## 3. What the ESP32-S3 sketch assumed (historical)
+
+This is what `firmware/esp32s3` is written against. It is kept so the firmware
+is not mistaken for the production design. It is not a specification.
 
 | Subsystem | Code assumption | Source |
 |---|---|---|
@@ -71,75 +67,60 @@ decision; Phase 4.5 may replace all of it.
 | Motion | QMI6858C per the code comment; the BOM says QMI8658CULT — **UNKNOWN which** | `veyro_main.c:8` |
 | Environment | BMP581 `0x47`, STTS22H `0x3C` | `veyro_main.c:9-10` |
 | Haptics | DRV2605L `0x5A` | `veyro_main.c:11` |
-| Power | BQ25895 PMIC `0x6B`, NTC on GPIO 14 | `veyro_main.c:12, 75` |
-| Radio | BLE only in code; no Wi-Fi application code | `veyro_main.c` includes Wi-Fi headers but no service |
+| Power | BQ25895 `0x6B`, NTC on GPIO 14 | `veyro_main.c:12, 75` |
+| Radio | BLE only in code; no Wi-Fi application code | `veyro_main.c` |
 | OS | ESP-IDF + FreeRTOS + LVGL **8.3.11** | `firmware/esp32s3/platformio.ini` |
 
-Four parts of the previous specification are wrong against this code and are
-corrected here: the module is **N16R8**, not N8R8; the graphics library is
-**LVGL 8.3.11**, not 9.x; the PPG the code expects is **VC31B**, not
-MAX30101/GH3011; and the prototype charger is an **MCP73831-class board with
-load sharing**, not a bare TP4056.
+The S3 declares three I²C buses but has two controllers (`I2C_NUM_2` cannot
+work). The production design does not patch this: the RV1106 has five I²C
+masters and the IMU moves to the companion MCU, so the third bus disappears
+([HARDWARE_DESIGN.md](HARDWARE_DESIGN.md) §6.2). Do not flash the S3 image until
+ROADMAP 4.4 is resumed on a decided target.
 
-## 4. Industrial design (target, not built)
+## 4. Industrial design (targets, not built)
 
-These are targets for the redesign. No case, seal or strap exists.
+The production targets are in [HARDWARE_DESIGN.md](HARDWARE_DESIGN.md) §7:
+46 mm case, ≤12.5 mm thick, aluminium or steel bezel, 2.5D glass, optical
+polycarbonate rear window, 20 mm quick-release strap, 4-pad magnetic pogo.
+The stack-up is an arithmetic budget, not a measurement.
 
-1. **Chassis:** sandblasted 6000-series aluminium bezel and rim.
-2. **Crystal:** chemically strengthened 2.5D curved glass, oleophobic coating.
-3. **Rear pod:** optical-grade polycarbonate window, flush to the skin.
-4. **Sealing:** silicone compression gasket, **designed for** IP67 / 3 ATM.
-5. **Strap:** 20 mm quick-release spring bars.
-
-IP67 is a design goal. The acceptance test in §6 is how it would be proven; it
-has not been run.
+**IP67 is the ingress target. 3 ATM is not claimed and swimming is not
+supported.**
 
 ## 5. Software targets
 
-1. **UI:** LVGL 8.3.11 on FreeRTOS, double-buffered DMA over SPI, partial
-   refresh. The five watch-face IDs and six theme IDs in `display.h` are the
-   intended set; their switching functions are stubs today.
-2. **Storage:** 60-day circular history of one-minute epochs. The prototype
-   already does this on LittleFS; the S3 target uses SPIFFS.
-3. **Protocol:** the wire format is v1 today. A future v2 would need an MTU
-   negotiation and an OTA client; neither exists on either side. The app's
-   `version = 2` constant is unused and must not be read as an implemented v2.
-4. **OTA:** the partition table provides `ota_0` and `ota_1` at 4 MB each, and
-   nothing writes to them. Cryptographic verification and rollback are targets,
-   not features.
+The production stack is **Buildroot Linux + LVGL 9**, not FreeRTOS and not
+LVGL 8. The system apps, the Arabic/English requirement and the update model are
+in [HARDWARE_DESIGN.md](HARDWARE_DESIGN.md) §8. The wire protocol and the app
+remain as described in [SYSTEM.md](SYSTEM.md); a protocol v2 is still not
+implemented on either side.
 
-## 6. Production acceptance gates (targets)
+## 6. Acceptance gates
 
 Every unit at this price would have to pass these before packaging. None has
-been measured; the numbers are the specification the redesign must meet.
+been measured. The sleep gate is now scoped to the mode where the application
+processor is power-gated off; Linux cannot suspend at 80 µA.
 
-1. **Sleep current:** under 80 µA with the display off and motion wake armed.
-2. **Touch:** 9-point capacitive verification with zero ghost touches.
-3. **Optical SNR:** green/IR signal-to-noise verified on an optical fixture.
-4. **Thermal:** case surface at or below 38 °C during fast charging.
-5. **Seal:** vacuum decay test confirming IP67 gasket integrity.
+| # | Gate | Scope | State |
+|---:|---|---|---|
+| 1 | **≤80 µA** total | AP power-gated off, C6 deep sleep, IMU low-power, gauge sleeping | MUST MEASURE |
+| 2 | **≤3 mA** suspend | Linux suspended, RAM retained, C6 connected | MUST MEASURE; target is 2 mA |
+| 3 | **9-point touch**, zero ghosts | Production panel and touch controller | MUST MEASURE |
+| 4 | **Optical SNR** on green and IR | PPG fixture, skin phantom | MUST MEASURE |
+| 5 | **≤38 °C** case surface | Fast charge, 25 °C ambient | MUST MEASURE |
+| 6 | **IP67** | IEC 60529, 1 m, 30 min | MUST MEASURE |
 
-The prototype cannot be measured against any of them: it has no sleep mode, no
-touch panel, no sealed case and no production optical path.
+The prototype cannot be measured against any of them: it has no production
+panel, no sealed case, no optical fixture and no AP-off mode.
 
-Provisioning steps from the old production manual — flash-station commands,
-writing a serial number to NVS, and setting the PMIC ship mode — are **not**
-carried into this document. They target a board that Phase 4.5 may replace, and
-several depend on register values that were never verified on hardware. They
-belong with the new design, after the part is chosen.
+## 7. What is still open
 
-## 7. What is explicitly open
+The live list is [HARDWARE_DESIGN.md](HARDWARE_DESIGN.md) §1.4 and §11. In
+summary: the 1,000-piece SoC price, the production cell, the panel MOQ, the
+duty classification, NTRA fees, the enclosure supplier and the factory fixture
+are all **UNKNOWN**. None of them may appear in marketing as a specification.
 
-| Question | State |
-|---|---|
-| Application processor class | UNKNOWN — the central 4.5 decision |
-| Cellular vs Wi-Fi/BLE | UNKNOWN |
-| Final display panel and driver | UNKNOWN; code assumes 360×360 AMOLED |
-| Battery capacity and runtime | UNKNOWN; “3–5 days” was a target with no test |
-| Water resistance | UNKNOWN; IP67 is a design goal |
-| Final BOM and unit cost | UNKNOWN; carried-over ranges are stale |
-| Manufacturing partner and test fixtures | UNKNOWN |
-| Regulatory certification path | UNKNOWN |
-
-Anything in this table must not appear in marketing or a product page as a
-specification until it has a source and a measurement.
+The 7,500 EGP price is fixed by the mission, but the arithmetic in §2 says it
+does not produce a viable margin at 1,000 units. The owner has three honest
+choices: approve a higher price, approve Option A (RTOS, no Linux) at a lower
+BOM, or commit to 10,000 units. This page does not choose for them.
