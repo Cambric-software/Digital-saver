@@ -1,33 +1,31 @@
-/// Glass panels, glow buttons and pulsing dots that this app does not use.
+/// The translucent panel used by the public download page.
 ///
-/// These widgets were written for a different visual language: translucent
-/// white over a blurred backdrop, coloured glow shadows and a fixed six-colour
-/// gradient. The web landing page is the one surface they might have suited,
-/// but that page is required to match the Max Tools stylesheet exactly, where
-/// cards are opaque `surface` panels with a hairline border and a fixed radius.
-/// A translucent card would change those published colours, so mounting these
-/// here would be decoration pretending to be the design.
+/// This file used to hold five widgets written in a different visual language:
+/// a translucent card, a fixed blue-to-purple gradient card, a glowing button,
+/// a glowing icon button and a pulsing status dot. Nothing imported any of
+/// them, and the three glow widgets each ran an animation that never stopped.
 ///
-/// The rest of the app uses [DsCard] and the semantic roles in `app_colors.dart`
-/// instead. This file is kept for inspection rather than mounted; if it is ever
-/// adopted, it should be rebuilt on those tokens rather than the literal values
-/// below.
+/// [GlassCard] now has a job: the three download cards on the web landing page
+/// are the one surface that sits above the page rather than in it. The caller
+/// supplies the surface colour and border from the page's own tokens, so the
+/// palette is unchanged; the blur and the lift are the deliberate departure
+/// decided on 2026-10-21. The other four widgets were removed rather than left
+/// as code nothing uses - the page's buttons already lift on hover, so a second
+/// glowing button would have given one action two looks.
 library;
 
-import 'dart:ui';
+import 'dart:ui' show ImageFilter;
+
 import 'package:flutter/material.dart';
 
-// Glassmorphic card with blur effect
+/// A blurred, translucent panel with a hairline border and a soft lift.
+///
+/// The background is see-through enough that whatever is behind it reads as
+/// texture rather than as a second colour, so this belongs over a page with
+/// something to blur, not over a flat in-app surface. Inside the app, use
+/// [DsCard] instead.
 class GlassCard extends StatelessWidget {
-  final Widget child;
-  final EdgeInsetsGeometry? padding;
-  final EdgeInsetsGeometry? margin;
-  final double borderRadius;
-  final double blur;
-  final Color? backgroundColor;
-  final VoidCallback? onTap;
-  final Border? border;
-
+  /// Create a glass panel.
   const GlassCard({
     super.key,
     required this.child,
@@ -40,9 +38,33 @@ class GlassCard extends StatelessWidget {
     this.border,
   });
 
+  /// Panel content.
+  final Widget child;
+
+  /// Space around the content.
+  final EdgeInsetsGeometry? padding;
+
+  /// Space around the panel.
+  final EdgeInsetsGeometry? margin;
+
+  /// Corner radius.
+  final double borderRadius;
+
+  /// Blur applied to whatever is behind the panel.
+  final double blur;
+
+  /// Panel fill. Defaults to translucent white.
+  final Color? backgroundColor;
+
+  /// Optional tap handler.
+  final VoidCallback? onTap;
+
+  /// Optional border. Defaults to a translucent white hairline.
+  final Border? border;
+
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
       margin: margin,
@@ -68,7 +90,7 @@ class GlassCard extends StatelessWidget {
                         color: Colors.white.withValues(alpha: 0.2),
                         width: 1.5,
                       ),
-                  boxShadow: [
+                  boxShadow: <BoxShadow>[
                     BoxShadow(
                       color: Colors.black.withValues(alpha: 0.1),
                       blurRadius: 20,
@@ -82,370 +104,6 @@ class GlassCard extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
-}
-
-// Gradient glass card with more vibrant appearance
-class GradientGlassCard extends StatelessWidget {
-  final Widget child;
-  final EdgeInsetsGeometry? padding;
-  final EdgeInsetsGeometry? margin;
-  final double borderRadius;
-  final List<Color>? gradientColors;
-  final VoidCallback? onTap;
-
-  const GradientGlassCard({
-    super.key,
-    required this.child,
-    this.padding,
-    this.margin,
-    this.borderRadius = 20,
-    this.gradientColors,
-    this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = gradientColors ??
-        [
-          const Color(0xFF2563EB).withValues(alpha: 0.3),
-          const Color(0xFF7C3AED).withValues(alpha: 0.3),
-        ];
-
-    return Container(
-      margin: margin,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(borderRadius),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-          child: Material(
-            color: Colors.transparent,
-            child: InkWell(
-              onTap: onTap,
-              borderRadius: BorderRadius.circular(borderRadius),
-              child: Container(
-                padding: padding ?? const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: colors,
-                  ),
-                  borderRadius: BorderRadius.circular(borderRadius),
-                  border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.3),
-                    width: 1.5,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: colors.first.withValues(alpha: 0.3),
-                      blurRadius: 20,
-                      offset: const Offset(0, 10),
-                    ),
-                  ],
-                ),
-                child: child,
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// Glowing button with gradient
-class GlowButton extends StatefulWidget {
-  final String text;
-  final VoidCallback? onPressed;
-  final IconData? icon;
-  final List<Color>? gradientColors;
-  final double height;
-  final double? width;
-
-  const GlowButton({
-    super.key,
-    required this.text,
-    this.onPressed,
-    this.icon,
-    this.gradientColors,
-    this.height = 56,
-    this.width,
-  });
-
-  @override
-  State<GlowButton> createState() => _GlowButtonState();
-}
-
-class _GlowButtonState extends State<GlowButton>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _glowAnimation;
-  bool _isPressed = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      duration: const Duration(milliseconds: 1500),
-      vsync: this,
-    )..repeat(reverse: true);
-
-    _glowAnimation = Tween<double>(begin: 0.3, end: 0.6).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
-    );
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = widget.gradientColors ??
-        [
-          const Color(0xFF2563EB),
-          const Color(0xFF7C3AED),
-        ];
-
-    return GestureDetector(
-      onTapDown: (_) => setState(() => _isPressed = true),
-      onTapUp: (_) {
-        setState(() => _isPressed = false);
-        widget.onPressed?.call();
-      },
-      onTapCancel: () => setState(() => _isPressed = false),
-      child: AnimatedBuilder(
-        animation: _glowAnimation,
-        builder: (context, child) {
-          return AnimatedContainer(
-            duration: const Duration(milliseconds: 150),
-            width: widget.width,
-            height: widget.height,
-            transform: Matrix4.identity()
-              ..scaleByDouble(
-                _isPressed ? 0.95 : 1.0,
-                _isPressed ? 0.95 : 1.0,
-                1,
-                1,
-              ),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: colors,
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: colors.first.withValues(alpha: _glowAnimation.value),
-                  blurRadius: 20,
-                  offset: const Offset(0, 8),
-                ),
-              ],
-            ),
-            child: Center(
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  if (widget.icon != null) ...[
-                    Icon(widget.icon, color: Colors.white, size: 22),
-                    const SizedBox(width: 8),
-                  ],
-                  Text(
-                    widget.text,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 1,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-}
-
-// Animated icon button with glow
-class GlowIconButton extends StatefulWidget {
-  final IconData icon;
-  final VoidCallback? onPressed;
-  final double size;
-  final Color? color;
-  final Color? backgroundColor;
-
-  const GlowIconButton({
-    super.key,
-    required this.icon,
-    this.onPressed,
-    this.size = 48,
-    this.color,
-    this.backgroundColor,
-  });
-
-  @override
-  State<GlowIconButton> createState() => _GlowIconButtonState();
-}
-
-class _GlowIconButtonState extends State<GlowIconButton>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _scaleAnimation;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      duration: const Duration(milliseconds: 100),
-      vsync: this,
-    );
-
-    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.9).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
-    );
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final color = widget.color ?? const Color(0xFF2563EB);
-
-    return GestureDetector(
-      onTapDown: (_) => _controller.forward(),
-      onTapUp: (_) {
-        _controller.reverse();
-        widget.onPressed?.call();
-      },
-      onTapCancel: () => _controller.reverse(),
-      child: AnimatedBuilder(
-        animation: _scaleAnimation,
-        builder: (context, child) {
-          return Transform.scale(
-            scale: _scaleAnimation.value,
-            child: Container(
-              width: widget.size,
-              height: widget.size,
-              decoration: BoxDecoration(
-                color: widget.backgroundColor ??
-                    Colors.white.withValues(alpha: 0.1),
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: color.withValues(alpha: 0.3),
-                  width: 1.5,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: color.withValues(alpha: 0.2),
-                    blurRadius: 12,
-                    spreadRadius: 2,
-                  ),
-                ],
-              ),
-              child: Icon(
-                widget.icon,
-                color: color,
-                size: widget.size * 0.5,
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-}
-
-// Status indicator with pulsing dot
-class StatusIndicator extends StatefulWidget {
-  final bool isActive;
-  final Color activeColor;
-  final Color inactiveColor;
-  final double size;
-
-  const StatusIndicator({
-    super.key,
-    required this.isActive,
-    this.activeColor = const Color(0xFF10B981),
-    this.inactiveColor = Colors.grey,
-    this.size = 12,
-  });
-
-  @override
-  State<StatusIndicator> createState() => _StatusIndicatorState();
-}
-
-class _StatusIndicatorState extends State<StatusIndicator>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      duration: const Duration(milliseconds: 1000),
-      vsync: this,
-    );
-
-    if (widget.isActive) {
-      _controller.repeat(reverse: true);
-    }
-  }
-
-  @override
-  void didUpdateWidget(StatusIndicator oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (widget.isActive && !_controller.isAnimating) {
-      _controller.repeat(reverse: true);
-    } else if (!widget.isActive && _controller.isAnimating) {
-      _controller.stop();
-      _controller.value = 0;
-    }
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final color = widget.isActive ? widget.activeColor : widget.inactiveColor;
-
-    return AnimatedBuilder(
-      animation: _controller,
-      builder: (context, child) {
-        return Container(
-          width: widget.size,
-          height: widget.size,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: color,
-            boxShadow: widget.isActive
-                ? [
-                    BoxShadow(
-                      color: color.withValues(
-                          alpha: 0.5 + _controller.value * 0.5),
-                      blurRadius: 8 + _controller.value * 8,
-                      spreadRadius: _controller.value * 4,
-                    ),
-                  ]
-                : null,
-          ),
-        );
-      },
     );
   }
 }

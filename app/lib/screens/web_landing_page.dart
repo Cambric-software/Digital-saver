@@ -1,7 +1,11 @@
 /// The public download page, shown when Digital Saver runs in a browser.
 ///
-/// Rebuilt to match the Max Tools download page exactly — same palette, same
-/// radii, same card and button shapes — so the two products read as one family.
+/// Built on the Max Tools download page — same palette, same radii, same card
+/// and button shapes — so the two products read as one family. One deliberate
+/// departure, decided 2026-10-21: the three download cards are translucent
+/// glass panels rather than opaque ones, using [GlassCard]. The palette, radii
+/// and buttons are unchanged, so the page still reads as the same family while
+/// the download choice sits visibly above the page.
 ///
 /// Three things were wrong with the previous version beyond its appearance:
 ///
@@ -26,6 +30,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../services/github_services.dart';
 import '../utils/download_helper.dart';
+import '../widgets/glassmorphic_widgets.dart';
 
 /// Where release assets live. The `latest` alias cannot go stale, which is why
 /// no version number appears in any download URL.
@@ -389,6 +394,7 @@ class _WebLandingPageState extends State<WebLandingPage> {
   }) {
     return _Card(
       t: t,
+      glass: true,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
@@ -823,13 +829,32 @@ class _WebLandingPageState extends State<WebLandingPage> {
 
 /// A surface card, matching the Max Tools card shape.
 class _Card extends StatelessWidget {
-  const _Card({required this.t, required this.child});
+  const _Card({required this.t, required this.child, this.glass = false});
 
   final _Tokens t;
   final Widget child;
 
+  /// Draw the translucent panel from `glassmorphic_widgets.dart`.
+  ///
+  /// Only the three download cards use it. They are the page's one
+  /// transactional surface, and the blur and lift make the download choice read
+  /// as sitting above the page. Everything else stays on the opaque panel so the
+  /// page still carries the same palette and card shape as Max Tools; the glass
+  /// is a deliberate departure, not a change to the colour system.
+  final bool glass;
+
   @override
   Widget build(BuildContext context) {
+    if (glass) {
+      return GlassCard(
+        padding: const EdgeInsets.all(22),
+        borderRadius: _radiusCard,
+        backgroundColor: t.surface.withValues(alpha: 0.62),
+        border: Border.all(color: t.border),
+        child: child,
+      );
+    }
+
     return Container(
       padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(

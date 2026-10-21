@@ -140,10 +140,13 @@ Nothing below this matters if the product tells lies or has dead controls.
       installing and reports an honest hand-off on Android;
       `health_analysis_service_v2` is `HealthPatternsService`, shown as Patterns
       in Insights; `creative_effects` is the static splash backdrop.
-      **Open:** `glassmorphic_widgets` is the one file without a job. Its
-      translucent, glowing surface conflicts with the design system, and the only
-      surface that could carry it — the web download page — must keep the Max
-      Tools palette exactly. Decision needed: delete it, or let that page diverge.
+      `glassmorphic_widgets` now supplies [GlassCard] to the web download page,
+      whose three download cards became translucent glass panels (decided
+      2026-10-21). That page keeps the Max Tools palette, radii and button
+      shapes; the glass is the one deliberate departure. The file's glow button,
+      glow icon button and pulsing dot ran animations that never stopped and
+      duplicated controls the page already had, so they were removed rather than
+      left unused.
 - [ ] **3.2 Interaction harness.** Rendering is verified; *behaviour* is only
       partly so. Each rebuilt screen has tests for its main path at 390px and
       1440px (hub, settings, lock, memory, wellness, lifestyle, fitness, device,
