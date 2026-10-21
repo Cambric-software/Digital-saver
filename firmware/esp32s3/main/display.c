@@ -218,10 +218,14 @@ void display_update_vitals(int hr, int spo2, int hrv, int stress, uint32_t steps
     lv_label_set_text(lbl_battery, buf);
 }
 
-void display_set_watchface(int face_id) {
-    // Face ID selector for alternative themes / layouts
+void display_set_watchface(watchface_id_t face_id) {
+    // Not implemented yet: the five faces exist as ids in display.h, but the
+    // layout is built once in display_init and is not rebuilt per face.
+    (void)face_id;
 }
 
-void display_set_theme(int theme_id) {
-    // Theme accent color selector
+void display_set_theme(theme_palette_t theme_id) {
+    // Not implemented yet: the six palettes exist as ids in display.h, but no
+    // widget is re-coloured when the theme changes.
+    (void)theme_id;
 }

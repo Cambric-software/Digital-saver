@@ -106,37 +106,45 @@
 /* ─────────────────────────────────────────────────────────────────────── */
 
 /* Service: 4fafc201-1fb5-459e-8fcc-c5c9c331914b */
-static const ble_uuid128_t gatt_svc_uuid = BLE_UUID128_INIT(
+/*
+ * These UUIDs are reserved for the GATT service and are deliberately unused
+ * until that service exists: this target advertises and accepts a connection
+ * but registers no characteristics, so a paired app currently finds nothing to
+ * read. They are marked unused rather than deleted so the table below can be
+ * written against the same constants the app already knows, and so the gap is
+ * visible in the source instead of being hidden by a compiler flag.
+ */
+static const ble_uuid128_t __attribute__((unused)) gatt_svc_uuid = BLE_UUID128_INIT(
     0x4b, 0x91, 0x31, 0xc3, 0xc9, 0xc5, 0xcc, 0x8f,
     0x9e, 0x45, 0xb5, 0x1f, 0x01, 0xc2, 0xaf, 0x4f);
 
 /* Live vitals: beb5483e-36e1-4688-b7f5-ea07361b26a8 */
-static const ble_uuid128_t chr_live_uuid = BLE_UUID128_INIT(
+static const ble_uuid128_t __attribute__((unused)) chr_live_uuid = BLE_UUID128_INIT(
     0xa8, 0x26, 0x1b, 0x36, 0x07, 0xea, 0xf5, 0xb7,
     0x88, 0x46, 0xe1, 0x36, 0x3e, 0x48, 0xb5, 0xbe);
 
 /* History: suffix 26a1 */
-static const ble_uuid128_t chr_hist_uuid = BLE_UUID128_INIT(
+static const ble_uuid128_t __attribute__((unused)) chr_hist_uuid = BLE_UUID128_INIT(
     0xa1, 0x26, 0x1b, 0x36, 0x07, 0xea, 0xf5, 0xb7,
     0x88, 0x46, 0xe1, 0x36, 0x3e, 0x48, 0xb5, 0xbe);
 
 /* Info: suffix 26a2 */
-static const ble_uuid128_t chr_info_uuid = BLE_UUID128_INIT(
+static const ble_uuid128_t __attribute__((unused)) chr_info_uuid = BLE_UUID128_INIT(
     0xa2, 0x26, 0x1b, 0x36, 0x07, 0xea, 0xf5, 0xb7,
     0x88, 0x46, 0xe1, 0x36, 0x3e, 0x48, 0xb5, 0xbe);
 
 /* Command: suffix 26f0 */
-static const ble_uuid128_t chr_cmd_uuid = BLE_UUID128_INIT(
+static const ble_uuid128_t __attribute__((unused)) chr_cmd_uuid = BLE_UUID128_INIT(
     0xf0, 0x26, 0x1b, 0x36, 0x07, 0xea, 0xf5, 0xb7,
     0x88, 0x46, 0xe1, 0x36, 0x3e, 0x48, 0xb5, 0xbe);
 
 /* Notifications: suffix 26b0 */
-static const ble_uuid128_t chr_notif_uuid = BLE_UUID128_INIT(
+static const ble_uuid128_t __attribute__((unused)) chr_notif_uuid = BLE_UUID128_INIT(
     0xb0, 0x26, 0x1b, 0x36, 0x07, 0xea, 0xf5, 0xb7,
     0x88, 0x46, 0xe1, 0x36, 0x3e, 0x48, 0xb5, 0xbe);
 
 /* OTA data: suffix 26c0 */
-static const ble_uuid128_t chr_ota_uuid = BLE_UUID128_INIT(
+static const ble_uuid128_t __attribute__((unused)) chr_ota_uuid = BLE_UUID128_INIT(
     0xc0, 0x26, 0x1b, 0x36, 0x07, 0xea, 0xf5, 0xb7,
     0x88, 0x46, 0xe1, 0x36, 0x3e, 0x48, 0xb5, 0xbe);
 

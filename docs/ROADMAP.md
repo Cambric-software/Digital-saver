@@ -162,12 +162,17 @@ Nothing below this matters if the product tells lies or has dead controls.
 
 ### Phase 4 — Veyro product
 
-- [ ] **4.1 Document both firmware targets.** Two exist: the ESP32-WROOM-32
-      DevKit prototype (v4.1.0, SSD1306, MAX30102/MPU6050) that `docs/`
-      describes, and `firmware/esp32s3` (v5.0.0, ESP32-S3, AMOLED, VC31B,
-      QMI8658C, BMP581, STTS22H, DRV2605L, BQ25895, FT6336G, ESP-IDF + FreeRTOS
-      + LVGL) which matches the 7,500 EGP production spec. **Decided: both are real and both get full
-      treatment, documented separately.**
+- [x] **4.1 Document both firmware targets.** Done in `docs/FIRMWARE.md`, built on
+      2026-10-21 rather than read. The prototype (`firmware/esp32`, v4.1.0) now
+      **builds** — Flash 62.0%, RAM 12.6% — and did not before, because
+      `max()` mixed `uint32_t` with `unsigned long`; its BLE `face` command also
+      wrapped at 4 of the 8 screens, so the app could not select screens 4–7.
+      The ESP32-S3 target (`firmware/esp32s3`, v5.0.0) **does not build**: it
+      declares three I2C buses on a chip with two (`I2C_NUM_2`), registers no
+      GATT service (the UUIDs were declared and unused), and leaves
+      `display_set_watchface`/`display_set_theme` as stubs. Its committed
+      sdkconfig had Bluetooth off and 2 MB flash; it was replaced with
+      `sdkconfig.defaults`. Both targets are real; only one runs.
 - [ ] **4.2 Rewrite `docs/`.** All ten numbered documents are ~940 lines of which
       most is generated checkerboard — one file repeats "acceptance:" 860 times.
       Replace the padding with real procedures written as Step 1, Step 2 …
@@ -179,7 +184,11 @@ Nothing below this matters if the product tells lies or has dead controls.
       commercial spec's contradictions (the spec says LVGL 9.x; the build uses
       LVGL 8.3.11).
 - [ ] **4.4 Expand the firmware** to the documented feature set on the decided
-      target, and make it build clean.
+      target, and make it build clean. The S3 blockers recorded in 4.1 come
+      first: settle the third I2C bus against the schematic (share a bus, add a
+      mux, or bit-bang), write the NimBLE GATT service table so the app can
+      read anything, implement the five faces and six themes, then hardware-test
+      the result. Do not flash the S3 image until the bus question is answered.
 
 ### Phase 5 — Customisation and polish
 

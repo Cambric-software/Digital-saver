@@ -1,0 +1,8 @@
+# PlatformIO generated build output
+.pio/
+.vscode/
+*.bin
+*.elf
+
+# Generated from sdkconfig.defaults at build time; not committed.
+sdkconfig.esp32s3_watch

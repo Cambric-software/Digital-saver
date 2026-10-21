@@ -107,7 +107,10 @@ int readBattery() {
 }
 
 void vibe(int ms) {
-  vibeUntil = max(vibeUntil, millis() + (uint32_t)ms);
+  // millis() is unsigned long and vibeUntil is uint32_t; both are 32-bit on
+  // this target but they are distinct types, so max() cannot deduce a single
+  // T. Cast the sum so the two arguments match.
+  vibeUntil = max(vibeUntil, (uint32_t)(millis() + (uint32_t)ms));
   digitalWrite(PIN_VIBE, HIGH);
 }
 
@@ -257,7 +260,10 @@ void handleCmd(const String &raw) {
   if (strcmp(op, "face") == 0) {
     int requested = doc["face"] | -1;
     if (requested >= 0) {
-      face = requested % 4;
+      // Eight screens exist (0-7) and the mode button cycles all eight, but
+      // this used to wrap at four, so the app could not select the second
+      // half of the screens that the button could reach.
+      face = requested % 8;
       prefs.putUChar("face", (uint8_t)face);
     }
     return;

@@ -23,7 +23,8 @@ Start with the section that matches what you are doing.
 
 | Document | Read it when |
 |---|---|
-| [07_FIRMWARE_GUIDE.md](07_FIRMWARE_GUIDE.md) | You are building, flashing or debugging either firmware target. |
+| [FIRMWARE.md](FIRMWARE.md) | You are building or flashing either target. Verified commands, what each target actually does, and what it does not. **Start here.** |
+| [07_FIRMWARE_GUIDE.md](07_FIRMWARE_GUIDE.md) | You want the long-form guide. It is being rewritten in Phase 4.2; where it disagrees with the source, the source wins. |
 | [FIRMWARE_FEATURES.md](FIRMWARE_FEATURES.md) | You need to know which prototype features exist, and which are proposed. |
 | [UPGRADE_GUIDE.md](UPGRADE_GUIDE.md) | You are migrating firmware or app data, or rolling a release back. |
 
