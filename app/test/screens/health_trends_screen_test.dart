@@ -52,7 +52,7 @@ void main() {
 
   testWidgets('a window with no measured value has an honest empty state',
       (WidgetTester tester) async {
-    final DateTime now = DateTime.now();
+    final DateTime now = DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day, 12);
     await _pump(tester, <WatchSample>[
       _sample(now.subtract(const Duration(hours: 1))),
       _sample(now.subtract(const Duration(hours: 2))),
@@ -68,7 +68,7 @@ void main() {
 
   testWidgets('enough readings produce a resting estimate and a direction',
       (WidgetTester tester) async {
-    final DateTime now = DateTime.now();
+    final DateTime now = DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day, 12);
     await _pump(tester, <WatchSample>[
       _sample(now.subtract(const Duration(days: 1, hours: 2)),
           hr: 50, spo2: 98),
@@ -92,7 +92,7 @@ void main() {
 
   testWidgets('too few readings show -- and the shortfall',
       (WidgetTester tester) async {
-    final DateTime now = DateTime.now();
+    final DateTime now = DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day, 12);
     await _pump(tester, <WatchSample>[
       _sample(now.subtract(const Duration(hours: 2)), hr: 60),
       _sample(now.subtract(const Duration(hours: 1)), hr: 62),
