@@ -1,8 +1,8 @@
 import 'dart:convert';
 
 import 'package:crypto/crypto.dart';
-import 'package:digital_saver/services/app_lock.dart';
-import 'package:digital_saver/services/emergency_service.dart';
+import 'package:digital_saver/core/services/app_lock.dart';
+import 'package:digital_saver/core/services/emergency_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 

@@ -6,19 +6,19 @@
 // not only the pixels: a snackbar alone does not prove a write happened.
 library;
 
-import 'package:digital_saver/models/health_models.dart';
-import 'package:digital_saver/screens/ai_assistant_screen.dart';
-import 'package:digital_saver/screens/device_diagnostics_screen.dart';
-import 'package:digital_saver/screens/lock_screen.dart';
-import 'package:digital_saver/screens/memory_screen.dart';
-import 'package:digital_saver/screens/settings_screen.dart';
-import 'package:digital_saver/screens/watch_simulator_screen.dart';
-import 'package:digital_saver/services/app_lock.dart';
-import 'package:digital_saver/services/ble_service.dart';
-import 'package:digital_saver/services/locale_service.dart';
-import 'package:digital_saver/services/local_store.dart';
-import 'package:digital_saver/services/storage_service.dart';
-import 'package:digital_saver/services/theme_service.dart';
+import 'package:digital_saver/core/models/health_models.dart';
+import 'package:digital_saver/features/screens/ai_assistant_screen.dart';
+import 'package:digital_saver/features/screens/device_diagnostics_screen.dart';
+import 'package:digital_saver/features/screens/lock_screen.dart';
+import 'package:digital_saver/features/screens/memory_screen.dart';
+import 'package:digital_saver/features/screens/settings_screen.dart';
+import 'package:digital_saver/features/screens/watch_simulator_screen.dart';
+import 'package:digital_saver/core/services/app_lock.dart';
+import 'package:digital_saver/core/services/ble_service.dart';
+import 'package:digital_saver/core/services/locale_service.dart';
+import 'package:digital_saver/core/services/local_store.dart';
+import 'package:digital_saver/core/services/storage_service.dart';
+import 'package:digital_saver/core/services/theme_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';

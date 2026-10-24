@@ -6,13 +6,13 @@
 // not exercise anything its host does.
 library;
 
-import 'package:digital_saver/screens/activity_screen.dart';
-import 'package:digital_saver/screens/dashboard_screen.dart';
-import 'package:digital_saver/screens/heart_screen.dart';
-import 'package:digital_saver/screens/insights_screen.dart';
-import 'package:digital_saver/screens/sleep_screen.dart';
-import 'package:digital_saver/screens/vitals_screen.dart';
-import 'package:digital_saver/services/daily_log.dart';
+import 'package:digital_saver/features/screens/activity_screen.dart';
+import 'package:digital_saver/features/screens/dashboard_screen.dart';
+import 'package:digital_saver/features/screens/heart_screen.dart';
+import 'package:digital_saver/features/screens/insights_screen.dart';
+import 'package:digital_saver/features/screens/sleep_screen.dart';
+import 'package:digital_saver/features/screens/vitals_screen.dart';
+import 'package:digital_saver/core/services/daily_log.dart';
 import 'package:cambric_design/cambric_design.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';

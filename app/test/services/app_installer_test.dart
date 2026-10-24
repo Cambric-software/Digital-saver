@@ -10,9 +10,9 @@ library;
 import 'dart:io';
 
 import 'package:crypto/crypto.dart';
-import 'package:digital_saver/services/app_installer_service.dart';
-import 'package:digital_saver/services/install_layout.dart' hide InstallOutcome;
-import 'package:digital_saver/services/release_assets.dart';
+import 'package:digital_saver/core/services/app_installer_service.dart';
+import 'package:digital_saver/core/services/install_layout.dart' hide InstallOutcome;
+import 'package:digital_saver/core/services/release_assets.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 

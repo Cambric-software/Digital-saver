@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:digital_saver/services/local_store.dart';
+import 'package:digital_saver/core/services/local_store.dart';
 
 void main() {
   test('watch samples round-trip through the history CSV format', () {

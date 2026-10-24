@@ -6,8 +6,8 @@
 /// gaps, duplicates, a run that ended two days ago, and an empty history.
 library;
 
-import 'package:digital_saver/screens/achievements_screen.dart';
-import 'package:digital_saver/services/local_store.dart';
+import 'package:digital_saver/features/screens/achievements_screen.dart';
+import 'package:digital_saver/core/services/local_store.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 WatchSample _sample(

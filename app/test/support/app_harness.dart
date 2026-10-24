@@ -7,12 +7,12 @@
 // the one people use.
 library;
 
-import 'package:digital_saver/services/app_lock.dart';
-import 'package:digital_saver/services/auto_update_service.dart';
-import 'package:digital_saver/services/ble_service.dart';
-import 'package:digital_saver/services/heart_rate_tracker.dart';
-import 'package:digital_saver/services/locale_service.dart';
-import 'package:digital_saver/services/theme_service.dart';
+import 'package:digital_saver/core/services/app_lock.dart';
+import 'package:digital_saver/core/services/auto_update_service.dart';
+import 'package:digital_saver/core/services/ble_service.dart';
+import 'package:digital_saver/core/services/heart_rate_tracker.dart';
+import 'package:digital_saver/core/services/locale_service.dart';
+import 'package:digital_saver/core/services/theme_service.dart';
 import 'package:cambric_design/cambric_design.dart';
 import 'package:cambric_design/cambric_design.dart';
 import 'package:flutter/material.dart';

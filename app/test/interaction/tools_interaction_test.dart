@@ -5,14 +5,14 @@
 // prove that anything was stored.
 library;
 
-import 'package:digital_saver/models/health_models.dart';
-import 'package:digital_saver/screens/fitness_tools_screen.dart';
-import 'package:digital_saver/screens/lifestyle_tools_screen.dart';
-import 'package:digital_saver/screens/wellness_tools_screen.dart';
-import 'package:digital_saver/services/ble_service.dart';
-import 'package:digital_saver/services/daily_log.dart';
-import 'package:digital_saver/services/local_store.dart';
-import 'package:digital_saver/services/storage_service.dart';
+import 'package:digital_saver/core/models/health_models.dart';
+import 'package:digital_saver/features/screens/fitness_tools_screen.dart';
+import 'package:digital_saver/features/screens/lifestyle_tools_screen.dart';
+import 'package:digital_saver/features/screens/wellness_tools_screen.dart';
+import 'package:digital_saver/core/services/ble_service.dart';
+import 'package:digital_saver/core/services/daily_log.dart';
+import 'package:digital_saver/core/services/local_store.dart';
+import 'package:digital_saver/core/services/storage_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';

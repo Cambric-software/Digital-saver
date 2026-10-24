@@ -6,7 +6,7 @@
 /// BPM and period, and check that a zero reading schedules no animation at all.
 library;
 
-import 'package:digital_saver/widgets/enhanced_animations.dart';
+import 'package:digital_saver/features/widgets/enhanced_animations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 

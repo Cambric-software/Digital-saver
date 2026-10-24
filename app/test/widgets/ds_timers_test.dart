@@ -1,4 +1,4 @@
-import 'package:digital_saver/widgets/ds_timers.dart';
+import 'package:digital_saver/features/widgets/ds_timers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 

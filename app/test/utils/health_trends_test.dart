@@ -6,8 +6,8 @@
 /// caught separately from a change in the layout.
 library;
 
-import 'package:digital_saver/screens/health_trends_screen.dart';
-import 'package:digital_saver/services/local_store.dart';
+import 'package:digital_saver/features/screens/health_trends_screen.dart';
+import 'package:digital_saver/core/services/local_store.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 WatchSample _sample(

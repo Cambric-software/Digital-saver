@@ -6,9 +6,9 @@
 /// the documented default rather than preventing the app from rendering.
 library;
 
-import 'package:digital_saver/services/dynamic_theme_service.dart';
-import 'package:digital_saver/services/storage_service.dart';
-import 'package:digital_saver/services/theme_service.dart';
+import 'package:digital_saver/core/services/dynamic_theme_service.dart';
+import 'package:digital_saver/core/services/storage_service.dart';
+import 'package:digital_saver/core/services/theme_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';

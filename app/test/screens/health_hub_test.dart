@@ -1,5 +1,5 @@
-import 'package:digital_saver/screens/health_hub_screen.dart';
-import 'package:digital_saver/services/storage_service.dart';
+import 'package:digital_saver/features/screens/health_hub_screen.dart';
+import 'package:digital_saver/core/services/storage_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';

@@ -1,4 +1,4 @@
-import 'package:digital_saver/services/storage_service.dart';
+import 'package:digital_saver/core/services/storage_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 

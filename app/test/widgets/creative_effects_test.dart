@@ -5,7 +5,7 @@
 /// cases (zero layers) do not throw.
 library;
 
-import 'package:digital_saver/widgets/creative_effects.dart';
+import 'package:digital_saver/features/widgets/creative_effects.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 

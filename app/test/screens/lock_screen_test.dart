@@ -1,5 +1,5 @@
-import 'package:digital_saver/screens/lock_screen.dart';
-import 'package:digital_saver/services/app_lock.dart';
+import 'package:digital_saver/features/screens/lock_screen.dart';
+import 'package:digital_saver/core/services/app_lock.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';

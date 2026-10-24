@@ -13,26 +13,26 @@ library;
 
 import 'dart:io';
 
-import 'package:digital_saver/screens/achievements_screen.dart';
-import 'package:digital_saver/screens/activity_screen.dart';
-import 'package:digital_saver/screens/ai_assistant_screen.dart';
-import 'package:digital_saver/screens/bp_screen.dart';
-import 'package:digital_saver/screens/dashboard_screen.dart';
-import 'package:digital_saver/screens/device_diagnostics_screen.dart';
-import 'package:digital_saver/screens/fitness_tools_screen.dart';
-import 'package:digital_saver/screens/health_hub_screen.dart';
-import 'package:digital_saver/screens/health_tips_screen.dart';
-import 'package:digital_saver/screens/health_trends_screen.dart';
-import 'package:digital_saver/screens/heart_screen.dart';
-import 'package:digital_saver/screens/insights_screen.dart';
-import 'package:digital_saver/screens/lock_screen.dart';
-import 'package:digital_saver/screens/lifestyle_tools_screen.dart';
-import 'package:digital_saver/screens/memory_screen.dart';
-import 'package:digital_saver/screens/settings_screen.dart';
-import 'package:digital_saver/screens/sleep_screen.dart';
-import 'package:digital_saver/screens/vitals_screen.dart';
-import 'package:digital_saver/screens/watch_simulator_screen.dart';
-import 'package:digital_saver/screens/wellness_tools_screen.dart';
+import 'package:digital_saver/features/screens/achievements_screen.dart';
+import 'package:digital_saver/features/screens/activity_screen.dart';
+import 'package:digital_saver/features/screens/ai_assistant_screen.dart';
+import 'package:digital_saver/features/screens/bp_screen.dart';
+import 'package:digital_saver/features/screens/dashboard_screen.dart';
+import 'package:digital_saver/features/screens/device_diagnostics_screen.dart';
+import 'package:digital_saver/features/screens/fitness_tools_screen.dart';
+import 'package:digital_saver/features/screens/health_hub_screen.dart';
+import 'package:digital_saver/features/screens/health_tips_screen.dart';
+import 'package:digital_saver/features/screens/health_trends_screen.dart';
+import 'package:digital_saver/features/screens/heart_screen.dart';
+import 'package:digital_saver/features/screens/insights_screen.dart';
+import 'package:digital_saver/features/screens/lock_screen.dart';
+import 'package:digital_saver/features/screens/lifestyle_tools_screen.dart';
+import 'package:digital_saver/features/screens/memory_screen.dart';
+import 'package:digital_saver/features/screens/settings_screen.dart';
+import 'package:digital_saver/features/screens/sleep_screen.dart';
+import 'package:digital_saver/features/screens/vitals_screen.dart';
+import 'package:digital_saver/features/screens/watch_simulator_screen.dart';
+import 'package:digital_saver/features/screens/wellness_tools_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -293,11 +293,11 @@ void main() {
 
   test('every screen in lib/screens is covered', () {
     // Guards against a new screen being added and never looked at.
-    final onDisk = Directory('lib/screens')
-        .listSync()
+    final onDisk = Directory('lib/features/screens')
+        .listSync(recursive: true)
         .whereType<File>()
         .where((f) => f.path.endsWith('_screen.dart'))
-        .map((f) => f.uri.pathSegments[2].replaceAll('_screen.dart', ''))
+        .map((f) => f.uri.pathSegments.last.replaceAll('_screen.dart', ''))
         .where((n) => !n.startsWith('web_landing'))
         .toSet();
 

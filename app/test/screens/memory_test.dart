@@ -2,9 +2,9 @@
 // log gets an empty state; a log with two rows gets the two rows' actual
 // averages. The pull control is disabled, with a reason, until a watch connects.
 
-import 'package:digital_saver/screens/memory_screen.dart';
-import 'package:digital_saver/services/ble_service.dart';
-import 'package:digital_saver/services/local_store.dart';
+import 'package:digital_saver/features/screens/memory_screen.dart';
+import 'package:digital_saver/core/services/ble_service.dart';
+import 'package:digital_saver/core/services/local_store.dart';
 import 'package:cambric_design/cambric_design.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';

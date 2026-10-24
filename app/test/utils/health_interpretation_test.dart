@@ -1,6 +1,6 @@
-import 'package:digital_saver/models/health_models.dart';
+import 'package:digital_saver/core/models/health_models.dart';
 import 'package:cambric_design/cambric_design.dart';
-import 'package:digital_saver/utils/health_interpretation.dart';
+import 'package:digital_saver/shared/utils/health_interpretation.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// Every screen that shows a reading asks this module what it means. If it is

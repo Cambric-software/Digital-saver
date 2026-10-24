@@ -1,5 +1,5 @@
-import 'package:digital_saver/services/emergency_service.dart';
-import 'package:digital_saver/services/gemini_service.dart';
+import 'package:digital_saver/core/services/emergency_service.dart';
+import 'package:digital_saver/core/services/gemini_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// The AI assistant must never hand out an emergency number that disagrees with

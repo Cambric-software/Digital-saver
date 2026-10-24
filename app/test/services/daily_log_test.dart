@@ -6,7 +6,7 @@
 /// yesterday's count fails here rather than on the phone.
 library;
 
-import 'package:digital_saver/services/daily_log.dart';
+import 'package:digital_saver/core/services/daily_log.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 

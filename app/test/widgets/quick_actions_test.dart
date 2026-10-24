@@ -6,10 +6,10 @@
 /// disconnected watch disables the memory action instead of pretending to sync.
 library;
 
-import 'package:digital_saver/services/ble_service.dart';
-import 'package:digital_saver/services/daily_log.dart';
+import 'package:digital_saver/core/services/ble_service.dart';
+import 'package:digital_saver/core/services/daily_log.dart';
 import 'package:cambric_design/cambric_design.dart';
-import 'package:digital_saver/widgets/quick_actions_widget.dart';
+import 'package:digital_saver/features/widgets/quick_actions_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';

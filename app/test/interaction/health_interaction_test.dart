@@ -6,13 +6,13 @@
 // them, and say so in the report.
 library;
 
-import 'package:digital_saver/screens/achievements_screen.dart';
-import 'package:digital_saver/screens/bp_screen.dart';
-import 'package:digital_saver/screens/health_hub_screen.dart';
-import 'package:digital_saver/screens/health_tips_screen.dart';
-import 'package:digital_saver/screens/health_trends_screen.dart';
-import 'package:digital_saver/services/local_store.dart';
-import 'package:digital_saver/services/storage_service.dart';
+import 'package:digital_saver/features/screens/achievements_screen.dart';
+import 'package:digital_saver/features/screens/bp_screen.dart';
+import 'package:digital_saver/features/screens/health_hub_screen.dart';
+import 'package:digital_saver/features/screens/health_tips_screen.dart';
+import 'package:digital_saver/features/screens/health_trends_screen.dart';
+import 'package:digital_saver/core/services/local_store.dart';
+import 'package:digital_saver/core/services/storage_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';

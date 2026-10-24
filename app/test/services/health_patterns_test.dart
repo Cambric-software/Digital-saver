@@ -6,8 +6,8 @@
 /// separately so a missing heart rate cannot hide a real oxygen reading.
 library;
 
-import 'package:digital_saver/services/health_analysis_service_v2.dart';
-import 'package:digital_saver/services/local_store.dart';
+import 'package:digital_saver/core/services/health_analysis_service_v2.dart';
+import 'package:digital_saver/core/services/local_store.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 WatchSample _sample(

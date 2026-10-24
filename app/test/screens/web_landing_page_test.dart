@@ -1,5 +1,5 @@
-import 'package:digital_saver/screens/web_landing_page.dart';
-import 'package:digital_saver/widgets/glassmorphic_widgets.dart';
+import 'package:digital_saver/features/screens/web_landing_page.dart';
+import 'package:digital_saver/features/widgets/glassmorphic_widgets.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 

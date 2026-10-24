@@ -1,9 +1,9 @@
 import 'dart:io';
 
 import 'package:crypto/crypto.dart';
-import 'package:digital_saver/services/auto_update_service.dart';
-import 'package:digital_saver/services/release_assets.dart';
-import 'package:digital_saver/services/update_service.dart';
+import 'package:digital_saver/core/services/auto_update_service.dart';
+import 'package:digital_saver/core/services/release_assets.dart';
+import 'package:digital_saver/core/services/update_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// 64 hex characters, built the Dart way.
@@ -287,7 +287,7 @@ void main() {
         'digital_saver_windows_setup.exe',
         'digital_saver_linux_installer.run',
       ];
-      final source = File('lib/services/app_version.dart').readAsStringSync();
+      final source = File('lib/core/services/app_version.dart').readAsStringSync();
       for (final name in invented) {
         expect(
           source.contains("'$name'"),

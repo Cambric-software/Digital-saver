@@ -5,16 +5,16 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'services/ble_service.dart';
-import 'services/app_lock.dart';
-import 'services/theme_service.dart';
-import 'services/locale_service.dart';
-import 'services/auto_update_service.dart';
-import 'services/heart_rate_tracker.dart';
-import 'screens/lock_screen.dart';
-import 'screens/web_landing_page.dart';
-import 'widgets/ds_shell.dart';
-import 'widgets/enhanced_splash.dart';
+import 'core/services/ble_service.dart';
+import 'core/services/app_lock.dart';
+import 'core/services/theme_service.dart';
+import 'core/services/locale_service.dart';
+import 'core/services/auto_update_service.dart';
+import 'core/services/heart_rate_tracker.dart';
+import 'features/screens/lock_screen.dart';
+import 'features/screens/web_landing_page.dart';
+import 'features/widgets/ds_shell.dart';
+import 'features/widgets/enhanced_splash.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
