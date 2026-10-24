@@ -38,8 +38,8 @@ import '../services/local_store.dart';
 import '../services/locale_service.dart';
 import '../services/storage_service.dart';
 import '../services/theme_service.dart';
-import '../theme/design_tokens.dart';
-import '../widgets/ds_widgets.dart';
+import 'package:cambric_design/cambric_design.dart';
+import 'package:cambric_design/cambric_design.dart';
 
 /// Appearance, the watch, alerts, records and the release.
 class SettingsScreen extends StatefulWidget {

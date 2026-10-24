@@ -27,9 +27,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/health_models.dart';
 import '../services/daily_log.dart';
 import '../services/local_store.dart';
-import '../theme/design_tokens.dart';
+import 'package:cambric_design/cambric_design.dart';
 import '../widgets/ds_timers.dart';
-import '../widgets/ds_widgets.dart';
+import 'package:cambric_design/cambric_design.dart';
 
 /// Daily habits and two calculators, nothing diagnostic.
 class LifestyleToolsScreen extends StatefulWidget {

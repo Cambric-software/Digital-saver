@@ -1,8 +1,8 @@
 import 'package:digital_saver/models/health_models.dart';
 import 'package:digital_saver/screens/dashboard_screen.dart';
 import 'package:digital_saver/services/ble_service.dart';
-import 'package:digital_saver/theme/app_colors.dart';
-import 'package:digital_saver/theme/app_theme.dart';
+import 'package:cambric_design/cambric_design.dart';
+import 'package:cambric_design/cambric_design.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';

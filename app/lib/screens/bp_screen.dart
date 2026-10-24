@@ -16,10 +16,10 @@ import 'package:provider/provider.dart';
 import '../models/health_models.dart';
 import '../services/ble_service.dart';
 import '../services/health_analysis_service.dart';
-import '../theme/app_colors.dart';
-import '../theme/design_tokens.dart';
+import 'package:cambric_design/cambric_design.dart';
+import 'package:cambric_design/cambric_design.dart';
 import '../utils/health_interpretation.dart';
-import '../widgets/ds_widgets.dart';
+import 'package:cambric_design/cambric_design.dart';
 
 /// Blood pressure in detail.
 class BpScreen extends StatelessWidget {

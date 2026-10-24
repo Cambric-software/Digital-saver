@@ -20,7 +20,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
-import '../theme/app_theme.dart';
+import 'package:cambric_design/cambric_design.dart';
 import 'dynamic_theme_service.dart';
 import 'storage_service.dart';
 

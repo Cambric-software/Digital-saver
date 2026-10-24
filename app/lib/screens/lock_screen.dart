@@ -15,8 +15,8 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../services/app_lock.dart';
-import '../theme/design_tokens.dart';
-import '../widgets/ds_widgets.dart';
+import 'package:cambric_design/cambric_design.dart';
+import 'package:cambric_design/cambric_design.dart';
 
 /// Shows [child] unless a PIN is set and not yet entered.
 class LockGate extends StatelessWidget {

@@ -37,11 +37,11 @@ import '../services/ble_service.dart';
 import '../services/daily_log.dart';
 import '../services/local_store.dart';
 import '../services/storage_service.dart';
-import '../theme/app_colors.dart';
-import '../theme/design_tokens.dart';
+import 'package:cambric_design/cambric_design.dart';
+import 'package:cambric_design/cambric_design.dart';
 import '../utils/health_interpretation.dart';
 import '../widgets/ds_timers.dart';
-import '../widgets/ds_widgets.dart';
+import 'package:cambric_design/cambric_design.dart';
 
 /// Training aids and logged effort, with no simulated measurements.
 class FitnessToolsScreen extends StatefulWidget {

@@ -27,10 +27,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../services/ble_service.dart';
 import '../services/daily_log.dart';
-import '../theme/app_colors.dart';
-import '../theme/design_tokens.dart';
+import 'package:cambric_design/cambric_design.dart';
+import 'package:cambric_design/cambric_design.dart';
 import '../widgets/ds_timers.dart';
-import '../widgets/ds_widgets.dart';
+import 'package:cambric_design/cambric_design.dart';
 
 /// Everyday wellness habits that are logged, not measured.
 class WellnessToolsScreen extends StatefulWidget {

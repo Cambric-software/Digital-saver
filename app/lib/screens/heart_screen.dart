@@ -29,10 +29,10 @@ import 'package:provider/provider.dart';
 import '../services/ble_service.dart';
 import '../services/health_analysis_service.dart';
 import '../services/heart_rate_tracker.dart';
-import '../theme/app_colors.dart';
-import '../theme/design_tokens.dart';
+import 'package:cambric_design/cambric_design.dart';
+import 'package:cambric_design/cambric_design.dart';
 import '../utils/health_interpretation.dart';
-import '../widgets/ds_widgets.dart';
+import 'package:cambric_design/cambric_design.dart';
 import '../widgets/enhanced_animations.dart';
 
 /// Live heart rate and the detail behind it.

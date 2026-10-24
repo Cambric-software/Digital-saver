@@ -13,7 +13,7 @@ import 'package:digital_saver/screens/insights_screen.dart';
 import 'package:digital_saver/screens/sleep_screen.dart';
 import 'package:digital_saver/screens/vitals_screen.dart';
 import 'package:digital_saver/services/daily_log.dart';
-import 'package:digital_saver/widgets/ds_widgets.dart';
+import 'package:cambric_design/cambric_design.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';

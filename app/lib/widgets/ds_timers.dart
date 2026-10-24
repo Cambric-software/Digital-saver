@@ -17,8 +17,8 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
-import '../theme/design_tokens.dart';
-import 'ds_widgets.dart';
+import 'package:cambric_design/cambric_design.dart';
+import 'package:cambric_design/cambric_design.dart';
 
 /// How often the controls update. Fast enough to look live, slow enough not to
 /// rebuild the screen 60 times a second for a 2-minute timer.

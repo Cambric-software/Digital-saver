@@ -20,10 +20,10 @@ import 'package:provider/provider.dart';
 
 import '../models/health_models.dart';
 import '../services/ble_service.dart';
-import '../theme/app_colors.dart';
+import 'package:cambric_design/cambric_design.dart';
 import '../utils/health_interpretation.dart';
-import '../theme/design_tokens.dart';
-import '../widgets/ds_widgets.dart';
+import 'package:cambric_design/cambric_design.dart';
+import 'package:cambric_design/cambric_design.dart';
 import '../widgets/quick_actions_widget.dart';
 import 'bp_screen.dart';
 

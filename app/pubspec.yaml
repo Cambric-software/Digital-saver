@@ -9,6 +9,10 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  cambric_design:
+    git:
+      url: https://github.com/Cambric-software/app-template.git
+      path: packages/cambric_design
   cupertino_icons: ^1.0.6
   flutter_blue_plus: ^1.31.15
   fl_chart: ^0.69.0

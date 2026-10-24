@@ -11,7 +11,7 @@ import 'package:digital_saver/services/heart_rate_tracker.dart';
 import 'package:digital_saver/services/locale_service.dart';
 import 'package:digital_saver/services/storage_service.dart';
 import 'package:digital_saver/services/theme_service.dart';
-import 'package:digital_saver/theme/app_theme.dart';
+import 'package:cambric_design/cambric_design.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';

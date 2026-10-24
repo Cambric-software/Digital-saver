@@ -17,9 +17,9 @@ library;
 import 'package:flutter/material.dart';
 
 import '../services/storage_service.dart';
-import '../theme/design_tokens.dart';
+import 'package:cambric_design/cambric_design.dart';
 import '../widgets/ds_timers.dart';
-import '../widgets/ds_widgets.dart';
+import 'package:cambric_design/cambric_design.dart';
 import 'bp_screen.dart';
 import 'device_diagnostics_screen.dart';
 import 'fitness_tools_screen.dart';

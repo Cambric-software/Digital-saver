@@ -27,10 +27,10 @@ import 'package:provider/provider.dart';
 
 import '../services/ble_service.dart';
 import '../services/local_store.dart';
-import '../theme/app_colors.dart';
-import '../theme/design_tokens.dart';
+import 'package:cambric_design/cambric_design.dart';
+import 'package:cambric_design/cambric_design.dart';
 import '../utils/health_interpretation.dart';
-import '../widgets/ds_widgets.dart';
+import 'package:cambric_design/cambric_design.dart';
 
 /// What the app's bands mean for the readings it has.
 class HealthTipsScreen extends StatefulWidget {

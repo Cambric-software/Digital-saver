@@ -23,9 +23,9 @@ import '../services/ble_service.dart';
 import '../services/local_store.dart';
 import '../services/memory_analyzer.dart';
 import '../services/veyro_protocol.dart';
-import '../theme/app_colors.dart';
-import '../theme/design_tokens.dart';
-import '../widgets/ds_widgets.dart';
+import 'package:cambric_design/cambric_design.dart';
+import 'package:cambric_design/cambric_design.dart';
+import 'package:cambric_design/cambric_design.dart';
 
 /// Saved watch history, and how much the watch is still holding.
 class MemoryScreen extends StatefulWidget {

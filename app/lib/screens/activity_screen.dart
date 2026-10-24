@@ -24,9 +24,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../services/ble_service.dart';
-import '../theme/app_colors.dart';
-import '../theme/design_tokens.dart';
-import '../widgets/ds_widgets.dart';
+import 'package:cambric_design/cambric_design.dart';
+import 'package:cambric_design/cambric_design.dart';
+import 'package:cambric_design/cambric_design.dart';
 
 /// The daily step goal. A configurable target would be better; this is the
 /// commonly used adult default and it is stated rather than implied.

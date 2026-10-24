@@ -18,7 +18,7 @@
 library;
 
 import '../models/health_models.dart';
-import '../theme/app_colors.dart';
+import 'package:cambric_design/cambric_design.dart';
 
 /// A reading at or below this is "no data", not a measurement.
 ///

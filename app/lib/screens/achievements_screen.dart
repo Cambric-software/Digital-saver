@@ -22,8 +22,8 @@ import 'package:flutter/material.dart';
 
 import '../services/local_store.dart';
 import '../services/veyro_protocol.dart';
-import '../theme/design_tokens.dart';
-import '../widgets/ds_widgets.dart';
+import 'package:cambric_design/cambric_design.dart';
+import 'package:cambric_design/cambric_design.dart';
 
 /// Distinct local calendar days that contain at least one sample.
 ///

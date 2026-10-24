@@ -8,7 +8,7 @@ library;
 
 import 'package:digital_saver/screens/health_trends_screen.dart';
 import 'package:digital_saver/services/local_store.dart';
-import 'package:digital_saver/theme/app_theme.dart';
+import 'package:cambric_design/cambric_design.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 

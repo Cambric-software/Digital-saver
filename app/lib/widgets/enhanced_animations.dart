@@ -17,7 +17,7 @@ library;
 
 import 'package:flutter/material.dart';
 
-import '../theme/app_colors.dart';
+import 'package:cambric_design/cambric_design.dart';
 
 /// A ring that expands once per heartbeat.
 class HeartPulseRing extends StatefulWidget {

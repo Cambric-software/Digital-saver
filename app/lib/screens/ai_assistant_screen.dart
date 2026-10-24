@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/digital_saver_ai.dart';
 import '../services/ble_service.dart';
-import '../theme/app_theme.dart';
+import 'package:cambric_design/cambric_design.dart';
 
 class AIAssistantScreen extends StatefulWidget {
   const AIAssistantScreen({super.key});

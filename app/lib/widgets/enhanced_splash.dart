@@ -17,8 +17,8 @@ library;
 import 'package:flutter/material.dart';
 
 import '../main.dart' show MainNav;
-import '../theme/app_colors.dart';
-import '../theme/design_tokens.dart';
+import 'package:cambric_design/cambric_design.dart';
+import 'package:cambric_design/cambric_design.dart';
 import 'creative_effects.dart';
 
 /// The app's opening screen.

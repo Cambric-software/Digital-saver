@@ -13,8 +13,8 @@ library;
 
 import 'package:flutter/material.dart';
 
-import '../theme/design_tokens.dart';
-import '../widgets/ds_widgets.dart';
+import 'package:cambric_design/cambric_design.dart';
+import 'package:cambric_design/cambric_design.dart';
 import 'achievements_screen.dart';
 import 'health_tips_screen.dart';
 import 'health_trends_screen.dart';

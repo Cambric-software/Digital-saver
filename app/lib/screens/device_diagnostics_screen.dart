@@ -26,8 +26,8 @@ import 'package:provider/provider.dart';
 
 import '../services/ble_service.dart';
 import '../services/storage_service.dart';
-import '../theme/design_tokens.dart';
-import '../widgets/ds_widgets.dart';
+import 'package:cambric_design/cambric_design.dart';
+import 'package:cambric_design/cambric_design.dart';
 
 /// The watch as the app can actually see it.
 class DeviceDiagnosticsScreen extends StatefulWidget {

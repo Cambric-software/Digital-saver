@@ -36,10 +36,10 @@ import 'package:flutter/material.dart';
 import '../services/health_analysis_service_v2.dart';
 import '../services/local_store.dart';
 import '../services/veyro_protocol.dart';
-import '../theme/app_colors.dart';
-import '../theme/design_tokens.dart';
+import 'package:cambric_design/cambric_design.dart';
+import 'package:cambric_design/cambric_design.dart';
 import '../utils/health_interpretation.dart';
-import '../widgets/ds_widgets.dart';
+import 'package:cambric_design/cambric_design.dart';
 
 /// The time window a trend view covers.
 enum TrendPeriod {

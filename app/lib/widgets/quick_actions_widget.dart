@@ -26,8 +26,8 @@ import '../screens/lifestyle_tools_screen.dart';
 import '../screens/wellness_tools_screen.dart';
 import '../services/ble_service.dart';
 import '../services/daily_log.dart';
-import '../theme/design_tokens.dart';
-import 'ds_widgets.dart';
+import 'package:cambric_design/cambric_design.dart';
+import 'package:cambric_design/cambric_design.dart';
 
 /// The quick-action panel used on the Today screen.
 class QuickActionsCard extends StatefulWidget {

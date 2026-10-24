@@ -73,6 +73,15 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.1.1"
+  cambric_design:
+    dependency: "direct main"
+    description:
+      path: "packages/cambric_design"
+      ref: HEAD
+      resolved-ref: "8e8ae2949b09f883fb08f081fafe47c483612cfe"
+      url: "https://github.com/Cambric-software/app-template.git"
+    source: git
+    version: "0.1.0"
   characters:
     dependency: transitive
     description:

@@ -17,9 +17,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../services/ble_service.dart';
-import '../theme/app_colors.dart';
-import '../theme/design_tokens.dart';
-import '../widgets/ds_widgets.dart';
+import 'package:cambric_design/cambric_design.dart';
+import 'package:cambric_design/cambric_design.dart';
+import 'package:cambric_design/cambric_design.dart';
 import '../screens/dashboard_screen.dart';
 import '../screens/health_hub_screen.dart';
 import '../screens/insights_screen.dart';
