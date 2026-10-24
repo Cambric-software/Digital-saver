@@ -13,25 +13,20 @@ Read the document that matches what you are doing.
 
 | Document | Read it when |
 |---|---|
-| [HARDWARE.md](HARDWARE.md) | You are buying parts, wiring the ESP32 bench prototype, or checking what the bench build still has to measure. Start here for the bench. |
 | [HARDWARE_DESIGN.md](HARDWARE_DESIGN.md) | You are deciding or buying production hardware. It selects the architecture, sources the parts and prices 1,000 and 10,000 units. Start here for the product. |
-| [11_PRODUCTION_WATCH_SPEC.md](11_PRODUCTION_WATCH_SPEC.md) | You need the 7,500 EGP commercial target and the acceptance gates. Its hardware sections are superseded by `HARDWARE_DESIGN.md`. |
+| [VEYRO_DEMO_BOM.md](VEYRO_DEMO_BOM.md) | You need the sourced demo-unit BOM (~9,500 EGP). |
 
 ## Firmware
 
 | Document | Read it when |
 |---|---|
-| [FIRMWARE.md](FIRMWARE.md) | You are building, flashing or diagnosing either firmware target. **Start here for firmware.** |
-| [FIRMWARE_FEATURES.md](FIRMWARE_FEATURES.md) | You need one page saying which prototype features are implemented and which are not. |
-| [UPGRADE_GUIDE.md](UPGRADE_GUIDE.md) | You are changing firmware or app versions, or rolling a release back. |
+| [FIRMWARE_PLAN.md](FIRMWARE_PLAN.md) | You are planning the RV1106 firmware. |
 
 ## App and protocol
 
 | Document | Read it when |
 |---|---|
-| [APP_GUIDE.md](APP_GUIDE.md) | You are working inside the Flutter app: entry point, providers, BLE, storage, screens. |
-| [SYSTEM.md](SYSTEM.md) | You need the whole data path: watch storage, BLE contract, phone storage, security, build and release checks. |
-| [INTERACTION-TESTS.md](INTERACTION-TESTS.md) | You are changing a screen and need to know which controls are covered by behaviour tests, and which are not. |
+| [ROADMAP.md](ROADMAP.md) | You are deciding what to build next. |
 
 ## Conventions
 
