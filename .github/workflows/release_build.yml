@@ -1,0 +1,311 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+env:
+  # Single source of truth for the version every job stamps into its output.
+  RELEASE_VERSION: ${{ github.ref_name }}
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Install dependencies
+        working-directory: app
+        run: flutter pub get
+
+      # Gate on both before anything is published. The previous workflow built
+      # and released without either check.
+      - name: Analyze
+        working-directory: app
+        shell: bash
+        run: |
+          # Gate on errors only.
+          #
+          # `flutter analyze` exits non-zero for info-level style lints as
+          # well, so gating on its exit code fails the release on formatting.
+          # Warnings are printed but not fatal, because CI runs a newer stable
+          # SDK than local development does and it promotes lints such as
+          # unused_local_variable from info to warning, so the same clean
+          # commit would pass here and fail there. Only an error can produce
+          # code that does not work.
+          flutter analyze > analysis.txt 2>&1 || true
+          if grep -qE '^[[:space:]]*error[[:space:]]+-' analysis.txt; then
+            cat analysis.txt
+            echo "::error::Analyzer reported errors"
+            exit 1
+          fi
+          echo "No analyzer errors."
+          grep -cE '^[[:space:]]*(warning|info)[[:space:]]+-' analysis.txt || true
+
+      - name: Test
+        working-directory: app
+        run: flutter test
+
+      - name: Build Windows
+        working-directory: app
+        run: flutter build windows --release
+
+      - name: Stage the versioned install layout
+        shell: pwsh
+        run: |
+          # The installer lays the app out as <root>/versions/<version>/ with a
+          # current.txt pointer, which is what lets the app update itself later
+          # without overwriting files Windows has open.
+          $version = (($env:RELEASE_VERSION -replace '^v', '') -split '-')[0]
+          New-Item -ItemType Directory -Force -Path staging | Out-Null
+          Copy-Item "app/build/windows/x64/runner/Release/*" staging -Recurse -Force
+          [System.IO.File]::WriteAllText("$PWD/staging-current.txt", $version)
+
+      - name: Package the portable zip
+        shell: pwsh
+        run: |
+          $src = "app/build/windows/x64/runner/Release"
+          Compress-Archive -Path "$src/*" -DestinationPath windows.zip
+          $hash = (Get-FileHash windows.zip -Algorithm SHA256).Hash.ToLower()
+          "$hash  windows.zip" | Out-File -FilePath windows.zip.sha256 -Encoding ASCII
+
+      - name: Install Inno Setup
+        run: choco install innosetup --yes --no-progress --limit-output
+
+      - name: Build the setup executable
+        shell: pwsh
+        run: |
+          $version = (($env:RELEASE_VERSION -replace '^v', '') -split '-')[0]
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) { throw "ISCC.exe not found at $iscc" }
+          & $iscc "/DAppVersion=$version" "installer\digital_saver.iss"
+          if ($LASTEXITCODE -ne 0) { throw "Inno Setup failed with $LASTEXITCODE" }
+
+      - name: Checksum the installer and add a stable alias
+        shell: pwsh
+        run: |
+          # The download page links releases/latest/download/<name>, which
+          # needs a filename that does not change every release. Publish the
+          # versioned file people keep on disk, plus a stable alias for the
+          # page. Both are the same bytes.
+          $installer = Get-ChildItem release-out -Filter "DigitalSaver-Setup-*.exe" | Select-Object -First 1
+          if (-not $installer) { throw "No installer exe was produced" }
+          if ($installer.Length -lt 100000) { throw "Installer is implausibly small" }
+          $hash = (Get-FileHash $installer.FullName -Algorithm SHA256).Hash.ToLower()
+          "$hash  $($installer.Name)" | Out-File -FilePath "release-out/$($installer.Name).sha256" -Encoding ASCII
+
+          Copy-Item $installer.FullName "release-out/DigitalSaver-Setup.exe" -Force
+          $aliasHash = (Get-FileHash "release-out/DigitalSaver-Setup.exe" -Algorithm SHA256).Hash.ToLower()
+          "$aliasHash  DigitalSaver-Setup.exe" | Out-File -FilePath "release-out/DigitalSaver-Setup.exe.sha256" -Encoding ASCII
+          Get-ChildItem release-out | Select-Object Name, Length
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows
+          path: |
+            windows.zip
+            windows.zip.sha256
+            release-out/
+
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update -y
+          # libsecret-1-dev is required by flutter_secure_storage_linux, which
+          # backs the watch pairing PIN. Without it CMake stops at
+          # pkg_check_modules with "libsecret-1>=0.18.4" and the build cannot
+          # generate at all.
+          sudo apt-get install -y clang cmake ninja-build pkg-config \
+            libgtk-3-dev liblzma-dev libstdc++-12-dev \
+            libsecret-1-dev libjsoncpp-dev
+
+      - name: Install dependencies
+        working-directory: app
+        run: flutter pub get
+
+      - name: Analyze
+        working-directory: app
+        shell: bash
+        run: |
+          # Gate on errors only, matching the Windows job above.
+          # `flutter analyze` exits non-zero for info-level style lints too, and
+          # CI runs a newer stable SDK than local development, which promotes
+          # lints such as unused_local_variable from info to warning. Gating on
+          # warnings made this job fail on the same code the Windows job
+          # accepted. Only an error can produce code that does not work.
+          flutter analyze > analysis.txt 2>&1 || true
+          if grep -qE '^[[:space:]]*error[[:space:]]+-' analysis.txt; then
+            cat analysis.txt
+            echo "::error::Analyzer reported errors"
+            exit 1
+          fi
+          echo "No analyzer errors."
+
+      - name: Test
+        working-directory: app
+        run: flutter test
+
+      - name: Create Linux scaffold
+        working-directory: app
+        run: |
+          # This repository has no committed linux/ directory, so
+          # `flutter build linux` fails with "No Linux desktop project
+          # configured". The previous release workflow generated the scaffold
+          # on the fly and so must this one; the build output is what is
+          # packaged, not the scaffold.
+          flutter config --enable-linux-desktop
+          flutter create --platforms=linux .
+
+      - name: Build Linux
+        working-directory: app
+        run: flutter build linux --release
+
+      - name: Package the portable tarball
+        run: |
+          tar -czf linux.tar.gz -C app/build/linux/x64/release/bundle .
+          sha256sum linux.tar.gz > linux.tar.gz.sha256
+
+      - name: Build the .deb package
+        run: |
+          # Versioned layout, mirroring the Windows installer, so a .deb install
+          # can also update itself in place.
+          set -euo pipefail
+          # Strip any pre-release suffix: dpkg versions cannot contain it.
+          VERSION="${RELEASE_VERSION#v}"
+          VERSION="${VERSION%%-*}"
+          PKG="digital-saver"
+          ROOT="debroot"
+          # RELATIVE for building the tree, ABSOLUTE for anything the installed
+          # system will execute or read. Conflating the two put a staging path
+          # into the desktop Exec on the last attempt, so the launcher pointed
+          # somewhere that does not exist once installed.
+          INSTALL_ABS="/usr/lib/digital-saver"
+          INSTALL="$ROOT$INSTALL_ABS"
+          # Every directory must exist before any file is written into it.
+          mkdir -p "$INSTALL/versions/$VERSION" \
+                   "$ROOT/DEBIAN" \
+                   "$ROOT/usr/share/applications" \
+                   "$ROOT/usr/share/icons/hicolor/x-icon/apps"
+          cp -r app/build/linux/x64/release/bundle/. "$INSTALL/versions/$VERSION/"
+          printf '%s' "$VERSION" > "$INSTALL/current.txt"
+          cat > "$ROOT/DEBIAN/control" <<EOF
+          Package: $PKG
+          Version: $VERSION
+          Section: utils
+          Priority: optional
+          Architecture: amd64
+          Maintainer: Cambric Software <support@cambric.dev>
+          Depends: libgtk-3-0, libstdc++6
+          Installed-Size: $(du -sk "$INSTALL" | cut -f1)
+          Description: Smartwatch health monitoring with emergency alerts.
+           Digital Saver reads heart rate, blood pressure, oxygen saturation,
+           sleep and activity from a Veyro watch and explains what they mean.
+          EOF
+          cat > "$ROOT/usr/share/applications/digital-saver.desktop" <<EOF
+          [Desktop Entry]
+          Type=Application
+          Name=Digital Saver
+          Comment=Smartwatch health monitoring
+          Exec=$INSTALL_ABS/versions/$VERSION/digital_saver
+          Icon=digital-saver
+          Categories=Utility;MedicalSoftware;
+          Terminal=false
+          EOF
+          dpkg-deb --build --root-owner-group "$ROOT" "digital-saver_$VERSION.deb"
+          sha256sum "digital-saver_$VERSION.deb" > "digital-saver_$VERSION.deb.sha256"
+          # Stable alias so the download page can link releases/latest/download.
+          cp "digital-saver_$VERSION.deb" digital-saver.deb
+          sha256sum digital-saver.deb > digital-saver.deb.sha256
+          ls -la digital-saver*.deb*
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux
+          path: |
+            linux.tar.gz
+            linux.tar.gz.sha256
+            *.deb
+            *.deb.sha256
+
+  build-android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Install dependencies
+        working-directory: app
+        run: flutter pub get
+
+      - name: Build APK
+        working-directory: app
+        run: flutter build apk --release
+
+      - name: Checksum
+        run: |
+          cp app/build/app/outputs/flutter-apk/app-release.apk android.apk
+          sha256sum android.apk > android.apk.sha256
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android
+          path: |
+            android.apk
+            android.apk.sha256
+
+  release:
+    needs: [build-windows, build-linux, build-android]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: release-files
+
+      - name: List artifacts
+        run: find release-files -type f
+
+      - name: Assemble the asset list
+        id: assets
+        run: |
+          # Build the file list from whatever actually exists, so a platform
+          # that failed to produce an installer cannot silently leave a dead
+          # download button.
+          {
+            echo "files<<EOF"
+            find release-files -type f \( -name '*.zip' -o -name '*.tar.gz' \
+              -o -name '*.exe' -o -name '*.deb' -o -name '*.apk' \
+              -o -name '*.sha256' \) | sort
+            echo EOF
+          } >> "$GITHUB_OUTPUT"
+          cat "$GITHUB_OUTPUT"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          fail_on_unmatched_files: true
+          files: ${{ steps.assets.outputs.files }}

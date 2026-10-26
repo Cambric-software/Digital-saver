@@ -1,0 +1,858 @@
+diff --git a/.github/workflows/release_build.yml b/.github/workflows/release_build.yml
+new file mode 100644
+index 0000000..21e4022
+--- /dev/null
++++ b/.github/workflows/release_build.yml
+@@ -0,0 +1,125 @@
++name: Build Release (Android & Windows)
++
++on:
++  push:
++    tags:
++      - 'v*'
++  workflow_dispatch:
++    inputs:
++      release_version:
++        description: 'Release version (e.g., v1.0.0-beta)'
++        required: false
++        type: string
++
++jobs:
++  build-android:
++    name: Build Android APK
++    runs-on: ubuntu-latest
++    
++    steps:
++      - name: Checkout code
++        uses: actions/checkout@v4
++
++      - name: Setup Flutter
++        uses: subosito/flutter-action@v2
++        with:
++          flutter-version: '3.24.0'
++          channel: 'stable'
++
++      - name: Install dependencies
++        run: cd app && flutter pub get
++
++      - name: Build Android APK (Release)
++        run: cd app && flutter build apk --release
++
++      - name: Rename APK
++        run: |
++          cd app/build/app/outputs/flutter-apk
++          # Get version from tag or input
++          VERSION=${GITHUB_REF#refs/tags/}
++          if [ -z "$VERSION" ]; then
++            VERSION=${{ inputs.release_version || 'dev' }}
++          fi
++          mv app-release.apk "digital_saver_android_${VERSION}.apk"
++          ls -la
++
++      - name: Upload Android APK
++        uses: actions/upload-artifact@v4
++        with:
++          name: android-apk
++          path: app/build/app/outputs/flutter-apk/digital_saver_android_*.apk
++          retention-days: 30
++
++  build-windows:
++    name: Build Windows App
++    runs-on: windows-latest
++    
++    steps:
++      - name: Checkout code
++        uses: actions/checkout@v4
++
++      - name: Setup Flutter
++        uses: subosito/flutter-action@v2
++        with:
++          flutter-version: '3.24.0'
++          channel: 'stable'
++          windows-cache: true
++
++      - name: Install dependencies
++        run: cd app; flutter pub get
++
++      - name: Enable Windows desktop support
++        run: flutter config --enable-windows-desktop
++
++      - name: Build Windows App (Release)
++        run: cd app; flutter build windows --release
++
++      - name: Package Windows App
++        shell: pwsh
++        run: |
++          $VERSION = if ($env:GITHUB_REF) { $env:GITHUB_REF -replace 'refs/tags/', '' } else { '${{ inputs.release_version || 'dev' }}' }
++          Compress-Archive -Path "app/build/windows/runner/Release/*" -DestinationPath "digital_saver_windows_${VERSION}.zip" -Force
++          Get-ChildItem -Path . -Filter "*.zip"
++
++      - name: Upload Windows ZIP
++        uses: actions/upload-artifact@v4
++        with:
++          name: windows-app
++          path: digital_saver_windows_*.zip
++          retention-days: 30
++
++  create-release:
++    name: Create GitHub Release
++    needs: [build-android, build-windows]
++    runs-on: ubuntu-latest
++    permissions:
++      contents: write
++    
++    steps:
++      - name: Checkout code
++        uses: actions/checkout@v4
++
++      - name: Download Android APK
++        uses: actions/download-artifact@v4
++        with:
++          name: android-apk
++          path: artifacts
++
++      - name: Download Windows ZIP
++        uses: actions/download-artifact@v4
++        with:
++          name: windows-app
++          path: artifacts
++
++      - name: List artifacts
++        run: ls -la artifacts/
++
++      - name: Create Release
++        uses: softprops/action-gh-release@v1
++        with:
++          draft: false
++          prerelease: true
++          files: artifacts/*
++          generate_release_notes: true
++        env:
++          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+diff --git a/app/lib/main.dart b/app/lib/main.dart
+index 5075f85..28ff34d 100644
+--- a/app/lib/main.dart
++++ b/app/lib/main.dart
+@@ -78,8 +78,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
+   late AnimationController _controller;
+   late Animation<double> _fadeAnimation;
+   late Animation<double> _scaleAnimation;
+-  bool _showDisclaimer = true; // FORCE SHOW IMMEDIATELY
+-  bool _accepted = false;
++  bool _showDisclaimer = false;
+ 
+   @override
+   void initState() {
+@@ -93,7 +92,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
+     );
+     _controller.forward();
+ 
+-    // Show disclaimer after a short delay
++    // Show disclaimer after animation
+     Future.delayed(const Duration(milliseconds: 1500), () {
+       if (mounted) {
+         setState(() {
+@@ -101,15 +100,6 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
+         });
+       }
+     });
+-
+-    // FALLBACK: Show disclaimer after 3 seconds if not shown
+-    Future.delayed(const Duration(seconds: 3), () {
+-      if (mounted && !_showDisclaimer) {
+-        setState(() {
+-          _showDisclaimer = true;
+-        });
+-      }
+-    });
+   }
+ 
+   @override
+@@ -119,60 +109,24 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
+   }
+ 
+   void _acceptAndContinue() {
+-    // Skip auth entirely, go directly to sign in
+-    Navigator.of(context).pushReplacement(
+-      MaterialPageRoute(builder: (_) => AuthScreen(
+-        onSignedIn: () {
+-          Navigator.of(context).pushReplacement(
+-            MaterialPageRoute(builder: (_) => const MainNav()),
+-          );
+-        },
+-      )),
+-    );
+-    return;
+-  }
+-
+-  void _OLD_acceptAndContinue() {
+     final auth = context.read<AuthProvider>();
+-    setState(() {
+-      _accepted = true;
+-    });
+     
+-    // Wait for auth to finish loading before navigating
+-    Future.delayed(const Duration(milliseconds: 300), () async {
+-      // If still loading, wait for it (max 5 seconds to prevent infinite loop)
+-      final startTime = DateTime.now();
+-      if (auth.loading) {
+-        await Future.doWhile(() async {
+-          await Future.delayed(const Duration(milliseconds: 100));
+-          final elapsed = DateTime.now().difference(startTime).inSeconds;
+-          if (elapsed > 5) {
+-            debugPrint('Auth loading timeout after 5s, proceeding...');
+-            return false;
+-          }
+-          return context.mounted && auth.loading;
+-        });
+-      }
+-      
+-      if (mounted) {
+-        // Navigate based on auth status
+-        if (auth.isAuthenticated) {
+-          Navigator.of(context).pushReplacement(
+-            MaterialPageRoute(builder: (_) => const MainNav()),
+-          );
+-        } else {
+-          Navigator.of(context).pushReplacement(
+-            MaterialPageRoute(builder: (_) => AuthScreen(
+-              onSignedIn: () {
+-                Navigator.of(context).pushReplacement(
+-                  MaterialPageRoute(builder: (_) => const MainNav()),
+-                );
+-              },
+-            )),
+-          );
+-        }
+-      }
+-    });
++    // Navigate based on current auth state
++    if (auth.isAuthenticated) {
++      Navigator.of(context).pushReplacement(
++        MaterialPageRoute(builder: (_) => const MainNav()),
++      );
++    } else {
++      Navigator.of(context).pushReplacement(
++        MaterialPageRoute(builder: (_) => AuthScreen(
++          onSignedIn: () {
++            Navigator.of(context).pushReplacement(
++              MaterialPageRoute(builder: (_) => const MainNav()),
++            );
++          },
++        )),
++      );
++    }
+   }
+ 
+   @override
+@@ -283,7 +237,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
+                       ),
+                     ),
+                   const Spacer(),
+-                  if (_showDisclaimer && !_accepted)
++                  if (_showDisclaimer)
+                     Container(
+                       padding: const EdgeInsets.all(20),
+                       decoration: BoxDecoration(
+diff --git a/app/lib/screens/settings_screen.dart b/app/lib/screens/settings_screen.dart
+index 8d6fe2c..a145862 100644
+--- a/app/lib/screens/settings_screen.dart
++++ b/app/lib/screens/settings_screen.dart
+@@ -986,6 +986,10 @@ class _CambricAccountCard extends StatelessWidget {
+ // DOWNLOAD CARD - App downloads for all platforms
+ // ===========================================================================
+ class _DownloadCard extends StatelessWidget {
++  // Release download URLs - will be updated when releases are created
++  static const String _latestReleaseUrl = 'https://github.com/Cambric-software/Digital-saver/releases';
++  static const String _releasesApiUrl = 'https://api.github.com/repos/Cambric-software/Digital-saver/releases/latest';
++
+   @override
+   Widget build(BuildContext context) {
+     return Container(
+@@ -1017,49 +1021,52 @@ class _DownloadCard extends StatelessWidget {
+             style: TextStyle(color: Color(0xFF64748B), fontSize: 12),
+           ),
+           const SizedBox(height: 16),
++          
++          // Android - Real download
+           _DownloadButton(
+             icon: Icons.android,
+-            label: 'Build Android APK',
++            label: 'Download Android APK',
+             color: const Color(0xFF3DDC84),
+-            onTap: () => _openUrl('https://github.com/Cambric-software/Digital-saver/blob/main/README.md#building'),
+-          ),
+-          const SizedBox(height: 10),
+-          _DownloadButton(
+-            icon: Icons.apple,
+-            label: 'Build iOS App',
+-            color: const Color(0xFF000000),
+-            onTap: () => _showComingSoon(context, 'iOS'),
++            subtitle: 'Recommended',
++            onTap: () => _openUrl(_latestReleaseUrl),
+           ),
+           const SizedBox(height: 10),
++          
++          // Windows - Real download
+           _DownloadButton(
+             icon: Icons.desktop_windows,
+-            label: 'Build Windows App',
++            label: 'Download Windows App',
+             color: const Color(0xFF0078D4),
+-            onTap: () => _showComingSoon(context, 'Windows'),
++            subtitle: 'Windows 10+',
++            onTap: () => _openUrl(_latestReleaseUrl),
+           ),
+           const SizedBox(height: 10),
+-          _DownloadButton(
+-            icon: Icons.computer,
+-            label: 'Build Linux App',
+-            color: const Color(0xFFE95420),
+-            onTap: () => _showComingSoon(context, 'Linux'),
++          
++          // iOS - Coming Soon
++          _ComingSoonButton(
++            icon: Icons.apple,
++            label: 'iOS App',
++            color: const Color(0xFF000000),
++            note: 'Apple Developer account required',
+           ),
+           const SizedBox(height: 16),
++          
++          // Info box
+           Container(
+             padding: const EdgeInsets.all(12),
+             decoration: BoxDecoration(
+-              color: const Color(0xFFFFF3E0),
++              color: const Color(0xFFE3F2FD),
+               borderRadius: BorderRadius.circular(8),
+-              border: Border.all(color: const Color(0xFFFFB74D)),
++              border: Border.all(color: const Color(0xFF2563eb).withOpacity(0.3)),
+             ),
+-            child: const Row(
++            child: Row(
+               children: [
+-                Icon(Icons.info_outline, color: Color(0xFFE65100), size: 18),
++                Icon(Icons.download_done, color: const Color(0xFF2563eb), size: 18),
+                 SizedBox(width: 8),
+                 Expanded(
+                   child: Text(
+-                    'Native apps are built locally. See README for build instructions.',
+-                    style: TextStyle(color: Color(0xFFE65100), fontSize: 11),
++                    'Download the latest release from GitHub. See releases page for all platform builds.',
++                    style: TextStyle(color: const Color(0xFF2563eb), fontSize: 11),
+                   ),
+                 ),
+               ],
+@@ -1069,32 +1076,27 @@ class _DownloadCard extends StatelessWidget {
+       ),
+     );
+   }
++
+   void _openUrl(String url) async {
+     final uri = Uri.parse(url);
+     if (await canLaunchUrl(uri)) {
+       await launchUrl(uri, mode: LaunchMode.externalApplication);
+     }
+   }
+-  void _showComingSoon(BuildContext context, String platform) {
+-    ScaffoldMessenger.of(context).showSnackBar(
+-      SnackBar(
+-        content: Text('$platform build is coming soon!'),
+-        backgroundColor: const Color(0xFF2563eb),
+-      ),
+-    );
+-  }
+ }
+ 
+ class _DownloadButton extends StatelessWidget {
+   final IconData icon;
+   final String label;
+   final Color color;
++  final String? subtitle;
+   final VoidCallback onTap;
+   
+   const _DownloadButton({
+     required this.icon,
+     required this.label,
+     required this.color,
++    this.subtitle,
+     required this.onTap,
+   });
+   
+@@ -1117,16 +1119,29 @@ class _DownloadButton extends StatelessWidget {
+               Icon(icon, color: color, size: 24),
+               const SizedBox(width: 12),
+               Expanded(
+-                child: Text(
+-                  label,
+-                  style: TextStyle(
+-                    color: color,
+-                    fontWeight: FontWeight.w600,
+-                    fontSize: 14,
+-                  ),
++                child: Column(
++                  crossAxisAlignment: CrossAxisAlignment.start,
++                  children: [
++                    Text(
++                      label,
++                      style: TextStyle(
++                        color: color,
++                        fontWeight: FontWeight.w600,
++                        fontSize: 14,
++                      ),
++                    ),
++                    if (subtitle != null)
++                      Text(
++                        subtitle!,
++                        style: TextStyle(
++                          color: color.withOpacity(0.7),
++                          fontSize: 11,
++                        ),
++                      ),
++                  ],
+                 ),
+               ),
+-              Icon(Icons.arrow_forward_ios, color: color.withOpacity(0.5), size: 16),
++              Icon(Icons.download, color: color.withOpacity(0.7), size: 20),
+             ],
+           ),
+         ),
+@@ -1134,3 +1149,77 @@ class _DownloadButton extends StatelessWidget {
+     );
+   }
+ }
++
++class _ComingSoonButton extends StatelessWidget {
++  final IconData icon;
++  final String label;
++  final Color color;
++  final String note;
++  
++  const _ComingSoonButton({
++    required this.icon,
++    required this.label,
++    required this.color,
++    required this.note,
++  });
++  
++  @override
++  Widget build(BuildContext context) {
++    return Container(
++      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
++      decoration: BoxDecoration(
++        color: Colors.grey.withOpacity(0.1),
++        borderRadius: BorderRadius.circular(12),
++        border: Border.all(color: Colors.grey.withOpacity(0.3)),
++      ),
++      child: Row(
++        children: [
++          Icon(icon, color: Colors.grey, size: 24),
++          const SizedBox(width: 12),
++          Expanded(
++            child: Column(
++              crossAxisAlignment: CrossAxisAlignment.start,
++              children: [
++                Row(
++                  children: [
++                    Text(
++                      label,
++                      style: const TextStyle(
++                        color: Colors.grey,
++                        fontWeight: FontWeight.w600,
++                        fontSize: 14,
++                      ),
++                    ),
++                    const SizedBox(width: 8),
++                    Container(
++                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
++                      decoration: BoxDecoration(
++                        color: Colors.grey.withOpacity(0.2),
++                        borderRadius: BorderRadius.circular(8),
++                      ),
++                      child: const Text(
++                        'Coming Soon',
++                        style: TextStyle(
++                          color: Colors.grey,
++                          fontSize: 10,
++                          fontWeight: FontWeight.w500,
++                        ),
++                      ),
++                    ),
++                  ],
++                ),
++                Text(
++                  note,
++                  style: TextStyle(
++                    color: Colors.grey.withOpacity(0.7),
++                    fontSize: 11,
++                  ),
++                ),
++              ],
++            ),
++          ),
++        ],
++      ),
++    );
++  }
++}
+diff --git a/app/lib/services/cambric_auth_service_v2.dart b/app/lib/services/cambric_auth_service_v2.dart
+index 000bde5..4fd84a9 100644
+--- a/app/lib/services/cambric_auth_service_v2.dart
++++ b/app/lib/services/cambric_auth_service_v2.dart
+@@ -70,15 +70,15 @@ class CambricUserProfile {
+   };
+ }
+ 
++/// Simplified AuthProvider with reliable session handling
++/// Uses standard Supabase Auth session management
+ class AuthProvider extends ChangeNotifier {
+   SupabaseClient get _client => CambricAuth.client;
+   User? _user;
+   CambricUserProfile? _profile;
+-  bool _loading = true;  // Start as true to prevent premature redirects
++  bool _loading = false;
+   String? _error;
+   StreamSubscription<AuthState>? _authSubscription;
+-  bool _sessionRestored = false;
+-  bool _initialCheckDone = false;
+ 
+   User? get user => _user;
+   CambricUserProfile? get profile => _profile;
+@@ -91,90 +91,40 @@ class AuthProvider extends ChangeNotifier {
+   }
+ 
+   Future<void> _init() async {
+-    // FIRST: Set up stream listener BEFORE anything else
+-    // This ensures we catch initialSession even if it fires immediately
+-    _authSubscription = _client.auth.onAuthStateChange.listen(
+-      _handleAuthChange,
+-      onError: (error) {
+-        _error = error.toString();
+-        _loading = false;
+-        _initialCheckDone = true;
+-        notifyListeners();
+-      },
+-    );
+-
+-    // THEN: Check for existing session synchronously
+-    // This is a fallback for sessions already in memory
+-    _checkExistingSessionSync();
++    // Check for existing session first
++    _checkExistingSession();
++    
++    // Then listen for auth changes
++    _authSubscription = _client.auth.onAuthStateChange.listen(_handleAuthChange);
+   }
+ 
+-  void _checkExistingSessionSync() {
+-    if (_initialCheckDone) return;
+-    
++  void _checkExistingSession() {
+     try {
+-      final existingSession = _client.auth.currentSession;
+-      if (existingSession != null && existingSession.user != null) {
+-        _user = existingSession.user;
++      final session = _client.auth.currentSession;
++      if (session != null && session.user != null) {
++        _user = session.user;
+         _profile = CambricUserProfile.fromUser(_user!);
+-        _sessionRestored = true;
+-        _loading = false;
+-        _initialCheckDone = true;
+-        // Load full profile in background
+         _loadFullProfile();
+         notifyListeners();
+-      } else {
+-        // No session found yet, wait for stream
+-        // Set a timeout to prevent infinite loading
+-        Future.delayed(const Duration(seconds: 3), () {
+-          if (!_initialCheckDone && _user == null) {
+-            _loading = false;
+-            _initialCheckDone = true;
+-            notifyListeners();
+-          }
+-        });
+       }
+     } catch (e) {
+-      _loading = false;
+-      _initialCheckDone = true;
+-      notifyListeners();
++      // Session check failed, that's OK
+     }
+   }
+ 
+-  Future<void> _handleAuthChange(AuthState data) async {
+-    if (_initialCheckDone && _user != null && data.event != AuthChangeEvent.signedOut) {
+-      // Already have a user, ignore redundant events (except signedOut)
+-      return;
+-    }
+-
++  void _handleAuthChange(AuthState data) {
+     final AuthChangeEvent event = data.event;
+     final Session? session = data.session;
+ 
+     switch (event) {
+       case AuthChangeEvent.initialSession:
+-        // This fires when session is restored from storage (web refresh)
+-        if (session?.user != null) {
+-          _user = session!.user;
+-          _profile = CambricUserProfile.fromUser(_user!);
+-          _sessionRestored = true;
+-          _loadFullProfile(); // fire and forget
+-        }
+-        _loading = false;
+-        _initialCheckDone = true;
+-        _error = null;
+-        notifyListeners();
+-        break;
+-
+       case AuthChangeEvent.signedIn:
+         if (session?.user != null) {
+           _user = session!.user;
+           _profile = CambricUserProfile.fromUser(_user!);
+-          _sessionRestored = true;
+-          _loadFullProfile(); // fire and forget
++          _error = null;
++          _loadFullProfile();
+         }
+-        _loading = false;
+-        _initialCheckDone = true;
+-        _error = null;
+-        notifyListeners();
+         break;
+ 
+       case AuthChangeEvent.tokenRefreshed:
+@@ -182,32 +132,23 @@ class AuthProvider extends ChangeNotifier {
+           _user = session!.user;
+           _profile = CambricUserProfile.fromUser(_user!);
+         }
+-        _loading = false;
+-        notifyListeners();
+         break;
+ 
+       case AuthChangeEvent.signedOut:
+         _user = null;
+         _profile = null;
+-        _sessionRestored = false;
+-        _loading = false;
+-        _initialCheckDone = true;
+-        notifyListeners();
+         break;
+ 
+       case AuthChangeEvent.userUpdated:
+         if (session?.user != null) {
+           _user = session!.user;
+           _profile = CambricUserProfile.fromUser(_user!);
+-          _loadFullProfile(); // fire and forget
++          _loadFullProfile();
+         }
+-        _loading = false;
+-        notifyListeners();
+-        break;
+-
+-      default:
+         break;
+     }
++    
++    notifyListeners();
+   }
+ 
+   Future<void> _loadFullProfile() async {
+@@ -218,8 +159,7 @@ class AuthProvider extends ChangeNotifier {
+           .from('digital_saver_user_profiles')
+           .select()
+           .eq('id', _user!.id)
+-          .maybeSingle()
+-          .timeout(const Duration(seconds: 5));
++          .maybeSingle();
+ 
+       if (result != null) {
+         _profile = CambricUserProfile.fromProfile(result);
+@@ -230,7 +170,6 @@ class AuthProvider extends ChangeNotifier {
+     }
+   }
+ 
+-  // Sign up with email and password
+   Future<bool> signUp({
+     required String email,
+     required String password,
+@@ -251,25 +190,23 @@ class AuthProvider extends ChangeNotifier {
+         _user = response.user;
+         _profile = CambricUserProfile.fromUser(_user!);
+         await _createUserProfile();
+-        _loading = false;
+-        _initialCheckDone = true;
+         notifyListeners();
+         return true;
+       }
+ 
+-      _loading = false;
+-      _error = 'Sign up failed';
++      _error = 'Sign up pending. Please check your email to confirm.';
+       notifyListeners();
+       return false;
+     } catch (e) {
+-      _loading = false;
+-      _error = _parseError(e); _initialCheckDone = true; // Mark done even on failure
++      _error = _parseError(e);
+       notifyListeners();
+       return false;
++    } finally {
++      _loading = false;
++      notifyListeners();
+     }
+   }
+ 
+-  // Sign in with email and password
+   Future<bool> signIn({
+     required String email,
+     required String password,
+@@ -279,41 +216,36 @@ class AuthProvider extends ChangeNotifier {
+     notifyListeners();
+ 
+     try {
+-      // Race between sign in and 8 second timeout
+       final result = await _client.auth.signInWithPassword(
+         email: email,
+         password: password,
+-      ).timeout(const Duration(seconds: 8));
++      ).timeout(const Duration(seconds: 10));
+ 
+       if (result.user != null) {
+         _user = result.user;
+         _profile = CambricUserProfile.fromUser(_user!);
+-        _loadFullProfile(); // fire and forget
+-        _loading = false;
+-        _initialCheckDone = true;
++        _loadFullProfile();
+         notifyListeners();
+         return true;
+       }
+ 
+-      _loading = false;
+-      _error = "Sign in failed"; _initialCheckDone = true; // Mark done even on failure
++      _error = 'Sign in failed';
+       notifyListeners();
+       return false;
+     } on TimeoutException {
+-      _loading = false;
+-      _initialCheckDone = true; // Mark done even on timeout
+       _error = 'Connection timed out. Please check your internet.';
+       notifyListeners();
+       return false;
+     } catch (e) {
+-      _loading = false;
+-      _error = _parseError(e); _initialCheckDone = true; // Mark done even on failure
++      _error = _parseError(e);
+       notifyListeners();
+       return false;
++    } finally {
++      _loading = false;
++      notifyListeners();
+     }
+   }
+ 
+-  // Sign in with Google
+   Future<bool> signInWithGoogle() async {
+     _loading = true;
+     _error = null;
+@@ -324,40 +256,33 @@ class AuthProvider extends ChangeNotifier {
+         OAuthProvider.google,
+         redirectTo: 'https://cambric-software.github.io/Digital-saver/',
+       );
+-      // OAuth redirects, session will be restored via onAuthStateChange
+       return true;
+     } catch (e) {
+-      _loading = false;
+-      _error = _parseError(e); _initialCheckDone = true; // Mark done even on failure
++      _error = _parseError(e);
+       notifyListeners();
+       return false;
++    } finally {
++      _loading = false;
++      notifyListeners();
+     }
+   }
+ 
+-  // Sign out
+   Future<void> signOut() async {
+     _loading = true;
+     notifyListeners();
+ 
+     try {
+       await _client.auth.signOut();
+-      _user = null;
+-      _profile = null;
+-      _sessionRestored = false;
+-      _initialCheckDone = true;
+     } catch (e) {
+-      // Sign out failed but still clear local state
+-      _user = null;
+-      _profile = null;
+-      _sessionRestored = false;
+-      _initialCheckDone = true;
++      // Continue with local sign out
+     }
+-
++    
++    _user = null;
++    _profile = null;
+     _loading = false;
+     notifyListeners();
+   }
+ 
+-  // Update user profile
+   Future<bool> updateProfile({
+     String? displayName,
+     Map<String, dynamic>? additionalData,
+@@ -366,13 +291,12 @@ class AuthProvider extends ChangeNotifier {
+ 
+     try {
+       final updates = <String, dynamic>{
+-        'id': _user!.id,  // Required for upsert
++        'id': _user!.id,
+         'updated_at': DateTime.now().toIso8601String(),
+       };
+ 
+       if (displayName != null) {
+         updates['display_name'] = displayName;
+-        // Also update auth metadata
+         await _client.auth.updateUser(
+           UserAttributes(data: {'display_name': displayName}),
+         );
+@@ -403,7 +327,6 @@ class AuthProvider extends ChangeNotifier {
+     }
+   }
+ 
+-  // Reset password
+   Future<bool> resetPassword(String email) async {
+     _loading = true;
+     _error = null;
+@@ -418,14 +341,15 @@ class AuthProvider extends ChangeNotifier {
+       notifyListeners();
+       return true;
+     } catch (e) {
+-      _loading = false;
+-      _error = _parseError(e); _initialCheckDone = true; // Mark done even on failure
++      _error = _parseError(e);
+       notifyListeners();
+       return false;
++    } finally {
++      _loading = false;
++      notifyListeners();
+     }
+   }
+ 
+-  // Create user profile in database
+   Future<void> _createUserProfile() async {
+     if (_user == null) return;
+ 
+@@ -442,7 +366,6 @@ class AuthProvider extends ChangeNotifier {
+     }
+   }
+ 
+-  // Parse error messages
+   String _parseError(dynamic e) {
+     if (e is AuthException) {
+       return e.message;

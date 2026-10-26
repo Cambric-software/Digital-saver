@@ -1,0 +1,5 @@
+# PlatformIO generated build output
+.pio/
+.vscode/
+*.bin
+*.elf

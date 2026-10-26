@@ -1,0 +1,117 @@
+PROPRIETARY SOFTWARE LICENSE AGREEMENT
+
+Digital Saver
+Copyright (c) 2026 Cambric Software. All rights reserved.
+
+NOTICE: This software and its source code, design, architecture, algorithms,
+documentation, assets, and all associated materials (collectively, the
+"Software") are the exclusive property of Cambric Software ("Cambric"). This
+Software is NOT open source and is NOT licensed under any open-source license.
+
+NOTICE: The source code is published so that anyone can inspect what the
+Software does. Publication does not make it open source, and it grants no
+rights beyond those in Section 2.
+
+1. OWNERSHIP
+
+All right, title, and interest in the Software, including all intellectual
+property rights, are and remain solely and exclusively owned by Cambric.
+
+2. GRANT OF RIGHTS
+
+  (a) Personal and internal use. Cambric grants you a non-exclusive,
+      non-transferable, revocable licence to install and run the Software on
+      devices you control, and to keep backup copies of an installer you
+      obtained from Cambric, for personal, educational, or internal business
+      purposes. No fee is required for this licence.
+
+  (b) Client deliverables. Where Cambric delivers this Software to a client as
+      part of a paid engagement, that client receives a non-exclusive,
+      non-transferable, revocable licence to use the delivered application for
+      its own internal business purposes, subject to the engagement agreement
+      between Cambric and that client. All ownership is retained by Cambric.
+      Shared libraries, tooling, and reusable components remain the property
+      of Cambric and are not licensed to the client except as part of the
+      delivered application.
+
+  (c) No other rights. No right is granted by implication, estoppel, or
+      otherwise. In particular, reading the source code does not grant a
+      licence to reuse it.
+
+3. RESTRICTIONS
+
+Except as expressly permitted by this agreement or by a written agreement
+signed by Cambric, you may not:
+
+  (a) copy, reproduce, or republish the Software for distribution to anyone
+      else, except for the backup copies allowed by Section 2(a);
+  (b) modify, adapt, translate, or create derivative works of the Software;
+  (c) reverse engineer, decompile, disassemble, or otherwise attempt to derive
+      the source code, structure, or design of the Software, except to the
+      extent such restriction is prohibited by applicable law;
+  (d) distribute, sublicense, lease, rent, sell, or otherwise transfer the
+      Software;
+  (e) remove, alter, or obscure any proprietary notice, label, or mark;
+  (f) use the Software to build or train any competing product or service;
+  (g) remove or circumvent any license key, entitlement, or usage limit.
+
+4. SOURCE AVAILABILITY
+
+The source code is publicly readable. That visibility is for inspection,
+security review, and education. It does not grant a licence to reuse, modify,
+redistribute, or incorporate any part of it beyond the grant in Section 2.
+Non-public materials — credentials, unreleased plans, customer information, and
+private communications — remain confidential and must not be disclosed.
+
+5. YOUR DATA AND THIRD-PARTY SERVICES
+
+  (a) Data you create with the Software (notes, financial records, and any
+      file you choose to open) belongs to you. It is stored on your device.
+      Cambric does not receive it.
+
+  (b) The Software has no account system, no analytics, and no telemetry.
+
+  (c) The update check contacts GitHub (api.github.com) to read the latest
+      release number. It sends no personal data beyond the request itself,
+      and GitHub's own privacy terms apply to that request.
+
+  (d) The HTTP tester sends a request only to the address you enter. That
+      request goes to the server you chose, not to Cambric.
+
+6. TOOL RESULTS
+
+The Software reports what it observes and calculates; it does not guarantee an
+outcome. Financial figures are estimates for planning, not financial advice. A
+clean antivirus result means the scanner found nothing, not that a file is
+safe. Overwriting a file does not guarantee that it is unrecoverable on flash
+storage or copy-on-write filesystems. Verify anything that matters before
+acting on it.
+
+7. TERMINATION
+
+Any unauthorized use, copying, or distribution terminates your rights
+automatically. Upon termination you must immediately cease all use and destroy
+all copies in your possession or control.
+
+8. DISCLAIMER OF WARRANTY
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE, AND NONINFRINGEMENT.
+
+9. LIMITATION OF LIABILITY
+
+IN NO EVENT SHALL CAMBRIC BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF, OR IN CONNECTION WITH THE SOFTWARE OR ITS USE.
+
+10. GOVERNING LAW
+
+This agreement is governed by the laws applicable at Cambric's principal place
+of business, without regard to conflict-of-law provisions.
+
+Where mandatory consumer-protection law grants the user rights that cannot be
+waived, those rights prevail over any conflicting term above.
+
+For licensing enquiries contact Cambric Software.
+

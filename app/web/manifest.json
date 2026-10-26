@@ -1,0 +1,10 @@
+{
+  "name": "Digital Saver",
+  "short_name": "Digital Saver",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#1e3a5f",
+  "theme_color": "#2563eb",
+  "description": "Professional Smartwatch Health Monitoring System",
+  "orientation": "portrait-primary"
+}
