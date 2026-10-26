@@ -11,6 +11,7 @@ lib/
 ```
 
 ## Rules
+
 - `core/` holds cross-cutting services.
 - `features/` holds UI and feature logic.
 - `shared/` holds reusable design and utilities.

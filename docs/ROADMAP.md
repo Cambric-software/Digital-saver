@@ -246,7 +246,6 @@ Nothing below this matters if the product tells lies or has dead controls.
 - A reading of zero means "no reading" and renders as `--`, never as a number.
 - Health status is always a label and an icon as well as a colour.
 
-
 ---
 
 ## Approved tool set — Max Tools
