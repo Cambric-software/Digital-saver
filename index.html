@@ -292,19 +292,7 @@
       el.textContent = chosen.label;
     }
 
-    // Add the published version to the label once the API answers. If it does
-    // not, the platform label alone is still accurate, so nothing is invented.
-    fetch('https://api.github.com/repos/Cambric-software/Digital-saver/releases/latest', {
-      headers: { Accept: 'application/vnd.github+json' }
-    })
-      .then(function (r) { return r.ok ? r.json() : null; })
-      .then(function (data) {
-        if (data && data.tag_name) {
-          el.textContent = (chosen ? chosen.label : 'Choose a platform') +
-            ' \u00b7 ' + data.tag_name;
-        }
-      })
-      .catch(function () { /* offline: keep the label as it stands */ });
+    // No version fetch; keep the label as is.
   })();
 </script>
 
