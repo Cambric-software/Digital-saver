@@ -1,0 +1,21 @@
+{
+  "manifestVersion": 1,
+  "product": {
+    "type": "app",
+    "name": "Digital Saver",
+    "id": "digital-saver",
+    "packageId": "com.digitalsaver.digital_saver",
+    "version": "2.0.0",
+    "buildNumber": 1,
+    "releaseChannel": "stable",
+    "publisher": "Cambric",
+    "developer": "Cambric",
+    "website": "https://cambric.dev",
+    "repository": "Cambric-software/Digital-saver"
+  },
+  "platforms": ["android", "windows", "linux"],
+  "capabilities": {"offline": true, "updates": true, "ecosystem": true, "localization": true},
+  "locales": ["en"],
+  "cambricTemplateVersion": "0.1.0",
+  "productLine": "Digital Saver"
+}

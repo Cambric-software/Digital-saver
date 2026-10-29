@@ -1,300 +1,165 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Digital Saver — Download</title>
-<meta name="description" content="Digital Saver by Cambric Software: the health companion for the Veyro smartwatch. Heart rate, blood oxygen and activity read straight from the watch and kept on your device. Download for Windows, Linux and Android.">
-<meta name="theme-color" content="#12141a">
-<meta property="og:title" content="Digital Saver — Download">
-<meta property="og:description" content="Cambric's health companion for the Veyro watch. Windows, Linux and Android.">
-<meta property="og:type" content="website">
-<link rel="icon" type="image/png" href="app/assets/digital-saver-icon-transparent.png">
-<link rel="apple-touch-icon" href="app/assets/digital-saver-icon-transparent.png">
-<style>
-  :root {
-    --bg: #0e1015;
-    --surface: #171a22;
-    --surface-2: #1e222c;
-    --border: #2a2f3b;
-    --text: #e8eaf0;
-    --muted: #9aa3b5;
-    --accent: #5b8cff;
-    --accent-2: #7c5bff;
-    --radius: 14px;
-    --shadow: 0 10px 30px rgba(0, 0, 0, .35);
-  }
-  @media (prefers-color-scheme: light) {
-    :root {
-      --bg: #f6f7fb;
-      --surface: #ffffff;
-      --surface-2: #f0f2f7;
-      --border: #e0e3ec;
-      --text: #171a22;
-      --muted: #5c6474;
-      --shadow: 0 8px 24px rgba(20, 24, 40, .08);
-    }
-  }
-  * { box-sizing: border-box; }
-  body {
-    margin: 0;
-    background: var(--bg);
-    color: var(--text);
-    font: 16px/1.6 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    -webkit-font-smoothing: antialiased;
-  }
-  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 20px; }
-  header {
-    padding: 64px 0 40px;
-    background: linear-gradient(180deg, rgba(91,140,255,.14), transparent 70%);
-    border-bottom: 1px solid var(--border);
-  }
-  .brand { display: flex; align-items: center; gap: 12px; font-weight: 600; letter-spacing: .2px; }
-  .logo {
-    width: 38px; height: 38px; border-radius: 10px;
-    display: block; flex: none; object-fit: contain;
-    box-shadow: 0 0 0 1px rgba(255, 255, 255, .14);
-  }
-  h1 { font-size: clamp(30px, 5vw, 46px); line-height: 1.15; margin: 28px 0 12px; }
-  .tagline { font-size: clamp(16px, 2.2vw, 20px); color: var(--muted); max-width: 62ch; }
-  .cta { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 28px; }
-  .btn {
-    display: inline-flex; align-items: center; gap: 10px;
-    padding: 13px 22px; border-radius: 11px; text-decoration: none;
-    font-weight: 600; border: 1px solid var(--border); color: var(--text);
-    background: var(--surface); transition: transform .12s ease, border-color .12s ease;
-  }
-  .btn:hover { transform: translateY(-1px); border-color: var(--accent); }
-  .btn.primary { background: linear-gradient(135deg, var(--accent), var(--accent-2)); border-color: transparent; color: #fff; }
-  section { padding: 48px 0; }
-  h2 { font-size: 24px; margin: 0 0 8px; }
-  .sub { color: var(--muted); margin: 0 0 24px; }
-  .grid { display: grid; gap: 18px; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
-  .card {
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: var(--radius); padding: 22px; box-shadow: var(--shadow);
-    display: flex; flex-direction: column; gap: 10px;
-  }
-  .card h3 { margin: 0; font-size: 18px; display: flex; align-items: center; gap: 10px; }
-  .card p { margin: 0; color: var(--muted); font-size: 14.5px; flex: 1; }
-  .pill { font-size: 11.5px; padding: 3px 9px; border-radius: 999px; border: 1px solid var(--border); color: var(--muted); font-weight: 600; }
-  .card .btn { justify-content: center; margin-top: 4px; }
-  .pills { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
-  .pillars { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
-  .pillar { background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px; padding: 18px; }
-  .pillar strong { display: block; margin-bottom: 6px; }
-  .pillar span { color: var(--muted); font-size: 14px; }
-  code {
-    background: var(--surface-2); border: 1px solid var(--border);
-    padding: 2px 7px; border-radius: 6px; font-size: 13.5px;
-  }
-  .checksum { font-size: 13px; color: var(--muted); }
-  .note { font-size: 13px; color: var(--muted); }
-  table { width: 100%; border-collapse: collapse; font-size: 14.5px; }
-  th, td { text-align: left; padding: 11px 10px; border-bottom: 1px solid var(--border); }
-  th { color: var(--muted); font-weight: 600; }
-  footer { border-top: 1px solid var(--border); padding: 28px 0 56px; color: var(--muted); font-size: 14px; }
-  a { color: var(--accent); }
-  .row { display: flex; flex-wrap: wrap; gap: 18px; align-items: center; justify-content: space-between; }
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Digital Saver — download</title>
+  <meta name="description" content="Download Digital Saver for Windows, Linux and Android. Free updates, no account required.">
+  <meta name="color-scheme" content="dark light">
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+  <a class="skip" href="#platforms">Skip to downloads</a>
 
-<header>
-  <div class="wrap">
-    <div class="brand"><img class="logo" src="cambric-icon-transparent.png" alt="Cambric Software" width="38" height="38"> Cambric Software</div>
-    <h1>Digital Saver</h1>
-    <p class="tagline">
-      Cambric's health companion for the Veyro watch. Heart rate, blood oxygen
-      and activity read straight from the watch and kept on your device.
-      A wellness tool, not a medical device.
-    </p>
-    <div class="cta">
-      <!-- Never points at a GitHub page. The script at the foot of the file
-           rewrites this to a direct release asset for the detected platform, so
-           the browser downloads it while the reader stays here. With scripting
-           off it degrades to scrolling down to the platform cards, which is
-           still correct and still does not leave the site. -->
-      <a class="btn primary" href="#platforms" id="latest">Choose a platform</a>
-      <a class="btn" href="https://github.com/Cambric-software/Digital-saver">Source on GitHub</a>
+  <header class="site-header">
+    <div class="wrap header-inner">
+      <a class="brand" href="#top">
+        <span class="brand-mark" aria-hidden="true">C</span>
+        <span class="brand-name">Digital Saver</span>
+      </a>
+      <nav class="nav" aria-label="Sections">
+        <a href="#platforms">Download</a>
+        <a href="#inside">What's inside</a>
+        <a href="#verify">Verify</a>
+      </nav>
     </div>
-    <p class="checksum" style="margin-top:16px">
-      Every download ships with a <code>.sha256</code> file. Verify it before installing.
-    </p>
-  </div>
-</header>
+  </header>
 
-<section id="platforms">
-  <div class="wrap">
-    <h2>Download for your platform</h2>
-    <p class="sub">Links always point at the newest published release — no version numbers to guess.</p>
-    <div class="grid">
-      <div class="card">
-        <h3>🪟 Windows <span class="pill">x64</span></h3>
-        <p><strong>Recommended:</strong> the setup executable installs Digital Saver
-        for your user account, adds a desktop and Start&nbsp;Menu shortcut, and can
-        update itself later. No admin rights required, and your readings are kept
-        across updates.</p>
-        <a class="btn primary" href="https://github.com/Cambric-software/Digital-saver/releases/latest/download/DigitalSaver-Setup.exe">Download installer</a>
-        <a class="btn" href="https://github.com/Cambric-software/Digital-saver/releases/latest/download/DigitalSaver-Setup.exe.sha256">Checksum</a>
-        <p class="note">Prefer no install? The portable archive works too, but a
-        portable copy cannot update itself in place.</p>
-        <div class="pills">
-          <a class="btn" href="https://github.com/Cambric-software/Digital-saver/releases/latest/download/windows.zip">Portable .zip</a>
-          <a class="btn" href="https://github.com/Cambric-software/Digital-saver/releases/latest/download/windows.zip.sha256">Checksum</a>
-        </div>
+  <main id="top">
+    <section class="hero wrap">
+      <p class="eyebrow">Cambric Software</p>
+      <h1>Digital Saver</h1>
+      <p class="lede">Privacy-first health companion for the Veyro watch. Windows, Linux and Android.</p>
+      <div class="hero-actions">
+        <a class="btn primary" href="https://github.com/Cambric-software/Digital-saver/releases/latest/download/windows.zip">
+          Download for Windows
+        </a>
+        <a class="btn" href="#platforms">All platforms</a>
       </div>
-      <div class="card">
-        <h3>🐧 Linux <span class="pill">x64</span></h3>
-        <p><strong>Recommended:</strong> the .deb installs into a versioned layout
-        under <code>/usr/lib/digital-saver</code> with a launcher entry, so updates
-        apply cleanly.</p>
-        <a class="btn primary" href="https://github.com/Cambric-software/Digital-saver/releases/latest/download/digital-saver.deb">Download .deb</a>
-        <a class="btn" href="https://github.com/Cambric-software/Digital-saver/releases/latest/download/digital-saver.deb.sha256">Checksum</a>
-        <p class="note">Or extract the tarball and run <code>digital_saver</code>
-        from the bundle folder. A tarball copy cannot update itself in place.</p>
-        <div class="pills">
-          <a class="btn" href="https://github.com/Cambric-software/Digital-saver/releases/latest/download/linux.tar.gz">Portable .tar.gz</a>
-          <a class="btn" href="https://github.com/Cambric-software/Digital-saver/releases/latest/download/linux.tar.gz.sha256">Checksum</a>
-        </div>
-      </div>
-      <div class="card">
-        <h3>🤖 Android <span class="pill">APK</span></h3>
-        <p>Universal APK for phones and tablets. Enable installs from unknown
-        sources, then open the APK. Android installs the update through the system
-        installer rather than silently.</p>
-        <a class="btn primary" href="https://github.com/Cambric-software/Digital-saver/releases/latest/download/android.apk">Download .apk</a>
-        <a class="btn" href="https://github.com/Cambric-software/Digital-saver/releases/latest/download/android.apk.sha256">Checksum</a>
-      </div>
-    </div>
-  </div>
-</section>
-
-<section>
-  <div class="wrap">
-    <h2>What is inside</h2>
-    <p class="sub">What the watch measures, shown as it measured it.</p>
-    <div class="pillars">
-      <div class="pillar">
-        <strong>Reads the watch</strong>
-        <span>Heart rate, blood oxygen, activity and motion come from the Veyro
-        watch over Bluetooth. Figures the watch does not report are left blank
-        rather than estimated.</span>
-      </div>
-      <div class="pillar">
-        <strong>Keeps it local</strong>
-        <span>Readings are stored on your device. There is no account, and
-        nothing is uploaded to run the app.</span>
-      </div>
-      <div class="pillar">
-        <strong>Emergency help</strong>
-        <span>An SOS you can dial with one press, using an emergency number you
-        choose, and fall detection you can switch off.</span>
-      </div>
-      <div class="pillar">
-        <strong>Honest by design</strong>
-        <span>A wellness tool. It does not diagnose, and it is not a substitute
-        for professional care.</span>
-      </div>
-    </div>
-  </div>
-</section>
-
-<section>
-  <div class="wrap">
-    <h2>Requirements</h2>
-    <div class="row" style="align-items:flex-start">
-      <div style="flex:1 1 460px">
-        <table>
-          <tr><th>Platform</th><th>Needs</th></tr>
-          <tr><td>Windows</td><td>Windows 10 or newer, 64-bit, Bluetooth</td></tr>
-          <tr><td>Linux</td><td>glibc distribution, 64-bit, GTK 3, Bluetooth</td></tr>
-          <tr><td>Android</td><td>Android 5.0 (API 21) or newer, Bluetooth</td></tr>
-        </table>
-      </div>
-      <p class="sub" style="flex:1 1 300px; margin:0">
-        The watch is read over Bluetooth Low Energy. Digital Saver runs entirely
-        on your machine; the only network calls it makes are checking for updates
-        and, if you choose to use the assistant, the questions you send it.
+      <p class="version" id="version-line" hidden>
+        Latest release <span id="version-value"></span>
       </p>
-    </div>
-  </div>
-</section>
-
-<section>
-  <div class="wrap">
-    <h2>Verify your download</h2>
-    <p class="sub">Checksums are published next to every artifact.</p>
-    <div class="grid">
-      <div class="card">
-        <h3>Windows</h3>
-        <p>Run this in PowerShell next to the downloaded files.</p>
-        <p><code>Get-FileHash .\windows.zip -Algorithm SHA256</code></p>
-        <p class="checksum">Compare the output with <code>windows.zip.sha256</code>.</p>
-      </div>
-      <div class="card">
-        <h3>Linux</h3>
-        <p>Verify the archive you downloaded.</p>
-        <p><code>sha256sum -c linux.tar.gz.sha256</code></p>
-        <p class="checksum">A result of <code>OK</code> means the file is intact.</p>
-      </div>
-    </div>
-  </div>
-</section>
-
-<footer>
-  <div class="wrap">
-    <div class="row" style="align-items:flex-start">
-      <p style="margin:0">
-        <img class="logo" src="cambric-icon-transparent.png" alt="" width="22" height="22" style="width:22px;height:22px;vertical-align:-6px;margin-right:6px">
-        © 2026 Cambric Software. Digital Saver is proprietary software — see the
-        <a href="https://github.com/Cambric-software/Digital-saver/blob/main/LICENSE">licence</a>.
+      <p class="fineprint">
+        Links always point at the newest published release, so there is no
+        version number to guess and no stale installer to download.
       </p>
-      <p style="margin:0">
-        <a href="https://github.com/Cambric-software/Digital-saver">Source</a> ·
-        <a href="https://github.com/Cambric-software/Digital-saver/releases">All releases</a> ·
-        <a href="https://github.com/Cambric-software/Digital-saver/issues">Report an issue</a>
+    </section>
+
+    <section class="wrap section" id="platforms">
+      <h2>Download for your platform</h2>
+      <p class="section-lede">
+        Pick the package for your device. Every download is the same build of
+        Digital Saver, published from the same release.
       </p>
+
+      <div class="grid platforms">
+        <article class="card platform">
+          <div class="card-head">
+            <h3>Windows</h3>
+            <span class="chip">x64</span>
+          </div>
+          <p class="body">
+            The setup executable installs Digital Saver for your user account and
+            adds a desktop and Start Menu shortcut. No administrator rights
+            required.
+          </p>
+          <a class="btn primary block" href="https://github.com/Cambric-software/Digital-saver/releases/latest/download/windows.zip">
+            Download setup
+          </a>
+          <p class="note">Windows 10 or newer, 64-bit.</p>
+        </article>
+
+        <article class="card platform">
+          <div class="card-head">
+            <h3>Linux</h3>
+            <span class="chip">x86_64</span>
+          </div>
+          <p class="body">
+            An AppImage you can run without installing anything. Mark it
+            executable, then open it.
+          </p>
+          <pre class="code"><code>chmod +x linux.tar.gz
+./linux.tar.gz</code></pre>
+          <a class="btn primary block" href="https://github.com/Cambric-software/Digital-saver/releases/latest/download/linux.tar.gz">
+            Download AppImage
+          </a>
+          <p class="note">glibc 2.31 or newer, 64-bit.</p>
+        </article>
+
+        <article class="card platform">
+          <div class="card-head">
+            <h3>Android</h3>
+            <span class="chip">arm64</span>
+          </div>
+          <p class="body">
+            Sideload the APK on a 64-bit Android device. Your phone may ask you
+            to allow installs from this browser the first time.
+          </p>
+          <a class="btn primary block" href="https://github.com/Cambric-software/Digital-saver/releases/latest/download/android.apk">
+            Download APK
+          </a>
+          <p class="note">Android 8.0 or newer.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="wrap section" id="inside">
+      <h2>What's inside</h2>
+      <div class="grid features">
+        <article class="card">
+          <h3>Works offline</h3>
+          <p class="body">Your data stays on your device. No account, no cloud, no sign-in.</p>
+        </article>
+        <article class="card">
+          <h3>Free updates</h3>
+          <p class="body">Every release is published here. The app tells you when a newer one exists.</p>
+        </article>
+        <article class="card">
+          <h3>One design</h3>
+          <p class="body">The same layout, palette and shortcuts across every platform.</p>
+        </article>
+        <article class="card">
+          <h3>Open about limits</h3>
+          <p class="body">What the app does and what it does not do is written down, not implied.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="wrap section" id="verify">
+      <h2>Verify your download</h2>
+      <div class="card">
+        <p class="body">
+          Each release page lists the file sizes and checksums that were
+          published with the build. Compare them before you run an installer:
+        </p>
+        <pre class="code"><code># Windows
+Get-FileHash .\windows.zip -Algorithm SHA256
+
+# Linux and macOS
+sha256sum linux.tar.gz</code></pre>
+        <p class="body">
+          The checksums live on the release page itself, not in this template,
+          so this page can never show a hash that belongs to a different build.
+        </p>
+        <a class="btn" href="https://github.com/Cambric-software/Digital-saver/releases/latest">
+          Open the latest release
+        </a>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap footer-inner">
+      <p>© <span id="year"></span> Cambric Software. All rights reserved.</p>
+      <nav aria-label="Legal">
+        <a href="https://github.com/Cambric-software/Digital-saver/blob/main/LICENSE">Licence</a>
+        <a href="https://github.com/Cambric-software/Digital-saver/blob/main/SECURITY.md">Security</a>
+        <a href="https://github.com/Cambric-software/Digital-saver">Source</a>
+      </nav>
     </div>
-  </div>
-</footer>
+  </footer>
 
-<script>
-  // The main button downloads from the release assets directly, so the browser
-  // starts the download without navigating away from this page.
-  //
-  // GitHub serves release assets with Content-Disposition: attachment, so the
-  // browser treats the response as a download and the page stays put. Pointing
-  // at github.com/.../releases/latest instead - an HTML page - is what carries
-  // the reader off to GitHub.
-  (function () {
-    var assets = 'https://github.com/Cambric-software/Digital-saver/releases/latest/download/';
-    var byPlatform = {
-      windows: { file: 'DigitalSaver-Setup.exe', label: 'Download for Windows' },
-      linux:   { file: 'digital-saver.deb',       label: 'Download for Linux' },
-      android: { file: 'android.apk',             label: 'Download for Android' }
-    };
-
-    var el = document.getElementById('latest');
-    if (!el) return;
-
-    var ua = navigator.userAgent || '';
-    var platform = '';
-    if (/Android/i.test(ua)) platform = 'android';
-    else if (/Windows/i.test(ua)) platform = 'windows';
-    else if (/Linux|X11|CrOS/i.test(ua)) platform = 'linux';
-
-    var chosen = byPlatform[platform];
-    // An unrecognised platform keeps the in-page link rather than guessing at a
-    // build that may not exist for it, such as macOS, which has no artifact.
-    if (chosen) {
-      el.href = assets + chosen.file;
-      el.textContent = chosen.label;
-    }
-
-    // No version fetch; keep the label as is.
-  })();
-</script>
-
+  <script src="app.js"></script>
 </body>
 </html>
+

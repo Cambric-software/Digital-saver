@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Digital Saver — download</title>
+  <meta name="description" content="Download Digital Saver for Windows, Linux and Android. Free updates, no account required.">
+  <meta name="color-scheme" content="dark light">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <a class="skip" href="#platforms">Skip to downloads</a>
+
+  <header class="site-header">
+    <div class="wrap header-inner">
+      <a class="brand" href="#top">
+        <span class="brand-mark" aria-hidden="true">C</span>
+        <span class="brand-name">Digital Saver</span>
+      </a>
+      <nav class="nav" aria-label="Sections">
+        <a href="#platforms">Download</a>
+        <a href="#inside">What's inside</a>
+        <a href="#verify">Verify</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="top">
+    <section class="hero wrap">
+      <p class="eyebrow">Cambric Software</p>
+      <h1>Digital Saver</h1>
+      <p class="lede">Privacy-first health companion for the Veyro watch. Windows, Linux and Android.</p>
+      <div class="hero-actions">
+        <a class="btn primary" href="https://github.com/Cambric-software/Digital-saver/releases/latest/download/windows.zip">
+          Download for Windows
+        </a>
+        <a class="btn" href="#platforms">All platforms</a>
+      </div>
+      <p class="version" id="version-line" hidden>
+        Latest release <span id="version-value"></span>
+      </p>
+      <p class="fineprint">
+        Links always point at the newest published release, so there is no
+        version number to guess and no stale installer to download.
+      </p>
+    </section>
+
+    <section class="wrap section" id="platforms">
+      <h2>Download for your platform</h2>
+      <p class="section-lede">
+        Pick the package for your device. Every download is the same build of
+        Digital Saver, published from the same release.
+      </p>
+
+      <div class="grid platforms">
+        <article class="card platform">
+          <div class="card-head">
+            <h3>Windows</h3>
+            <span class="chip">x64</span>
+          </div>
+          <p class="body">
+            The setup executable installs Digital Saver for your user account and
+            adds a desktop and Start Menu shortcut. No administrator rights
+            required.
+          </p>
+          <a class="btn primary block" href="https://github.com/Cambric-software/Digital-saver/releases/latest/download/windows.zip">
+            Download setup
+          </a>
+          <p class="note">Windows 10 or newer, 64-bit.</p>
+        </article>
+
+        <article class="card platform">
+          <div class="card-head">
+            <h3>Linux</h3>
+            <span class="chip">x86_64</span>
+          </div>
+          <p class="body">
+            An AppImage you can run without installing anything. Mark it
+            executable, then open it.
+          </p>
+          <pre class="code"><code>chmod +x linux.tar.gz
+./linux.tar.gz</code></pre>
+          <a class="btn primary block" href="https://github.com/Cambric-software/Digital-saver/releases/latest/download/linux.tar.gz">
+            Download AppImage
+          </a>
+          <p class="note">glibc 2.31 or newer, 64-bit.</p>
+        </article>
+
+        <article class="card platform">
+          <div class="card-head">
+            <h3>Android</h3>
+            <span class="chip">arm64</span>
+          </div>
+          <p class="body">
+            Sideload the APK on a 64-bit Android device. Your phone may ask you
+            to allow installs from this browser the first time.
+          </p>
+          <a class="btn primary block" href="https://github.com/Cambric-software/Digital-saver/releases/latest/download/android.apk">
+            Download APK
+          </a>
+          <p class="note">Android 8.0 or newer.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="wrap section" id="inside">
+      <h2>What's inside</h2>
+      <div class="grid features">
+        <article class="card">
+          <h3>Works offline</h3>
+          <p class="body">Your data stays on your device. No account, no cloud, no sign-in.</p>
+        </article>
+        <article class="card">
+          <h3>Free updates</h3>
+          <p class="body">Every release is published here. The app tells you when a newer one exists.</p>
+        </article>
+        <article class="card">
+          <h3>One design</h3>
+          <p class="body">The same layout, palette and shortcuts across every platform.</p>
+        </article>
+        <article class="card">
+          <h3>Open about limits</h3>
+          <p class="body">What the app does and what it does not do is written down, not implied.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="wrap section" id="verify">
+      <h2>Verify your download</h2>
+      <div class="card">
+        <p class="body">
+          Each release page lists the file sizes and checksums that were
+          published with the build. Compare them before you run an installer:
+        </p>
+        <pre class="code"><code># Windows
+Get-FileHash .\windows.zip -Algorithm SHA256
+
+# Linux and macOS
+sha256sum linux.tar.gz</code></pre>
+        <p class="body">
+          The checksums live on the release page itself, not in this template,
+          so this page can never show a hash that belongs to a different build.
+        </p>
+        <a class="btn" href="https://github.com/Cambric-software/Digital-saver/releases/latest">
+          Open the latest release
+        </a>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap footer-inner">
+      <p>© <span id="year"></span> Cambric Software. All rights reserved.</p>
+      <nav aria-label="Legal">
+        <a href="https://github.com/Cambric-software/Digital-saver/blob/main/LICENSE">Licence</a>
+        <a href="https://github.com/Cambric-software/Digital-saver/blob/main/SECURITY.md">Security</a>
+        <a href="https://github.com/Cambric-software/Digital-saver">Source</a>
+      </nav>
+    </div>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
+

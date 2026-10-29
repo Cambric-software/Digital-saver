@@ -1,0 +1,11 @@
+{
+  "manifestVersion": 1,
+  "productId": "digital-saver-product",
+  "name": "Digital Saver",
+  "version": "2.0.0",
+  "template": "app-template",
+  "templateVersion": "1.0.0",
+  "platforms": ["windows", "linux", "android"],
+  "ecosystemProtocolVersion": 1,
+  "capabilities": ["local-storage", "cache", "release-discovery", "updates", "ecosystem"]
+}
