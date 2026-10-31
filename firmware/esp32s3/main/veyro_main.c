@@ -80,7 +80,7 @@
 #define I2C_BUS_B         I2C_NUM_1   /* All health sensors */
 #define I2C_SDA_B         1
 #define I2C_SCL_B         2
-#define I2C_BUS_C         I2C_NUM_2   /* PMIC */
+#define I2C_BUS_C         I2C_NUM_1   /* PMIC (shared with bus B) */
 #define I2C_SDA_C         17
 #define I2C_SCL_C         18
 
@@ -1057,14 +1057,7 @@ static void init_i2c_buses(void) {
     i2c_param_config(I2C_BUS_B, &cfgB);
     i2c_driver_install(I2C_BUS_B, I2C_MODE_MASTER, 0, 0, 0);
 
-    /* Bus C: PMIC BQ25895 — 100 kHz */
-    i2c_config_t cfgC = {
-        .mode = I2C_MODE_MASTER, .sda_io_num = I2C_SDA_C,
-        .scl_io_num = I2C_SCL_C, .sda_pullup_en = GPIO_PULLUP_ENABLE,
-        .scl_pullup_en = GPIO_PULLUP_ENABLE, .master.clk_speed = 100000,
-    };
-    i2c_param_config(I2C_BUS_C, &cfgC);
-    i2c_driver_install(I2C_BUS_C, I2C_MODE_MASTER, 0, 0, 0);
+    /* PMIC shares bus B; no separate init needed. */
 }
 
 /** Initialise GPIO for buttons and LED. */
