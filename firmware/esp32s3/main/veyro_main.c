@@ -96,7 +96,11 @@
 /*  FIRMWARE VERSION                                                        */
 /* ─────────────────────────────────────────────────────────────────────── */
 
+/* The firmware version has one home. The build no longer passes a second copy
+ * on the command line, which previously shadowed this one. */
+#ifndef VEYRO_FW_VERSION
 #define VEYRO_FW_VERSION  "5.0.0"
+#endif
 #define VEYRO_PROTO       2
 #define VEYRO_NAME        "Veyro"
 #define RETAIN_DAYS       60
@@ -573,9 +577,10 @@ static void fs_prune(void) {
     time_t cutoff = (time_t)now - (time_t)RETAIN_DAYS * 86400;
     struct tm cut_tm;
     gmtime_r(&cutoff, &cut_tm);
-    char cutkey[9];
-    snprintf(cutkey, sizeof(cutkey), "%04d%02d%02d",
-             cut_tm.tm_year + 1900, cut_tm.tm_mon + 1, cut_tm.tm_mday);
+    /* strftime writes a bounded, fixed-width key and reports truncation by
+     * returning 0, which snprintf with an int year cannot promise. */
+    char cutkey[16];
+    if (strftime(cutkey, sizeof(cutkey), "%Y%m%d", &cut_tm) == 0) return;
 
     DIR *dir = opendir("/spiffs/d");
     if (!dir) return;
@@ -587,7 +592,9 @@ static void fs_prune(void) {
         memcpy(filekey, name, 8);
         filekey[8] = 0;
         if (strcmp(filekey, cutkey) < 0) {
-            char full[64];
+            /* "/spiffs/d/" plus a dirent name, whose length the compiler
+             * cannot bound. Size for a full 255-byte name. */
+            char full[sizeof("/spiffs/d/") + 256];
             snprintf(full, sizeof(full), "/spiffs/d/%s", name);
             remove(full);
         }
@@ -618,11 +625,9 @@ static void IRAM_ATTR qmi_step_isr(void *arg) {
 
 static void task_sensors(void *arg) {
     float ax = 0, ay = 0, az = 1, gyro = 0;
-    float last_fall_mag = 1.0f;
     uint32_t fall_low_start = 0;
     bool fall_armed = false;
     int rr_ms = 800;
-    static uint32_t last_sample_ms = 0;
 
     while (1) {
         uint32_t now_ms = xTaskGetTickCount() * portTICK_PERIOD_MS;
@@ -672,7 +677,6 @@ static void task_sensors(void *arg) {
             fall_low_start = 0;
             fall_armed = false;
         }
-        last_fall_mag = mag;
 
         /* Sleep detection: HR < 75 and very low motion for 10 min (24000 x 25ms) */
         static int sleep_counter = 0;
