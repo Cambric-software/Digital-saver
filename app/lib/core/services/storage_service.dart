@@ -21,6 +21,14 @@ import 'dart:convert';
 
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../models/medication.dart';
+import '../models/reminder.dart';
+
+// Existing screens import `storage_service.dart` to reach [Medication]. Keeping
+// the export here means those imports do not have to change while the model
+// itself lives with the other pure models.
+export '../models/medication.dart';
+
 /// A dated entry in the reflection log.
 class Reflection {
   /// Create an entry.
@@ -45,38 +53,6 @@ class Reflection {
   Map<String, Object> toJson() => <String, Object>{'date': date, 'text': text};
 }
 
-/// A medication or supplement the person keeps on their own list.
-///
-/// Just a name and an optional dose. There is no schedule, no reminder and no
-/// interval: the watch has no alarm API, and the phone app does not send
-/// notifications from this list.
-class Medication {
-  /// Create an entry.
-  const Medication({required this.name, this.dose = ''});
-
-  /// What it is, e.g. `Vitamin D3`.
-  final String name;
-
-  /// Strength or note, e.g. `2000 IU`. May be empty.
-  final String dose;
-
-  /// Read from stored JSON, or null when the object is not a usable entry.
-  static Medication? fromJson(Object? value) {
-    if (value is! Map) return null;
-    final Object? name = value['name'];
-    final Object? dose = value['dose'];
-    if (name is! String || name.trim().isEmpty) return null;
-    return Medication(
-      name: name.trim(),
-      dose: dose is String ? dose.trim() : '',
-    );
-  }
-
-  /// Write as stored JSON.
-  Map<String, Object> toJson() =>
-      <String, Object>{'name': name, 'dose': dose};
-}
-
 /// Typed access to stored settings and records.
 abstract final class StorageService {
   /// The most reflection entries kept. Older ones are dropped rather than
@@ -95,6 +71,10 @@ abstract final class StorageService {
   static const String _keyBreathHoldBest = 'breath_hold_best_seconds';
   static const String _keyMedications = 'medications';
   static const String _keyDimAfterDark = 'dim_after_dark';
+  static const String _keyReminders = 'reminders';
+  static const String _keyScheduledIds = 'scheduled_notification_ids';
+  static const String _keyHydrationGoal = 'hydration_goal_glasses';
+  static const String _keyGlassMl = 'hydration_glass_ml';
 
   /// The defaults, in one place, so load and save cannot disagree.
   static const bool defaultDemoMode = false;
@@ -113,6 +93,29 @@ abstract final class StorageService {
   static const int defaultBreathHoldBest = 0;
   static const List<Medication> defaultMedications = <Medication>[];
   static const bool defaultDimAfterDark = false;
+  static const List<Reminder> defaultReminders = <Reminder>[];
+  static const int defaultHydrationGoal = 8;
+  static const int defaultGlassMl = 250;
+  static const int minHydrationGoal = 1;
+  static const int maxHydrationGoal = 30;
+  static const int minGlassMl = 100;
+  static const int maxGlassMl = 1000;
+
+  /// The glass sizes the wellness screen offers.
+  ///
+  /// Storage accepts the wider [minGlassMl]..[maxGlassMl] range so an older or
+  /// hand-edited value is not thrown away; the screen adds the stored value to
+  /// this list when it builds the menu, so a value outside the common sizes is
+  /// still selectable rather than an assertion failure.
+  static const List<int> glassSizes = <int>[
+    150,
+    200,
+    250,
+    300,
+    350,
+    400,
+    500,
+  ];
 
   static Future<SharedPreferences> get _prefs =>
       SharedPreferences.getInstance();
@@ -270,16 +273,33 @@ abstract final class StorageService {
   /// Entries that cannot be read are skipped rather than discarding the whole
   /// list, for the same reason the reflection log does it: one bad entry should
   /// not erase the others.
+  ///
+  /// Entries written before ids existed are given a deterministic id here, so a
+  /// dose already ticked off today stays linked to the same medication after the
+  /// app restarts. Duplicate ids are made unique in list order.
   static Future<List<Medication>> medications() async {
     final String? raw = (await _prefs).getString(_keyMedications);
     if (raw == null) return <Medication>[];
     try {
       final Object? decoded = jsonDecode(raw);
       if (decoded is! List) return <Medication>[];
-      return decoded
-          .map(Medication.fromJson)
-          .whereType<Medication>()
-          .toList(growable: false);
+      final List<Medication> out = <Medication>[];
+      final Set<String> seen = <String>{};
+      for (int index = 0; index < decoded.length; index++) {
+        final Medication? entry =
+            Medication.fromJson(decoded[index], index: index);
+        if (entry == null) continue;
+        String id = entry.id;
+        if (id.isEmpty || seen.contains(id)) {
+          id = Medication.legacyId(entry.name, entry.dose, index);
+          while (seen.contains(id)) {
+            id = '${id}_';
+          }
+        }
+        seen.add(id);
+        out.add(entry.copyWith(id: id));
+      }
+      return List<Medication>.unmodifiable(out);
     } on FormatException {
       return <Medication>[];
     }
@@ -294,6 +314,83 @@ abstract final class StorageService {
       ),
     );
   }
+
+  /// The alarms and reminders the person set, in the order they were added.
+  ///
+  /// Unreadable entries are skipped for the same reason as the medication list:
+  /// one bad object must not erase every alarm.
+  static Future<List<Reminder>> reminders() async {
+    final String? raw = (await _prefs).getString(_keyReminders);
+    if (raw == null) return <Reminder>[];
+    try {
+      final Object? decoded = jsonDecode(raw);
+      if (decoded is! List) return <Reminder>[];
+      final List<Reminder> out = <Reminder>[];
+      final Set<String> seen = <String>{};
+      for (final Object? item in decoded) {
+        final Reminder? entry = Reminder.fromJson(item);
+        if (entry == null || seen.contains(entry.id)) continue;
+        seen.add(entry.id);
+        out.add(entry);
+      }
+      return List<Reminder>.unmodifiable(out);
+    } on FormatException {
+      return <Reminder>[];
+    }
+  }
+
+  /// Replace the alarm and reminder list.
+  static Future<void> setReminders(List<Reminder> value) async {
+    await (await _prefs).setString(
+      _keyReminders,
+      jsonEncode(value.map((Reminder entry) => entry.toJson()).toList()),
+    );
+  }
+
+  /// The notification ids this app last scheduled.
+  ///
+  /// Kept so a resync cancels exactly what it created instead of calling
+  /// `cancelAll`, which would also dismiss reminders the person has not read.
+  static Future<List<int>> scheduledNotificationIds() async {
+    final List<String>? stored = (await _prefs).getStringList(_keyScheduledIds);
+    if (stored == null) return <int>[];
+    return stored.map(int.tryParse).whereType<int>().toList(growable: false);
+  }
+
+  /// Store the notification ids currently scheduled.
+  static Future<void> setScheduledNotificationIds(List<int> value) async {
+    await (await _prefs).setStringList(
+      _keyScheduledIds,
+      value.map((int id) => id.toString()).toList(),
+    );
+  }
+
+  /// How many glasses count as the day's goal. Clamped to a usable range.
+  static Future<int> hydrationGoal() async {
+    final int? stored = (await _prefs).getInt(_keyHydrationGoal);
+    if (stored == null) return defaultHydrationGoal;
+    return stored.clamp(minHydrationGoal, maxHydrationGoal);
+  }
+
+  /// Store the daily glass goal.
+  static Future<void> setHydrationGoal(int value) async =>
+      (await _prefs).setInt(
+        _keyHydrationGoal,
+        value.clamp(minHydrationGoal, maxHydrationGoal),
+      );
+
+  /// How many millilitres one logged glass counts as. Clamped.
+  static Future<int> glassMl() async {
+    final int? stored = (await _prefs).getInt(_keyGlassMl);
+    if (stored == null) return defaultGlassMl;
+    return stored.clamp(minGlassMl, maxGlassMl);
+  }
+
+  /// Store the glass size.
+  static Future<void> setGlassMl(int value) async => (await _prefs).setInt(
+        _keyGlassMl,
+        value.clamp(minGlassMl, maxGlassMl),
+      );
 
   /// Whether the app may switch to the dark theme after dark.
   ///
@@ -325,6 +422,10 @@ abstract final class StorageService {
       _keyBreathHoldBest,
       _keyMedications,
       _keyDimAfterDark,
+      _keyReminders,
+      _keyScheduledIds,
+      _keyHydrationGoal,
+      _keyGlassMl,
     ]) {
       await prefs.remove(key);
     }

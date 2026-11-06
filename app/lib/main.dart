@@ -11,6 +11,7 @@ import 'core/services/theme_service.dart';
 import 'core/services/locale_service.dart';
 import 'core/services/auto_update_service.dart';
 import 'core/services/heart_rate_tracker.dart';
+import 'core/services/notification_service.dart';
 import 'features/screens/lock_screen.dart';
 import 'features/screens/web_landing_page.dart';
 import 'features/widgets/ds_shell.dart';
@@ -20,6 +21,12 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final appLock = AppLock();
   await appLock.load();
+
+  // Prepare the notification plugin before the first frame. Scheduling is
+  // skipped on platforms without a notification implementation; the service
+  // says why instead of throwing.
+  unawaited(NotificationService.instance.initialize());
+  unawaited(NotificationService.instance.syncFromStorage());
 
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
@@ -50,7 +57,8 @@ class DigitalSaverApp extends StatefulWidget {
   State<DigitalSaverApp> createState() => _DigitalSaverAppState();
 }
 
-class _DigitalSaverAppState extends State<DigitalSaverApp> with WidgetsBindingObserver {
+class _DigitalSaverAppState extends State<DigitalSaverApp>
+    with WidgetsBindingObserver {
   /// The app's navigator, so routes opened above the shell can be closed when
   /// the lock shuts. A dialog is a route on this navigator, not part of the
   /// locked subtree, so it would otherwise stay readable over the PIN screen.
@@ -71,7 +79,8 @@ class _DigitalSaverAppState extends State<DigitalSaverApp> with WidgetsBindingOb
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.paused || state == AppLifecycleState.hidden) {
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.hidden) {
       _navigatorKey.currentState
           ?.popUntil((Route<dynamic> route) => route.isFirst);
       unawaited(context.read<AppLock>().lockNow());
@@ -79,6 +88,7 @@ class _DigitalSaverAppState extends State<DigitalSaverApp> with WidgetsBindingOb
     }
     if (state == AppLifecycleState.resumed) {
       _checkForUpdates();
+      unawaited(NotificationService.instance.syncIfStale());
     }
   }
 
@@ -165,7 +175,8 @@ class _UpdateWrapperState extends State<_UpdateWrapper> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Version ${widget.updateService.latestUpdate?.version ?? ""} is available.'),
+            Text(
+                'Version ${widget.updateService.latestUpdate?.version ?? ""} is available.'),
             const SizedBox(height: 10),
             const Text(
               'Automatic install is not available on your device. Tap Download to get the latest APK and install it manually.',
@@ -174,7 +185,8 @@ class _UpdateWrapperState extends State<_UpdateWrapper> {
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Later')),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx), child: const Text('Later')),
           ElevatedButton.icon(
             onPressed: () {
               Navigator.pop(ctx);
@@ -202,7 +214,8 @@ class _UpdateWrapperState extends State<_UpdateWrapper> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Version ${widget.updateService.latestUpdate?.version ?? ""} is now available!'),
+            Text(
+                'Version ${widget.updateService.latestUpdate?.version ?? ""} is now available!'),
             const SizedBox(height: 12),
             if (widget.updateService.latestUpdate?.releaseNotes != null)
               Container(
@@ -219,11 +232,13 @@ class _UpdateWrapperState extends State<_UpdateWrapper> {
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Later')),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx), child: const Text('Later')),
           ElevatedButton.icon(
             onPressed: () {
               Navigator.pop(ctx);
-              _launchUrl(widget.updateService.latestUpdate?.downloadUrl ?? 'https://github.com/Cambric-software/Digital-saver/releases');
+              _launchUrl(widget.updateService.latestUpdate?.downloadUrl ??
+                  'https://github.com/Cambric-software/Digital-saver/releases');
             },
             icon: const Icon(Icons.download),
             label: const Text('Download'),

@@ -52,6 +52,9 @@ abstract final class DailyLog {
   /// Optional words attached to today's effort rating.
   static const String rpeNote = 'rpe_note';
 
+  /// Seconds of guided breathing practised today.
+  static const String breathingSeconds = 'breathing_seconds';
+
   static const String _dayPrefix = 'daily_log_';
   static const String _settingPrefix = 'daily_log_setting_';
   static const String _strideKey = 'stride_cm';
@@ -139,8 +142,7 @@ abstract final class DailyLog {
   /// Values outside a plausible adult range are treated as corrupt rather than
   /// used to produce a distance that is wrong by a factor of ten.
   static Future<double?> strideCm() async {
-    final String? raw =
-        (await _prefs).getString('$_settingPrefix$_strideKey');
+    final String? raw = (await _prefs).getString('$_settingPrefix$_strideKey');
     final double? value = raw == null ? null : double.tryParse(raw);
     if (value == null || value < 30 || value > 160) return null;
     return value;
@@ -159,8 +161,7 @@ abstract final class DailyLog {
 
   /// The fasting plan last chosen, e.g. `16:8`. Null when never chosen.
   static Future<String?> fastingPlan() async {
-    final String? value =
-        (await _prefs).getString('$_settingPrefix$_planKey');
+    final String? value = (await _prefs).getString('$_settingPrefix$_planKey');
     if (value == null || value.trim().isEmpty) return null;
     return value;
   }

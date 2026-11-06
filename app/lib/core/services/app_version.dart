@@ -25,10 +25,10 @@ class AppVersion {
   const AppVersion._();
 
   /// The released version.
-  static const String current = '1.0.3';
+  static const String current = '1.1.0';
 
   /// Build number, matching the `+N` suffix in pubspec.
-  static const String buildNumber = '3';
+  static const String buildNumber = '4';
 
   /// Marketing name.
   static const String displayName = 'Digital Saver';

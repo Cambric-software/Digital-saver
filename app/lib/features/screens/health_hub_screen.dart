@@ -20,9 +20,12 @@ import '../../../core/services/storage_service.dart';
 import 'package:cambric_design/cambric_design.dart';
 import '../../../features/widgets/ds_timers.dart';
 import 'bp_screen.dart';
+import 'breathing_screen.dart';
 import 'device_diagnostics_screen.dart';
 import 'fitness_tools_screen.dart';
 import 'lifestyle_tools_screen.dart';
+import 'medications_screen.dart';
+import 'reminders_screen.dart';
 import 'watch_simulator_screen.dart';
 import 'wellness_tools_screen.dart';
 
@@ -162,7 +165,8 @@ class _HealthHubScreenState extends State<HealthHubScreen> {
                 ),
                 _SuiteCard(
                   title: 'Device & sensors',
-                  subtitle: 'Connection, firmware, storage and the commands it accepts',
+                  subtitle:
+                      'Connection, firmware, storage and the commands it accepts',
                   icon: Icons.tune_outlined,
                   onTap: () => _open(const DeviceDiagnosticsScreen()),
                 ),
@@ -187,6 +191,36 @@ class _HealthHubScreenState extends State<HealthHubScreen> {
                   subtitle: 'See how a watch face renders before you pair one',
                   icon: Icons.watch_outlined,
                   onTap: () => _open(const WatchSimulatorScreen()),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: Space.xxl),
+          DsSection(
+            title: 'Daily care',
+            subtitle: 'Alarms, medication times and guided breathing',
+            child: DsGrid(
+              minTileWidth: 280,
+              children: <Widget>[
+                _SuiteCard(
+                  title: 'Alarms & reminders',
+                  subtitle: 'Wake-up alarms, water prompts and break reminders',
+                  icon: Icons.alarm_outlined,
+                  onTap: () => _open(const RemindersScreen()),
+                ),
+                _SuiteCard(
+                  title: 'Medications',
+                  subtitle:
+                      'Your list, the times you take them, and today\'s doses',
+                  icon: Icons.medication_outlined,
+                  onTap: () => _open(const MedicationsScreen()),
+                ),
+                _SuiteCard(
+                  title: 'Breathing & relaxation',
+                  subtitle:
+                      'Box, 4-7-8, coherent and calm rhythms that pace themselves',
+                  icon: Icons.self_improvement_outlined,
+                  onTap: () => _open(const BreathingScreen()),
                 ),
               ],
             ),

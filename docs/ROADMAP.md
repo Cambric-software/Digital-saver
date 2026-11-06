@@ -7,8 +7,10 @@ order survives between sessions instead of living only in a conversation.
 start a lower phase while a higher phase has an open item, unless the user says
 otherwise.
 
-The same file is kept in `Digital-saver/docs/ROADMAP.md` so whichever product is open,
-the plan is visible.
+The same work order is kept in Max Tools and Digital Saver, because a phase that
+is done for one product is often open for the other. The copies are not
+byte-identical: each carries its own product-specific items. The copy in the
+repository you are working in is the one to follow.
 
 ---
 
@@ -159,6 +161,23 @@ Nothing below this matters if the product tells lies or has dead controls.
       records the control-by-control coverage, those findings, and what is not
       exercised and why (real Bluetooth, OS installers, the update download).
       Pipeline: 346 tests green, analyzer 0 errors.
+- [x] **3.3 Daily care — alarms, reminders, medications and guided breathing**
+      (2026-11-06). The app had no alarm or reminder model at all, the
+      medication list had no schedule, and box breathing ran one anonymous
+      16-second countdown. **Done:** a stored `Reminder` model with weekly and
+      one-off occurrence maths; a medication schedule (`HH:MM` times plus
+      weekdays) and today's doses with a taken timestamp; a pure
+      `SchedulePlanner` that turns both into a finite, sorted, deduplicated
+      alert list; a `NotificationService` that schedules through
+      `flutter_local_notifications` with inexact Android timing, cancels only
+      the ids it created, and reports unsupported platforms instead of
+      pretending; three screens reachable from the health hub; a hydration goal
+      and glass size the person sets; and Android boot/update receivers so a
+      reboot keeps the schedule. The screens state the limits: reminders can
+      arrive a few minutes late, a desktop build saves the schedule but cannot
+      alert, and the medication list is the person's own, not a prescription.
+      Verified: 420 tests pass, `flutter analyze` reports no issues, and the UI
+      capture harness renders all three screens at 390px and 1440px.
 
 ### Phase 4 — Veyro product
 
@@ -184,17 +203,20 @@ Nothing below this matters if the product tells lies or has dead controls.
       documents say UNKNOWN or MUST MEASURE instead of inventing a value.
 - [x] **4.3 Verify every fact** in `docs/` and `firmware/`, for the parts the
       repository can settle. Done 2026-10-21: the prototype builds (Flash 62.0%,
-      RAM 12.6%), the S3 target fails on `I2C_NUM_2`, and the app runs 346 tests
+      RAM 12.6%), the S3 target fails on `I2C_NUM_2` (fixed in source on
+      2026-11-06; see 4.4), and the app runs 346 tests
       with 0 analyzer errors. The commercial spec's contradictions are removed
       (LVGL 8.3.11, N16R8, VC31B, MCP73831-class charger) and it is marked as an
       input to 4.5. Datasheet and bench facts remain UNKNOWN/MUST MEASURE until
       the 4.5 part selection chooses parts — see `docs/HARDWARE.md` §7.
 - [ ] **4.4 Expand the firmware** to the documented feature set on the decided
-      target, and make it build clean. The S3 blockers recorded in 4.1 come
-      first: settle the third I2C bus against the schematic (share a bus, add a
-      mux, or bit-bang), write the NimBLE GATT service table so the app can
-      read anything, implement the five faces and six themes, then hardware-test
-      the result. Do not flash the S3 image until the bus question is answered.
+      target, and make it build clean. The third-I2C-bus blocker from 4.1 is
+      answered in source: bus B is shared (`I2C_NUM_2` → `I2C_NUM_1`), so the
+      PMIC and the other bus-B devices no longer claim a master the chip does
+      not have. What remains is to write the NimBLE GATT service table so the
+      app can read anything, implement the five faces and six themes, get a
+      clean build, then hardware-test the result. Do not flash the S3 image
+      until the build and the bench checks pass.
 - [ ] **4.5 Redesign the hardware system for the 7,500 EGP product.** The
       mission, stated 2026-10-21: a watch that competes on a shelf with the
       Apple Watch and its peers at about 7,500 EGP — touchscreen, a large custom

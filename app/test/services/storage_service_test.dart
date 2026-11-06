@@ -1,3 +1,4 @@
+import 'package:digital_saver/core/models/reminder.dart';
 import 'package:digital_saver/core/services/storage_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -46,6 +47,13 @@ void main() {
       await StorageService.dimAfterDark(),
       StorageService.defaultDimAfterDark,
     );
+    expect(await StorageService.reminders(), isEmpty);
+    expect(
+      await StorageService.hydrationGoal(),
+      StorageService.defaultHydrationGoal,
+    );
+    expect(await StorageService.glassMl(), StorageService.defaultGlassMl);
+    expect(await StorageService.scheduledNotificationIds(), isEmpty);
   });
 
   test('each setting round-trips', () async {
@@ -213,6 +221,18 @@ void main() {
       Medication(name: 'Iron'),
     ]);
     await StorageService.setDimAfterDark(true);
+    await StorageService.setReminders(const <Reminder>[
+      Reminder(
+        id: 'r1',
+        title: 'Wake up',
+        hour: 7,
+        minute: 0,
+        days: <int>[1, 2, 3, 4, 5, 6, 7],
+      ),
+    ]);
+    await StorageService.setHydrationGoal(10);
+    await StorageService.setGlassMl(300);
+    await StorageService.setScheduledNotificationIds(<int>[1, 2]);
 
     await StorageService.clear();
 
@@ -225,5 +245,93 @@ void main() {
       await StorageService.dimAfterDark(),
       StorageService.defaultDimAfterDark,
     );
+    expect(await StorageService.reminders(), isEmpty);
+    expect(await StorageService.hydrationGoal(),
+        StorageService.defaultHydrationGoal);
+    expect(await StorageService.glassMl(), StorageService.defaultGlassMl);
+    expect(await StorageService.scheduledNotificationIds(), isEmpty);
+  });
+
+  test('a medication schedule round-trips, sorted and deduplicated', () async {
+    await StorageService.setMedications(const <Medication>[
+      Medication(
+        id: 'med_a',
+        name: 'Metformin',
+        dose: '500 mg',
+        notes: 'With food',
+        times: <String>['20:00', '08:00', '8:00'],
+        days: <int>[5, 1, 1],
+      ),
+    ]);
+
+    final List<Medication> stored = await StorageService.medications();
+    expect(stored, hasLength(1));
+    final Medication entry = stored.single;
+    expect(entry.id, 'med_a');
+    expect(entry.times, <String>['08:00', '20:00']);
+    expect(entry.days, <int>[1, 5]);
+    expect(entry.notes, 'With food');
+  });
+
+  test('a medication written before ids existed gets a stable id', () async {
+    SharedPreferences.setMockInitialValues(<String, Object>{
+      'medications': '[{"name":"Iron","dose":"50 mg"}]',
+    });
+
+    final Medication first = (await StorageService.medications()).single;
+    final Medication second = (await StorageService.medications()).single;
+    expect(first.id, isNotEmpty);
+    expect(first.id, second.id);
+    expect(first.times, isEmpty);
+    expect(first.days, isEmpty);
+  });
+
+  test('reminders round-trip and unreadable ones are skipped', () async {
+    await StorageService.setReminders(<Reminder>[
+      const Reminder(
+        id: 'r1',
+        title: 'Wake up',
+        hour: 7,
+        minute: 15,
+        days: <int>[1, 2, 3, 4, 5],
+        kind: ReminderKind.alarm,
+      ),
+      const Reminder(
+        id: 'r2',
+        title: 'Dentist',
+        hour: 9,
+        minute: 0,
+        date: '2027-01-14',
+      ),
+    ]);
+
+    final List<Reminder> stored = await StorageService.reminders();
+    expect(stored, hasLength(2));
+    expect(stored.first.title, 'Wake up');
+    expect(stored.first.repeatLabel, 'Weekdays');
+    expect(stored.last.date, '2027-01-14');
+  });
+
+  test('a corrupt reminder list reads as empty, not a crash', () async {
+    SharedPreferences.setMockInitialValues(<String, Object>{
+      'reminders': 'not json',
+    });
+    expect(await StorageService.reminders(), isEmpty);
+  });
+
+  test('hydration settings are clamped to a usable range', () async {
+    await StorageService.setHydrationGoal(0);
+    expect(
+        await StorageService.hydrationGoal(), StorageService.minHydrationGoal);
+
+    await StorageService.setHydrationGoal(999);
+    expect(
+        await StorageService.hydrationGoal(), StorageService.maxHydrationGoal);
+
+    await StorageService.setGlassMl(1);
+    expect(await StorageService.glassMl(), StorageService.minGlassMl);
+
+    await StorageService.setGlassMl(9999);
+    expect(await StorageService.glassMl(), StorageService.maxGlassMl);
   });
 }

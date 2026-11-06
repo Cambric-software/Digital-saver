@@ -4,19 +4,17 @@ Digital Saver is a Flutter companion app for a health-tracking watch. Veyro is
 the watch. Two firmware targets exist in this repository, and they are at very
 different stages.
 
-| Part | Where | State on 2026-10-21 |
+| Part | Where | State on 2026-11-06 |
 |---|---|---|
-| Companion app | `app/` | Built on Flutter; 346 tests pass, analyzer reports no errors |
-| Veyro prototype | `firmware/esp32/` | Builds (Flash 62.0%, RAM 12.6%); not hardware-tested in this repository |
-| Veyro production target | `firmware/esp32s3/` | **Does not build**; the hardware is under redesign |
-| Documentation | `docs/` | Rewritten; start at [docs/README.md](docs/README.md) |
+| Companion app | `app/` | Flutter; 420 tests pass, analyzer reports no errors |
+| Veyro prototype | `firmware/esp32/` | Builds (Flash 62.0%, RAM 12.6% as of 2026-10-21); not hardware-tested in this repository |
+| Veyro production target | `firmware/esp32s3/` | ESP-IDF source. The third-I2C-bus conflict is fixed by sharing bus B; a clean build has not been verified here, and the target has no GATT service yet |
+| Documentation | `docs/` | Start at [docs/README.md](docs/README.md) |
 
 The production watch is a design goal, not a shipped product. The app talks to
-the ESP32 prototype over Bluetooth; the ESP32-S3 target has no GATT service yet,
-so it cannot be paired with, and its pin map assigns three I2C buses to a chip
-with two. [docs/FIRMWARE.md](docs/FIRMWARE.md) records the exact blockers rather
-than presenting the target as finished. The redesign, with sourced parts, is
-item 4.5 in [docs/ROADMAP.md](docs/ROADMAP.md).
+the ESP32 prototype over Bluetooth. The ESP32-S3 target still has no GATT
+service, so it cannot be paired with. [docs/ROADMAP.md](docs/ROADMAP.md) records
+what is open, including the production hardware redesign in item 4.5.
 
 ## What the app does
 
@@ -24,10 +22,17 @@ item 4.5 in [docs/ROADMAP.md](docs/ROADMAP.md).
   a blood-pressure screen that reads the values the watch sends.
 - Stores watch history on the phone, with a defined retention window, and works
   without an account or a cloud service.
-- Groups everyday tools under a health hub: wellness (breathing, hydration,
-  caffeine, a rest timer), fitness (recovery test, zones, workout timer, RPE),
-  lifestyle (fasting timer, mood, movement breaks, a BMR estimate) and device
-  diagnostics.
+- Groups everyday tools under a health hub: wellness (hydration with a goal and
+  glass size you set yourself, caffeine, a rest timer), fitness (recovery test,
+  zones, workout timer, RPE), lifestyle (fasting timer, mood, movement breaks, a
+  BMR estimate) and device diagnostics.
+- Schedules alarms, reminders and medication times with the phone's own
+  notification system, and shows today's doses. Android may deliver a reminder a
+  few minutes late because the app asks for battery-friendly scheduling rather
+  than the restricted exact-alarm permission; a desktop build saves the schedule
+  but cannot alert.
+- Includes guided breathing with box, 4-7-8, coherent and calm rhythms that
+  count the real phase and record the seconds practised today.
 - Includes an app lock, an emergency contact card, a daily reflection log and a
   watch-face preview.
 - Has an assistant screen that calls a hosted endpoint. It is not an offline
@@ -73,20 +78,24 @@ pio device monitor
 ```
 
 The build and flash steps, the expected boot line and the recovery table are in
-[docs/FIRMWARE.md](docs/FIRMWARE.md). Hardware and wiring are in
-[docs/HARDWARE.md](docs/HARDWARE.md).
+[docs/README.md](docs/README.md); the production firmware plan is
+[docs/FIRMWARE_PLAN.md](docs/FIRMWARE_PLAN.md). Production hardware, sourcing
+and the measurement gates are in
+[docs/HARDWARE_DESIGN.md](docs/HARDWARE_DESIGN.md).
 
 ## Documentation
 
 - [docs/README.md](docs/README.md) - the index, and which document to read when.
-- [docs/ROADMAP.md](docs/ROADMAP.md) - the ordered plan; shared verbatim with
-  Max Tools, Cambric's other product.
-- [docs/FIRMWARE.md](docs/FIRMWARE.md) - what each firmware target does, and how
-  to build and flash the one that builds.
-- [docs/HARDWARE.md](docs/HARDWARE.md) - the bench prototype, sourcing and
-  power safety, and what the production redesign must decide.
-- [docs/SYSTEM.md](docs/SYSTEM.md) - the watch-to-phone data path, BLE contract,
-  storage and release checks.
+- [docs/ROADMAP.md](docs/ROADMAP.md) - the ordered plan. Max Tools keeps its
+  own copy with its product-specific items.
+- [docs/FIRMWARE_PLAN.md](docs/FIRMWARE_PLAN.md) - the production architecture
+  and firmware milestones.
+- [docs/HARDWARE_DESIGN.md](docs/HARDWARE_DESIGN.md) - the sourced production
+  design, 1,000/10,000-unit prices and the gates a build must pass.
+- [docs/VEYRO_DEMO_BOM.md](docs/VEYRO_DEMO_BOM.md) - the sourced demo-unit BOM.
+- [docs/PLAN.md](docs/PLAN.md) and
+  [docs/ARCHITECTURE_STANDARD.md](docs/ARCHITECTURE_STANDARD.md) - the
+  Cambric-wide phase status and the repository layout rules.
 
 ## Licence and security
 

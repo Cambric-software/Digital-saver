@@ -27,6 +27,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../core/services/ble_service.dart';
 import '../../../core/services/daily_log.dart';
+import '../../../core/services/storage_service.dart';
 import 'package:cambric_design/cambric_design.dart';
 import '../../../features/widgets/ds_timers.dart';
 
@@ -40,13 +41,12 @@ class WellnessToolsScreen extends StatefulWidget {
 }
 
 class _WellnessToolsScreenState extends State<WellnessToolsScreen> {
-  static const int _goalGlasses = 8;
-  static const int _glassMl = 250;
-
   bool _loading = true;
   String? _loadError;
 
   int _glasses = 0;
+  int _goalGlasses = StorageService.defaultHydrationGoal;
+  int _glassMl = StorageService.defaultGlassMl;
   int _coffees = 0;
   DateTime? _lastCoffee;
   double? _strideCm;
@@ -62,8 +62,9 @@ class _WellnessToolsScreenState extends State<WellnessToolsScreen> {
 
   Future<void> _load() async {
     try {
-      final int glasses =
-          await DailyLog.counter(DailyLog.hydrationGlasses);
+      final int glasses = await DailyLog.counter(DailyLog.hydrationGlasses);
+      final int goal = await StorageService.hydrationGoal();
+      final int glassMl = await StorageService.glassMl();
       final int coffees = await DailyLog.counter(DailyLog.coffees);
       final DateTime? lastCoffee = await DailyLog.time(DailyLog.lastCoffee);
       final double? stride = await DailyLog.strideCm();
@@ -71,6 +72,8 @@ class _WellnessToolsScreenState extends State<WellnessToolsScreen> {
       if (!mounted) return;
       setState(() {
         _glasses = glasses;
+        _goalGlasses = goal;
+        _glassMl = glassMl;
         _coffees = coffees;
         _lastCoffee = lastCoffee;
         _strideCm = stride;
@@ -103,6 +106,24 @@ class _WellnessToolsScreenState extends State<WellnessToolsScreen> {
   Future<void> _resetWater() async {
     setState(() => _glasses = 0);
     await DailyLog.setCounter(DailyLog.hydrationGlasses, 0);
+  }
+
+  Future<void> _setGoal(int value) async {
+    final int clamped = value.clamp(
+      StorageService.minHydrationGoal,
+      StorageService.maxHydrationGoal,
+    );
+    setState(() => _goalGlasses = clamped);
+    await StorageService.setHydrationGoal(clamped);
+  }
+
+  Future<void> _setGlassMl(int value) async {
+    final int clamped = value.clamp(
+      StorageService.minGlassMl,
+      StorageService.maxGlassMl,
+    );
+    setState(() => _glassMl = clamped);
+    await StorageService.setGlassMl(clamped);
   }
 
   Future<void> _logCoffee() async {
@@ -187,8 +208,9 @@ class _WellnessToolsScreenState extends State<WellnessToolsScreen> {
         ],
         DsSection(
           title: 'Hydration today',
-          subtitle: '250 ml a glass. The eight-glass line is a general guide, '
-              'not a target derived from your data.',
+          subtitle:
+              'The goal is a general guide you set yourself, not a target '
+              'derived from your data.',
           child: DsCard(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -237,6 +259,53 @@ class _WellnessToolsScreenState extends State<WellnessToolsScreen> {
                     TextButton(
                       onPressed: _glasses == 0 ? null : _resetWater,
                       child: const Text('Reset today'),
+                    ),
+                  ],
+                ),
+                const Divider(height: Space.xl),
+                Wrap(
+                  spacing: Space.sm,
+                  runSpacing: Space.sm,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: <Widget>[
+                    Text('Daily goal', style: theme.textTheme.bodySmall),
+                    IconButton.filledTonal(
+                      tooltip: 'Lower the goal',
+                      onPressed: _goalGlasses <= StorageService.minHydrationGoal
+                          ? null
+                          : () => _setGoal(_goalGlasses - 1),
+                      icon: const Icon(Icons.remove_rounded, size: 18),
+                    ),
+                    Text(
+                      '$_goalGlasses glasses',
+                      style: theme.textTheme.titleSmall,
+                    ),
+                    IconButton.filledTonal(
+                      tooltip: 'Raise the goal',
+                      onPressed: _goalGlasses >= StorageService.maxHydrationGoal
+                          ? null
+                          : () => _setGoal(_goalGlasses + 1),
+                      icon: const Icon(Icons.add_rounded, size: 18),
+                    ),
+                    const SizedBox(width: Space.sm),
+                    Text('Glass size', style: theme.textTheme.bodySmall),
+                    DropdownButton<int>(
+                      value: _glassMl,
+                      underline: const SizedBox.shrink(),
+                      items: <DropdownMenuItem<int>>[
+                        for (final int ml in (<int>{
+                          ...StorageService.glassSizes,
+                          _glassMl,
+                        }.toList()
+                          ..sort()))
+                          DropdownMenuItem<int>(
+                            value: ml,
+                            child: Text('$ml ml'),
+                          ),
+                      ],
+                      onChanged: (int? value) {
+                        if (value != null) _setGlassMl(value);
+                      },
                     ),
                   ],
                 ),
@@ -362,8 +431,7 @@ class _WellnessToolsScreenState extends State<WellnessToolsScreen> {
                   DsSegment<int>(value: 90, label: '90 s'),
                   DsSegment<int>(value: 120, label: '2 min'),
                 ],
-                onChanged: (int value) =>
-                    setState(() => _restSeconds = value),
+                onChanged: (int value) => setState(() => _restSeconds = value),
               ),
               const SizedBox(height: Space.md),
               DsCountdown(

@@ -17,6 +17,7 @@ import 'package:digital_saver/features/screens/achievements_screen.dart';
 import 'package:digital_saver/features/screens/activity_screen.dart';
 import 'package:digital_saver/features/screens/ai_assistant_screen.dart';
 import 'package:digital_saver/features/screens/bp_screen.dart';
+import 'package:digital_saver/features/screens/breathing_screen.dart';
 import 'package:digital_saver/features/screens/dashboard_screen.dart';
 import 'package:digital_saver/features/screens/device_diagnostics_screen.dart';
 import 'package:digital_saver/features/screens/fitness_tools_screen.dart';
@@ -28,6 +29,8 @@ import 'package:digital_saver/features/screens/insights_screen.dart';
 import 'package:digital_saver/features/screens/lock_screen.dart';
 import 'package:digital_saver/features/screens/lifestyle_tools_screen.dart';
 import 'package:digital_saver/features/screens/memory_screen.dart';
+import 'package:digital_saver/features/screens/medications_screen.dart';
+import 'package:digital_saver/features/screens/reminders_screen.dart';
 import 'package:digital_saver/features/screens/settings_screen.dart';
 import 'package:digital_saver/features/screens/sleep_screen.dart';
 import 'package:digital_saver/features/screens/vitals_screen.dart';
@@ -45,12 +48,12 @@ import 'stub_notifications.dart';
 ///
 /// Off unless CAPTURE_UI=1, so a normal test run asserts behaviour and does not
 /// compare against stored pixels.
-final bool captureImages =
-    Platform.environment['CAPTURE_UI'] == '1';
+final bool captureImages = Platform.environment['CAPTURE_UI'] == '1';
 
 /// Phone and laptop, chosen because they are the two the app is actually used
 /// at and the two most layouts are written for.
-const List<({String name, Size size})> _viewports = <({String name, Size size})>[
+const List<({String name, Size size})> _viewports =
+    <({String name, Size size})>[
   (name: 'phone', size: Size(390, 844)),
   (name: 'laptop', size: Size(1440, 900)),
 ];
@@ -85,6 +88,9 @@ final Map<String, Widget Function()> _screens = <String, Widget Function()>{
   'fitness_tools': FitnessToolsScreen.new,
   'lifestyle_tools': LifestyleToolsScreen.new,
   'wellness_tools': WellnessToolsScreen.new,
+  'reminders': RemindersScreen.new,
+  'medications': MedicationsScreen.new,
+  'breathing': BreathingScreen.new,
   'achievements': AchievementsScreen.new,
   'ai_assistant': AIAssistantScreen.new,
   'memory': MemoryScreen.new,
@@ -104,8 +110,7 @@ final Map<String, Widget Function()> _screens = <String, Widget Function()>{
 /// These are the same files the Flutter SDK ships and the app uses at runtime,
 /// so what is captured is what a person sees.
 Future<void> loadRealFonts() async {
-  final root = Platform.environment['FLUTTER_ROOT'] ??
-      r'C:\src\flutter';
+  final root = Platform.environment['FLUTTER_ROOT'] ?? r'C:\src\flutter';
   final dir = Directory('$root/bin/cache/artifacts/material_fonts');
   if (!dir.existsSync()) {
     // Not fatal: the assertions still run. The images just render as boxes.
