@@ -223,7 +223,11 @@ Nothing below this matters if the product tells lies or has dead controls.
       reset; the app replaces the alarm set from the repeating reminders. The
       faces are authored at 360×360 and scale to a larger square panel; a
       466×466 build was verified. Remaining: flash it to a watch and run the
-      bench checks. Do not call the image production-ready until those pass.
+      bench checks. The watch has no OTA path yet — the OTA characteristic is
+      reserved and not registered, and updates go over USB. A BLE update needs
+      a published signed image, a transfer protocol and bench testing before it
+      can ship, so it is not claimed. Do not call the image production-ready
+      until the bench checks pass.
 - [ ] **4.5 Redesign the hardware system for the 7,500 EGP product.** The
       mission, stated 2026-10-21: a watch that competes on a shelf with the
       Apple Watch and its peers at about 7,500 EGP — touchscreen, a large custom
