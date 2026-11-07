@@ -20,6 +20,7 @@
 #include <string.h>
 #include <math.h>
 #include <stdio.h>
+#include <time.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/queue.h"
@@ -46,12 +47,15 @@
 #include "nimble/nimble_port.h"
 #include "nimble/nimble_port_freertos.h"
 #include "host/ble_hs.h"
+#include "host/ble_hs_mbuf.h"
+#include "os/os_mbuf.h"
 #include "host/ble_uuid.h"
 #include "host/ble_gap.h"
 #include "display.h"
 #include "host/ble_gatt.h"
 #include "services/gap/ble_svc_gap.h"
 #include "services/gatt/ble_svc_gatt.h"
+#include "cJSON.h"
 #include "lvgl.h"
 
 /* ─────────────────────────────────────────────────────────────────────── */
@@ -111,43 +115,44 @@
 
 /* Service: 4fafc201-1fb5-459e-8fcc-c5c9c331914b */
 /*
- * These UUIDs are reserved for the GATT service and are deliberately unused
- * until that service exists: this target advertises and accepts a connection
- * but registers no characteristics, so a paired app currently finds nothing to
- * read. They are marked unused rather than deleted so the table below can be
- * written against the same constants the app already knows, and so the gap is
- * visible in the source instead of being hidden by a compiler flag.
+ * The same service and characteristic UUIDs the companion app knows
+ * (app/lib/core/services/veyro_protocol.dart). The live, history, info and
+ * command characteristics are registered in the GATT table below. The
+ * notification-bridge and OTA characteristics are reserved: this firmware has
+ * no behaviour behind them yet, so registering them would advertise a feature
+ * that does not work. They are kept here, marked unused, so the gap stays
+ * visible and the table can be extended against the same constants.
  */
-static const ble_uuid128_t __attribute__((unused)) gatt_svc_uuid = BLE_UUID128_INIT(
+static const ble_uuid128_t gatt_svc_uuid = BLE_UUID128_INIT(
     0x4b, 0x91, 0x31, 0xc3, 0xc9, 0xc5, 0xcc, 0x8f,
     0x9e, 0x45, 0xb5, 0x1f, 0x01, 0xc2, 0xaf, 0x4f);
 
 /* Live vitals: beb5483e-36e1-4688-b7f5-ea07361b26a8 */
-static const ble_uuid128_t __attribute__((unused)) chr_live_uuid = BLE_UUID128_INIT(
+static const ble_uuid128_t chr_live_uuid = BLE_UUID128_INIT(
     0xa8, 0x26, 0x1b, 0x36, 0x07, 0xea, 0xf5, 0xb7,
     0x88, 0x46, 0xe1, 0x36, 0x3e, 0x48, 0xb5, 0xbe);
 
 /* History: suffix 26a1 */
-static const ble_uuid128_t __attribute__((unused)) chr_hist_uuid = BLE_UUID128_INIT(
+static const ble_uuid128_t chr_hist_uuid = BLE_UUID128_INIT(
     0xa1, 0x26, 0x1b, 0x36, 0x07, 0xea, 0xf5, 0xb7,
     0x88, 0x46, 0xe1, 0x36, 0x3e, 0x48, 0xb5, 0xbe);
 
 /* Info: suffix 26a2 */
-static const ble_uuid128_t __attribute__((unused)) chr_info_uuid = BLE_UUID128_INIT(
+static const ble_uuid128_t chr_info_uuid = BLE_UUID128_INIT(
     0xa2, 0x26, 0x1b, 0x36, 0x07, 0xea, 0xf5, 0xb7,
     0x88, 0x46, 0xe1, 0x36, 0x3e, 0x48, 0xb5, 0xbe);
 
 /* Command: suffix 26f0 */
-static const ble_uuid128_t __attribute__((unused)) chr_cmd_uuid = BLE_UUID128_INIT(
+static const ble_uuid128_t chr_cmd_uuid = BLE_UUID128_INIT(
     0xf0, 0x26, 0x1b, 0x36, 0x07, 0xea, 0xf5, 0xb7,
     0x88, 0x46, 0xe1, 0x36, 0x3e, 0x48, 0xb5, 0xbe);
 
-/* Notifications: suffix 26b0 */
+/* Notifications: suffix 26b0 (reserved, not registered) */
 static const ble_uuid128_t __attribute__((unused)) chr_notif_uuid = BLE_UUID128_INIT(
     0xb0, 0x26, 0x1b, 0x36, 0x07, 0xea, 0xf5, 0xb7,
     0x88, 0x46, 0xe1, 0x36, 0x3e, 0x48, 0xb5, 0xbe);
 
-/* OTA data: suffix 26c0 */
+/* OTA data: suffix 26c0 (reserved, not registered) */
 static const ble_uuid128_t __attribute__((unused)) chr_ota_uuid = BLE_UUID128_INIT(
     0xc0, 0x26, 0x1b, 0x36, 0x07, 0xea, 0xf5, 0xb7,
     0x88, 0x46, 0xe1, 0x36, 0x3e, 0x48, 0xb5, 0xbe);
@@ -163,7 +168,10 @@ static volatile uint32_t g_last_activity_ms = 0;
 static void display_wake(void) {
     if (!g_display_awake) {
         g_display_awake = true;
-        ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, 614);
+        uint8_t pct = display_get_config()->brightness_pct;
+        if (pct < 1) pct = 60;
+        ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0,
+                      (uint32_t)((1023u * pct) / 100u));
         ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0);
     }
     g_last_activity_ms = xTaskGetTickCount() * portTICK_PERIOD_MS;
@@ -202,6 +210,9 @@ static volatile bool    g_ble_paired  = false;
 static volatile bool    g_ble_connected = false;
 static volatile int     g_watch_face  = 0;
 static volatile int     g_theme       = 0;
+/* Minutes east of UTC for the watch face only. Stored day files stay in UTC so
+ * their names and retention are stable regardless of travel. */
+static volatile int     g_tz_offset_min = 0;
 static volatile uint32_t g_saved_steps = 0;  /* last value written to NVS */
 static volatile int     g_wrong_pin_count = 0;
 static char             g_pin_code[7] = "000000";
@@ -236,6 +247,10 @@ static QueueHandle_t g_sensor_queue;   /* sensor_event_t, size 16 */
 static QueueHandle_t g_haptic_queue;   /* uint8_t effect number, size 8 */
 static SemaphoreHandle_t g_i2c_b_mutex; /* protects I2C bus B */
 static SemaphoreHandle_t g_storage_mutex; /* protects LittleFS writes */
+
+/* Implemented in the GATT section; declared here because the BLE task builds
+ * the live payload before that section. */
+static void ble_notify_live(const char *json);
 
 typedef struct {
     int hr;
@@ -500,9 +515,18 @@ static void nvs_load_all(void) {
     nvs_get_u32(g_nvs, "steps", (uint32_t *)&g_steps);
     g_saved_steps = g_steps;
     uint8_t face;
-    if (nvs_get_u8(g_nvs, "face", &face) == ESP_OK) g_watch_face = face % 8;
+    if (nvs_get_u8(g_nvs, "face", &face) == ESP_OK) {
+        g_watch_face = face % WATCHFACE_COUNT;
+    }
     uint8_t theme;
-    if (nvs_get_u8(g_nvs, "theme", &theme) == ESP_OK) g_theme = theme % 4;
+    if (nvs_get_u8(g_nvs, "theme", &theme) == ESP_OK) {
+        g_theme = theme % THEME_COUNT;
+    }
+    int32_t tz;
+    if (nvs_get_i32(g_nvs, "tz", &tz) == ESP_OK &&
+        tz >= -14 * 60 && tz <= 14 * 60) {
+        g_tz_offset_min = (int)tz;
+    }
     len = sizeof(g_serial);
     nvs_get_str(g_nvs, "serial", g_serial, &len);
 }
@@ -524,6 +548,41 @@ static void generate_pin(void) {
 #include <sys/stat.h>
 
 static bool g_fs_ready = false;
+static uint32_t g_sample_count = 0;  /* stored CSV rows, kept in step with the files */
+
+/** Count the rows in one CSV file. Reads in blocks: fgetc per byte is slow on
+ *  SPIFFS and this runs at boot and when old files are pruned. */
+static uint32_t fs_count_file_rows(const char *path) {
+    FILE *f = fopen(path, "r");
+    if (!f) return 0;
+    char buf[512];
+    size_t n;
+    uint32_t rows = 0;
+    while ((n = fread(buf, 1, sizeof(buf), f)) > 0) {
+        for (size_t i = 0; i < n; i++) {
+            if (buf[i] == '\n') rows++;
+        }
+    }
+    fclose(f);
+    return rows;
+}
+
+/** Count every stored row across the day files. */
+static uint32_t fs_count_samples(void) {
+    DIR *dir = opendir("/spiffs/d");
+    if (!dir) return 0;
+    uint32_t rows = 0;
+    struct dirent *ent;
+    while ((ent = readdir(dir)) != NULL) {
+        const char *name = ent->d_name;
+        if (strlen(name) != 12 || strcmp(name + 8, ".csv") != 0) continue;
+        char full[sizeof("/spiffs/d/") + 256];
+        snprintf(full, sizeof(full), "/spiffs/d/%s", name);
+        rows += fs_count_file_rows(full);
+    }
+    closedir(dir);
+    return rows;
+}
 
 /** Initialise SPIFFS filesystem. */
 static void fs_init(void) {
@@ -540,6 +599,7 @@ static void fs_init(void) {
         mkdir("/spiffs/assets", 0777);
         mkdir("/spiffs/log", 0777);
         g_fs_ready = true;
+        g_sample_count = fs_count_samples();
     }
 }
 
@@ -553,7 +613,14 @@ static void day_path(uint32_t ts, char *buf, size_t len) {
 }
 
 /** Append one health sample row to today's CSV file.
- *  Format: unix,hr,spo2,hrv,stress,steps,floors,altitude,skin_temp,battery,fall,zone
+ *
+ *  The first nine fields are the contract the companion app parses
+ *  (app/lib/core/services/local_store.dart: unix,hr,spo2,sys,dia,hrv,steps,
+ *  fall,bat). This target has no blood-pressure sensor, so sys and dia are 0.
+ *  The extra fields after `bat` are S3-only and ignored by the app; they keep
+ *  the richer data the watch already collects instead of throwing it away.
+ *
+ *  Format: unix,hr,spo2,sys,dia,hrv,steps,fall,bat,stress,floors,altitude,skin_temp,zone
  */
 static void fs_append_sample(sensor_event_t *e) {
     if (!g_fs_ready || e->ts == 0) return;
@@ -562,11 +629,12 @@ static void fs_append_sample(sensor_event_t *e) {
     FILE *f = fopen(path, "a");
     if (!f) f = fopen(path, "w");
     if (!f) return;
-    fprintf(f, "%lu,%d,%d,%d,%d,%lu,%d,%.1f,%.1f,%d,%d,%d\n",
-            (unsigned long)e->ts, e->hr, e->spo2, e->hrv, e->stress,
-            (unsigned long)e->steps, e->floors, e->altitude, e->skin_temp,
-            e->battery, e->fall ? 1 : 0, e->zone);
+    fprintf(f, "%lu,%d,%d,0,0,%d,%lu,%d,%d,%d,%d,%.1f,%.1f,%d\n",
+            (unsigned long)e->ts, e->hr, e->spo2, e->hrv,
+            (unsigned long)e->steps, e->fall ? 1 : 0, e->battery,
+            e->stress, e->floors, e->altitude, e->skin_temp, e->zone);
     fclose(f);
+    g_sample_count++;
 }
 
 /** Delete files older than RETAIN_DAYS from /spiffs/d/. */
@@ -596,7 +664,12 @@ static void fs_prune(void) {
              * cannot bound. Size for a full 255-byte name. */
             char full[sizeof("/spiffs/d/") + 256];
             snprintf(full, sizeof(full), "/spiffs/d/%s", name);
-            remove(full);
+            uint32_t removed = fs_count_file_rows(full);
+            if (remove(full) == 0) {
+                g_sample_count = removed > g_sample_count
+                                     ? 0
+                                     : g_sample_count - removed;
+            }
         }
     }
     closedir(dir);
@@ -916,10 +989,32 @@ static void task_display(void *arg) {
     g_last_activity_ms = xTaskGetTickCount() * portTICK_PERIOD_MS;
 
     uint32_t last_vitals_ms = 0;
+    int last_face = g_watch_face;
+    int last_theme = g_theme;
+    uint32_t last_clock_sec = 0;
 
     while (1) {
         uint32_t now_ms = xTaskGetTickCount() * portTICK_PERIOD_MS;
         g_task_heartbeat[HB_DISPLAY] = now_ms;
+
+        /* A face or theme chosen over BLE is applied here, in the task that
+         * owns LVGL, rather than from the NimBLE host task. */
+        if (g_watch_face != last_face) {
+            last_face = g_watch_face;
+            display_set_watchface((watchface_id_t)last_face);
+        }
+        if (g_theme != last_theme) {
+            last_theme = g_theme;
+            display_set_theme((theme_palette_t)last_theme);
+        }
+
+        /* Redraw the clock once per second. Before the phone sets the time
+         * now_unix() is 0 and the faces keep their placeholder. */
+        uint32_t unix_now = now_unix();
+        if (unix_now != 0 && unix_now != last_clock_sec) {
+            last_clock_sec = unix_now;
+            display_set_time(unix_now + (uint32_t)(g_tz_offset_min * 60));
+        }
 
         /* Run LVGL timer engine */
         lv_timer_handler();
@@ -964,6 +1059,7 @@ static void task_ble(void *arg) {
                 ev.battery, ev.fall ? 1 : 0, ev.zone, ev.weather,
                 (unsigned long)ev.ts);
             /* ble_service_notify_live(json) is called here when BLE module is linked */
+            ble_notify_live(json);
         }
         vTaskDelay(pdMS_TO_TICKS(10));
     }
@@ -1171,23 +1267,414 @@ static void factory_test(void) {
 
 
 /* ─────────────────────────────────────────────────────────────────────── */
-/*  NIMBLE BLE STACK INITIALISATION & ADVERTISING                          */
+/*  NIMBLE GATT SERVER: SERVICE TABLE, CALLBACKS AND ADVERTISING           */
 /* ─────────────────────────────────────────────────────────────────────── */
 
+static const char *TAG = "VEYRO";
+
+/* One entry per registered characteristic, passed through ble_gatt_chr_def.arg
+ * so one access callback can serve all of them. */
+enum gatt_chr_kind {
+    GATT_CHR_LIVE = 0,
+    GATT_CHR_HIST,
+    GATT_CHR_INFO,
+    GATT_CHR_CMD,
+};
+
+#define VEYRO_CMD_MAX        192
+#define VEYRO_HIST_LINE_MAX  192
+#define VEYRO_INFO_JSON_MAX  192
+#define VEYRO_PREFERRED_MTU  247
+
+static uint16_t g_live_handle = 0;
+static uint16_t g_hist_handle = 0;
+static uint16_t g_info_handle = 0;
+static uint16_t g_cmd_handle  = 0;
+static uint16_t g_conn_handle = BLE_HS_CONN_HANDLE_NONE;
+static bool     g_live_notify = false;
+static bool     g_hist_notify = false;
+
+/* History sync state. One file is streamed at a time; the app asks for the
+ * next row with {"op":"next"} after it has stored the previous one. */
+static FILE    *g_sync_file = NULL;
+static char     g_sync_path[16] = {0};
+static bool     g_sync_active = false;
+
+static int gatt_access(uint16_t conn_handle, uint16_t attr_handle,
+                       struct ble_gatt_access_ctxt *ctxt, void *arg);
+
+static const struct ble_gatt_chr_def veyro_chrs[] = {
+    {
+        .uuid       = &chr_live_uuid.u,
+        .access_cb  = gatt_access,
+        .arg        = (void *)(uintptr_t)GATT_CHR_LIVE,
+        .flags      = BLE_GATT_CHR_F_NOTIFY,
+        .val_handle = &g_live_handle,
+    },
+    {
+        .uuid       = &chr_hist_uuid.u,
+        .access_cb  = gatt_access,
+        .arg        = (void *)(uintptr_t)GATT_CHR_HIST,
+        .flags      = BLE_GATT_CHR_F_NOTIFY,
+        .val_handle = &g_hist_handle,
+    },
+    {
+        .uuid       = &chr_info_uuid.u,
+        .access_cb  = gatt_access,
+        .arg        = (void *)(uintptr_t)GATT_CHR_INFO,
+        .flags      = BLE_GATT_CHR_F_READ,
+        .val_handle = &g_info_handle,
+    },
+    {
+        .uuid       = &chr_cmd_uuid.u,
+        .access_cb  = gatt_access,
+        .arg        = (void *)(uintptr_t)GATT_CHR_CMD,
+        .flags      = BLE_GATT_CHR_F_WRITE | BLE_GATT_CHR_F_WRITE_NO_RSP,
+        .val_handle = &g_cmd_handle,
+    },
+    { 0 }
+};
+
+static const struct ble_gatt_svc_def veyro_svcs[] = {
+    {
+        .type            = BLE_GATT_SVC_TYPE_PRIMARY,
+        .uuid            = &gatt_svc_uuid.u,
+        .characteristics = veyro_chrs,
+    },
+    { 0 }
+};
+
+/* ── Info payload ────────────────────────────────────────────────────────── */
+
+static int build_info_json(char *buf, size_t len) {
+    size_t total = 0;
+    size_t used  = 0;
+    int free_kb  = 0;
+    if (g_fs_ready && esp_spiffs_info(NULL, &total, &used) == ESP_OK) {
+        free_kb = (int)((total - used) / 1024);
+    }
+    return snprintf(buf, len,
+                    "{\"v\":%d,\"fw\":\"%s\",\"name\":\"%s\",\"paired\":%s,"
+                    "\"samples\":%lu,\"retain_d\":%d,\"free_kb\":%d,\"bat\":%d}",
+                    VEYRO_PROTO, VEYRO_FW_VERSION, VEYRO_NAME,
+                    g_ble_paired ? "true" : "false",
+                    (unsigned long)g_sample_count, RETAIN_DAYS,
+                    free_kb, g_battery_pct);
+}
+
+/* ── Notifications ───────────────────────────────────────────────────────── */
+
+static bool ble_notify(uint16_t handle, bool subscribed, const char *data,
+                       uint16_t len) {
+    if (g_conn_handle == BLE_HS_CONN_HANDLE_NONE || !subscribed) return false;
+    if (len == 0) return false;
+    if (len + 3 > ble_att_mtu(g_conn_handle)) {
+        /* ATT notifications cannot be fragmented at the ATT layer. The phone
+         * normally negotiates the preferred 247-byte MTU; if it did not, say so
+         * rather than sending a truncated JSON document. */
+        ESP_LOGW(TAG, "notify %u bytes exceeds MTU %u", len,
+                 ble_att_mtu(g_conn_handle));
+        return false;
+    }
+    struct os_mbuf *om = ble_hs_mbuf_from_flat(data, len);
+    if (!om) return false;
+    int rc = ble_gatts_notify_custom(g_conn_handle, handle, om);
+    if (rc != 0) {
+        ESP_LOGW(TAG, "notify failed: %d", rc);
+        return false;
+    }
+    return true;
+}
+
+static void ble_notify_live(const char *json) {
+    ble_notify(g_live_handle, g_live_notify, json, (uint16_t)strlen(json));
+}
+
+static void hist_finish(void) {
+    static const char done[] = "{\"v\":2,\"done\":1}";
+    g_sync_active = false;
+    if (g_sync_file) {
+        fclose(g_sync_file);
+        g_sync_file = NULL;
+    }
+    g_sync_path[0] = 0;
+    ble_notify(g_hist_handle, g_hist_notify, done, (uint16_t)(sizeof(done) - 1));
+}
+
+/** Find the first day file, or the first one after [after].
+ *
+ *  Day files are exactly `YYYYMMDD.csv`. A linear directory scan each time is
+ *  fine here: the retention window holds at most 60 files. */
+static bool hist_find_file(const char *after, char *out, size_t out_len) {
+    DIR *dir = opendir("/spiffs/d");
+    if (!dir) return false;
+    bool found = false;
+    struct dirent *ent;
+    while ((ent = readdir(dir)) != NULL) {
+        const char *name = ent->d_name;
+        if (strlen(name) != 12 || strcmp(name + 8, ".csv") != 0) continue;
+        bool digits = true;
+        for (int i = 0; i < 8; i++) {
+            if (name[i] < '0' || name[i] > '9') { digits = false; break; }
+        }
+        if (!digits) continue;
+        if (after != NULL && after[0] != 0 && strcmp(name, after) <= 0) continue;
+        if (!found || strcmp(name, out) < 0) {
+            snprintf(out, out_len, "%s", name);
+            found = true;
+        }
+    }
+    closedir(dir);
+    return found;
+}
+
+static bool hist_open_next(void) {
+    char name[16];
+    if (!hist_find_file(g_sync_path, name, sizeof(name))) return false;
+    snprintf(g_sync_path, sizeof(g_sync_path), "%s", name);
+    char full[sizeof("/spiffs/d/") + 16];
+    snprintf(full, sizeof(full), "/spiffs/d/%s", name);
+    g_sync_file = fopen(full, "r");
+    return g_sync_file != NULL;
+}
+
+static void hist_send_line(void) {
+    if (!g_sync_active) return;
+    char line[VEYRO_HIST_LINE_MAX];
+    for (;;) {
+        if (g_sync_file == NULL && !hist_open_next()) {
+            hist_finish();
+            return;
+        }
+        if (fgets(line, sizeof(line), g_sync_file) == NULL) {
+            fclose(g_sync_file);
+            g_sync_file = NULL;
+            continue;
+        }
+        size_t n = strlen(line);
+        while (n > 0 && (line[n - 1] == '\n' || line[n - 1] == '\r' ||
+                         line[n - 1] == ' ' || line[n - 1] == '\t')) {
+            line[--n] = 0;
+        }
+        if (n == 0) continue;
+
+        char json[VEYRO_HIST_LINE_MAX + 24];
+        int m = snprintf(json, sizeof(json), "{\"v\":2,\"row\":\"%s\"}", line);
+        if (m <= 0 || (size_t)m >= sizeof(json)) {
+            hist_finish();
+            return;
+        }
+        if (!ble_notify(g_hist_handle, g_hist_notify, json, (uint16_t)m)) {
+            hist_finish();
+        }
+        return;
+    }
+}
+
+static void hist_start(void) {
+    if (g_sync_file) {
+        fclose(g_sync_file);
+        g_sync_file = NULL;
+    }
+    g_sync_path[0] = 0;
+    g_sync_active = true;
+    hist_send_line();
+}
+
+/* ── Command handling ────────────────────────────────────────────────────── */
+
+static void handle_cmd(const uint8_t *data, size_t len) {
+    if (len == 0) return;
+
+    /* The app has a second, binary command path beginning with 0xA5. No binary
+     * command has a behaviour in this firmware yet, so it is logged and
+     * ignored instead of being mistaken for JSON. */
+    if (data[0] == 0xA5) {
+        ESP_LOGI(TAG, "binary command 0x%02X not implemented",
+                 len > 1 ? data[1] : 0);
+        return;
+    }
+
+    cJSON *root = cJSON_ParseWithLength((const char *)data, len);
+    if (root == NULL) {
+        ESP_LOGW(TAG, "command is not valid JSON");
+        return;
+    }
+    const cJSON *op_item = cJSON_GetObjectItemCaseSensitive(root, "op");
+    const char *op = cJSON_IsString(op_item) ? op_item->valuestring : "";
+
+    if (strcmp(op, "pair") == 0) {
+        const cJSON *pin_item = cJSON_GetObjectItemCaseSensitive(root, "pin");
+        if (cJSON_IsString(pin_item) &&
+            strcmp(pin_item->valuestring, g_pin_code) == 0) {
+            g_ble_paired = true;
+            g_wrong_pin_count = 0;
+            if (g_haptic_queue) {
+                uint8_t fx = 1;
+                xQueueSend(g_haptic_queue, &fx, 0);
+            }
+            ESP_LOGI(TAG, "paired");
+        } else {
+            g_wrong_pin_count++;
+            ESP_LOGW(TAG, "wrong PIN (%d)", g_wrong_pin_count);
+        }
+        cJSON_Delete(root);
+        return;
+    }
+
+    if (!g_ble_paired) {
+        ESP_LOGW(TAG, "command '%s' refused before pairing", op);
+        cJSON_Delete(root);
+        return;
+    }
+
+    if (strcmp(op, "time") == 0) {
+        const cJSON *unix_item = cJSON_GetObjectItemCaseSensitive(root, "unix");
+        if (cJSON_IsNumber(unix_item) && unix_item->valuedouble > 0) {
+            g_unix_time = (uint32_t)unix_item->valuedouble;
+            g_boot_ms = xTaskGetTickCount() * portTICK_PERIOD_MS;
+            ESP_LOGI(TAG, "clock set to %lu",
+                     (unsigned long)g_unix_time);
+        }
+        /* Optional: minutes east of UTC, as reported by the phone. Without it
+         * the face shows UTC, which is still correct but usually not local. */
+        const cJSON *tz_item = cJSON_GetObjectItemCaseSensitive(root, "tz");
+        if (cJSON_IsNumber(tz_item)) {
+            int tz = tz_item->valueint;
+            if (tz >= -14 * 60 && tz <= 14 * 60) {
+                g_tz_offset_min = tz;
+                nvs_set_i32(g_nvs, "tz", (int32_t)tz);
+                nvs_commit(g_nvs);
+            }
+        }
+    } else if (strcmp(op, "face") == 0) {
+        const cJSON *face_item = cJSON_GetObjectItemCaseSensitive(root, "face");
+        if (cJSON_IsNumber(face_item) && face_item->valueint >= 0) {
+            g_watch_face = face_item->valueint % WATCHFACE_COUNT;
+            nvs_set_u8(g_nvs, "face", (uint8_t)g_watch_face);
+            nvs_commit(g_nvs);
+        }
+    } else if (strcmp(op, "theme") == 0) {
+        const cJSON *theme_item =
+            cJSON_GetObjectItemCaseSensitive(root, "theme");
+        if (cJSON_IsNumber(theme_item) && theme_item->valueint >= 0) {
+            g_theme = theme_item->valueint % THEME_COUNT;
+            nvs_set_u8(g_nvs, "theme", (uint8_t)g_theme);
+            nvs_commit(g_nvs);
+        }
+    } else if (strcmp(op, "brightness") == 0) {
+        const cJSON *pct_item =
+            cJSON_GetObjectItemCaseSensitive(root, "pct");
+        if (cJSON_IsNumber(pct_item)) {
+            int pct = pct_item->valueint;
+            if (pct >= 1 && pct <= 100) display_set_brightness((uint8_t)pct);
+        }
+    } else if (strcmp(op, "sync") == 0) {
+        hist_start();
+    } else if (strcmp(op, "next") == 0) {
+        hist_send_line();
+    } else if (strcmp(op, "prune") == 0) {
+        fs_prune();
+    } else {
+        ESP_LOGI(TAG, "unknown command '%s'", op);
+    }
+
+    cJSON_Delete(root);
+}
+
+static int gatt_access(uint16_t conn_handle, uint16_t attr_handle,
+                       struct ble_gatt_access_ctxt *ctxt, void *arg) {
+    (void)conn_handle;
+    (void)attr_handle;
+    const enum gatt_chr_kind kind = (enum gatt_chr_kind)(uintptr_t)arg;
+
+    if (ctxt->op == BLE_GATT_ACCESS_OP_READ_CHR) {
+        if (kind != GATT_CHR_INFO) return BLE_ATT_ERR_READ_NOT_PERMITTED;
+        char buf[VEYRO_INFO_JSON_MAX];
+        int n = build_info_json(buf, sizeof(buf));
+        if (n <= 0 || (size_t)n >= sizeof(buf)) return BLE_ATT_ERR_UNLIKELY;
+        int rc = os_mbuf_append(ctxt->om, buf, (uint16_t)n);
+        return rc == 0 ? 0 : BLE_ATT_ERR_INSUFFICIENT_RES;
+    }
+
+    if (ctxt->op == BLE_GATT_ACCESS_OP_WRITE_CHR) {
+        if (kind != GATT_CHR_CMD) return BLE_ATT_ERR_WRITE_NOT_PERMITTED;
+        uint16_t len = OS_MBUF_PKTLEN(ctxt->om);
+        if (len == 0) return 0;
+        if (len > VEYRO_CMD_MAX) return BLE_ATT_ERR_INVALID_ATTR_VALUE_LEN;
+        uint8_t buf[VEYRO_CMD_MAX + 1];
+        if (os_mbuf_copydata(ctxt->om, 0, len, buf) != 0) {
+            return BLE_ATT_ERR_UNLIKELY;
+        }
+        buf[len] = 0;
+        handle_cmd(buf, len);
+        return 0;
+    }
+
+    return BLE_ATT_ERR_UNLIKELY;
+}
+
+/* ── Connection events and advertising ───────────────────────────────────── */
+
+static int ble_gap_event(struct ble_gap_event *event, void *arg);
+
+static void ble_start_advertising(void) {
+    struct ble_gap_adv_params adv_params = {
+        .conn_mode = BLE_GAP_CONN_MODE_UND,
+        .disc_mode = BLE_GAP_DISC_MODE_GEN,
+    };
+    ble_gap_adv_start(BLE_OWN_ADDR_PUBLIC, NULL, BLE_HS_FOREVER, &adv_params,
+                      ble_gap_event, NULL);
+}
+
 static int ble_gap_event(struct ble_gap_event *event, void *arg) {
+    (void)arg;
     switch (event->type) {
     case BLE_GAP_EVENT_CONNECT:
-        g_ble_connected = (event->connect.status == 0);
+        if (event->connect.status == 0) {
+            g_conn_handle = event->connect.conn_handle;
+            g_ble_connected = true;
+            g_ble_paired = false; /* the app re-pairs on every connection */
+        } else {
+            ble_start_advertising();
+        }
         break;
+
     case BLE_GAP_EVENT_DISCONNECT:
         g_ble_connected = false;
-        /* Restart advertising on disconnect */
-        struct ble_gap_adv_params adv_params = {
-            .conn_mode = BLE_GAP_CONN_MODE_UND,
-            .disc_mode = BLE_GAP_DISC_MODE_GEN,
-        };
-        ble_gap_adv_start(BLE_OWN_ADDR_PUBLIC, NULL, BLE_HS_FOREVER, &adv_params, ble_gap_event, NULL);
+        g_ble_paired = false;
+        g_conn_handle = BLE_HS_CONN_HANDLE_NONE;
+        g_live_notify = false;
+        g_hist_notify = false;
+        if (g_sync_file) {
+            fclose(g_sync_file);
+            g_sync_file = NULL;
+        }
+        g_sync_active = false;
+        g_sync_path[0] = 0;
+        ble_start_advertising();
         break;
+
+    case BLE_GAP_EVENT_SUBSCRIBE:
+        if (event->subscribe.attr_handle == g_live_handle) {
+            g_live_notify = event->subscribe.cur_notify;
+        } else if (event->subscribe.attr_handle == g_hist_handle) {
+            g_hist_notify = event->subscribe.cur_notify;
+            if (!g_hist_notify) {
+                g_sync_active = false;
+                if (g_sync_file) {
+                    fclose(g_sync_file);
+                    g_sync_file = NULL;
+                }
+                g_sync_path[0] = 0;
+            }
+        }
+        break;
+
+    case BLE_GAP_EVENT_MTU:
+        ESP_LOGI(TAG, "MTU %u", event->mtu.value);
+        break;
+
     default:
         break;
     }
@@ -1196,25 +1683,53 @@ static int ble_gap_event(struct ble_gap_event *event, void *arg) {
 
 static void ble_app_on_sync(void) {
     char dev_name[32];
-    snprintf(dev_name, sizeof(dev_name), "Veyro-%.4s", &g_serial[strlen(g_serial) >= 4 ? strlen(g_serial)-4 : 0]);
+    size_t serial_len = strlen(g_serial);
+    snprintf(dev_name, sizeof(dev_name), "Veyro-%.4s",
+             &g_serial[serial_len >= 4 ? serial_len - 4 : 0]);
     ble_svc_gap_device_name_set(dev_name);
 
-    struct ble_gap_adv_params adv_params = {
-        .conn_mode = BLE_GAP_CONN_MODE_UND,
-        .disc_mode = BLE_GAP_DISC_MODE_GEN,
-    };
-    ble_gap_adv_start(BLE_OWN_ADDR_PUBLIC, NULL, BLE_HS_FOREVER, &adv_params, ble_gap_event, NULL);
+    /* Put the service UUID in the advertisement so a scanner can recognise the
+     * watch without relying on its name, and the name in the scan response. */
+    struct ble_hs_adv_fields adv_fields = {0};
+    adv_fields.flags = BLE_HS_ADV_F_DISC_GEN | BLE_HS_ADV_F_BREDR_UNSUP;
+    adv_fields.uuids128 = &gatt_svc_uuid;
+    adv_fields.num_uuids128 = 1;
+    adv_fields.uuids128_is_complete = 1;
+    int rc = ble_gap_adv_set_fields(&adv_fields);
+    if (rc != 0) ESP_LOGW(TAG, "advertisement fields failed: %d", rc);
+
+    struct ble_hs_adv_fields rsp_fields = {0};
+    rsp_fields.name = (const uint8_t *)dev_name;
+    rsp_fields.name_len = (uint8_t)strlen(dev_name);
+    rsp_fields.name_is_complete = 1;
+    rc = ble_gap_adv_rsp_set_fields(&rsp_fields);
+    if (rc != 0) ESP_LOGW(TAG, "scan response fields failed: %d", rc);
+
+    ble_start_advertising();
 }
 
 static void ble_host_task(void *param) {
+    (void)param;
     nimble_port_run();
     nimble_port_freertos_deinit();
 }
 
 static void init_nimble_ble(void) {
     nimble_port_init();
+
+    /* The live payload and a history row are both longer than the 23-byte
+     * default ATT MTU. Ask for 247 and let the phone negotiate down if it must;
+     * ble_notify refuses to send a payload that does not fit. */
+    ble_att_set_preferred_mtu(VEYRO_PREFERRED_MTU);
+
     ble_svc_gap_init();
     ble_svc_gatt_init();
+
+    int rc = ble_gatts_count_cfg(veyro_svcs);
+    if (rc != 0) ESP_LOGE(TAG, "ble_gatts_count_cfg failed: %d", rc);
+    rc = ble_gatts_add_svcs(veyro_svcs);
+    if (rc != 0) ESP_LOGE(TAG, "ble_gatts_add_svcs failed: %d", rc);
+
     ble_hs_cfg.sync_cb = ble_app_on_sync;
     nimble_port_freertos_init(ble_host_task);
 }

@@ -49,6 +49,9 @@ typedef struct {
 } watch_ui_config_t;
 
 void display_init(void);
+/* Local epoch seconds: callers add the timezone offset before calling, because
+ * this module renders the value with gmtime and has no clock of its own. */
+void display_set_time(uint32_t local_unix_time);
 void display_update_vitals(int hr, int spo2, int hrv, int stress, uint32_t steps, int battery, bool charging, float temp);
 void display_set_watchface(watchface_id_t face_id);
 void display_set_theme(theme_palette_t theme_id);
