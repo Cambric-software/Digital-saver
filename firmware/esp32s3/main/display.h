@@ -66,6 +66,9 @@ void display_set_theme(theme_palette_t theme_id);
 void display_set_brightness(uint8_t pct);
 void display_set_complication(int slot_index, complication_type_t comp);
 void display_toggle_aod(bool enable);
+/* Full-screen alarm overlay. Dismiss is idempotent; showing again replaces it. */
+void display_show_alarm(int hour, int minute, const char *label);
+void display_dismiss_alarm(void);
 watch_ui_config_t* display_get_config(void);
 
 #endif /* DISPLAY_H */

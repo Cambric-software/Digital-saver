@@ -20,6 +20,7 @@
 #include <string.h>
 #include <math.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <time.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -28,6 +29,7 @@
 #include "freertos/timers.h"
 #include "esp_log.h"
 #include "esp_system.h"
+#include "esp_attr.h"
 #include "esp_mac.h"
 #include "esp_random.h"
 #include "esp_efuse.h"
@@ -58,6 +60,8 @@
 #include "services/gatt/ble_svc_gatt.h"
 #include "cJSON.h"
 #include "lvgl.h"
+
+static const char *TAG = "VEYRO";
 
 /* ─────────────────────────────────────────────────────────────────────── */
 /*  GPIO DEFINITIONS                                                        */
@@ -563,6 +567,193 @@ static void generate_pin(void) {
 }
 
 /* ─────────────────────────────────────────────────────────────────────── */
+/*  WATCH ALARMS                                                           */
+/* ─────────────────────────────────────────────────────────────────────── */
+
+/* The phone owns the alarm list and writes the whole set after every edit.
+ * The watch only needs what it can ring on its own: a time, a weekday mask
+ * and a label. One-off reminders stay on the phone, because the watch has no
+ * calendar and a one-off alarm that outlives its date would be wrong.
+ *
+ * Bit 0 of `days` is Sunday, matching struct tm's tm_wday, so the check is a
+ * shift rather than a translation table. */
+#define ALARM_MAX 8
+#define ALARM_LABEL_MAX 24
+
+typedef struct {
+    uint8_t hour;
+    uint8_t minute;
+    uint8_t days;
+    bool    enabled;
+    char    label[ALARM_LABEL_MAX];
+} alarm_t;
+
+static alarm_t  g_alarms[ALARM_MAX];
+static int      g_alarm_count = 0;
+static volatile bool g_alarm_ringing = false;
+static volatile bool g_alarm_dismiss_requested = false;
+static uint32_t g_alarm_started_ms = 0;
+static uint32_t g_alarm_next_haptic_ms = 0;
+static uint32_t g_alarm_last_minute = 0; /* local epoch minute already fired */
+
+/* The clock lives in RTC memory so a software reset does not lose it. It is
+ * not a battery-backed RTC: removing power still resets the time until the
+ * phone sets it again. */
+RTC_DATA_ATTR static uint32_t g_rtc_epoch = 0;
+
+static void alarms_save(void) {
+    cJSON *root = cJSON_CreateArray();
+    if (root == NULL) return;
+    for (int i = 0; i < g_alarm_count; i++) {
+        const alarm_t *a = &g_alarms[i];
+        cJSON *item = cJSON_CreateObject();
+        if (item == NULL) continue;
+        cJSON_AddNumberToObject(item, "h", a->hour);
+        cJSON_AddNumberToObject(item, "m", a->minute);
+        cJSON_AddNumberToObject(item, "days", a->days);
+        cJSON_AddBoolToObject(item, "on", a->enabled);
+        cJSON_AddStringToObject(item, "label", a->label);
+        cJSON_AddItemToArray(root, item);
+    }
+    char *text = cJSON_PrintUnformatted(root);
+    cJSON_Delete(root);
+    if (text == NULL) return;
+    nvs_set_str(g_nvs, "alarms", text);
+    nvs_commit(g_nvs);
+    cJSON_free(text);
+}
+
+static void alarms_load(void) {
+    size_t len = 0;
+    if (nvs_get_str(g_nvs, "alarms", NULL, &len) != ESP_OK || len == 0) return;
+    char *text = malloc(len);
+    if (text == NULL) return;
+    if (nvs_get_str(g_nvs, "alarms", text, &len) != ESP_OK) {
+        free(text);
+        return;
+    }
+    cJSON *root = cJSON_Parse(text);
+    free(text);
+    if (!cJSON_IsArray(root)) {
+        cJSON_Delete(root);
+        return;
+    }
+    g_alarm_count = 0;
+    const cJSON *item = NULL;
+    cJSON_ArrayForEach(item, root) {
+        if (g_alarm_count >= ALARM_MAX) break;
+        const cJSON *h = cJSON_GetObjectItemCaseSensitive(item, "h");
+        const cJSON *m = cJSON_GetObjectItemCaseSensitive(item, "m");
+        if (!cJSON_IsNumber(h) || !cJSON_IsNumber(m)) continue;
+        int hour = h->valueint;
+        int minute = m->valueint;
+        if (hour < 0 || hour > 23 || minute < 0 || minute > 59) continue;
+        alarm_t *a = &g_alarms[g_alarm_count++];
+        a->hour = (uint8_t)hour;
+        a->minute = (uint8_t)minute;
+        const cJSON *days = cJSON_GetObjectItemCaseSensitive(item, "days");
+        a->days = cJSON_IsNumber(days) ? (uint8_t)(days->valueint & 0x7F) : 0;
+        const cJSON *on = cJSON_GetObjectItemCaseSensitive(item, "on");
+        a->enabled = cJSON_IsBool(on) ? cJSON_IsTrue(on) : true;
+        const cJSON *label = cJSON_GetObjectItemCaseSensitive(item, "label");
+        snprintf(a->label, sizeof(a->label), "%s",
+                 cJSON_IsString(label) && label->valuestring
+                     ? label->valuestring
+                     : "Alarm");
+    }
+    cJSON_Delete(root);
+}
+
+/** Append one alarm from a command payload.
+ *
+ *  The phone sends `alarm_clear`, then one `alarm` per entry, then
+ *  `alarm_commit`. Splitting the set keeps every write inside one ATT MTU;
+ *  a single JSON array of eight alarms with labels does not fit. */
+static void alarm_append(const cJSON *item) {
+    if (g_alarm_count >= ALARM_MAX) return;
+    const cJSON *h = cJSON_GetObjectItemCaseSensitive(item, "h");
+    const cJSON *m = cJSON_GetObjectItemCaseSensitive(item, "m");
+    if (!cJSON_IsNumber(h) || !cJSON_IsNumber(m)) return;
+    int hour = h->valueint;
+    int minute = m->valueint;
+    if (hour < 0 || hour > 23 || minute < 0 || minute > 59) return;
+    const cJSON *days = cJSON_GetObjectItemCaseSensitive(item, "days");
+    int mask = cJSON_IsNumber(days) ? (days->valueint & 0x7F) : 0;
+    if (mask == 0) return; /* one-off reminders stay on the phone */
+    const cJSON *on = cJSON_GetObjectItemCaseSensitive(item, "on");
+    const cJSON *label = cJSON_GetObjectItemCaseSensitive(item, "label");
+    alarm_t *a = &g_alarms[g_alarm_count++];
+    a->hour = (uint8_t)hour;
+    a->minute = (uint8_t)minute;
+    a->days = (uint8_t)mask;
+    a->enabled = cJSON_IsBool(on) ? cJSON_IsTrue(on) : true;
+    snprintf(a->label, sizeof(a->label), "%s",
+             cJSON_IsString(label) && label->valuestring
+                 ? label->valuestring
+                 : "Alarm");
+}
+
+static void alarm_commit(void) {
+    alarms_save();
+    ESP_LOGI(TAG, "alarm set saved: %d", g_alarm_count);
+}
+
+static void alarm_dismiss(void) {
+    if (!g_alarm_ringing) return;
+    g_alarm_ringing = false;
+    display_dismiss_alarm();
+    ESP_LOGI(TAG, "alarm dismissed");
+}
+
+/** Called once per second from the display task with the phone-set epoch. */
+static void alarm_tick(uint32_t unix_now, uint32_t now_ms) {
+    uint32_t local = unix_now + (uint32_t)(g_tz_offset_min * 60);
+    time_t t = (time_t)local;
+    struct tm tm;
+    gmtime_r(&t, &tm);
+    uint32_t minute = local / 60;
+
+    if (g_alarm_dismiss_requested) {
+        g_alarm_dismiss_requested = false;
+        alarm_dismiss();
+        return;
+    }
+
+    if (g_alarm_ringing) {
+        /* Keep the screen awake and repeat the alert until someone stops it. */
+        display_wake();
+        if (now_ms - g_alarm_started_ms >= 60000) {
+            alarm_dismiss();
+            return;
+        }
+        if (now_ms >= g_alarm_next_haptic_ms) {
+            g_alarm_next_haptic_ms = now_ms + 2500;
+            if (g_haptic_queue) {
+                uint8_t fx = 47;
+                xQueueSend(g_haptic_queue, &fx, 0);
+            }
+        }
+        return;
+    }
+
+    if (minute == g_alarm_last_minute) return;
+    for (int i = 0; i < g_alarm_count; i++) {
+        const alarm_t *a = &g_alarms[i];
+        if (!a->enabled || a->days == 0) continue;
+        if ((a->days & (1u << tm.tm_wday)) == 0) continue;
+        if (a->hour != tm.tm_hour || a->minute != tm.tm_min) continue;
+        g_alarm_last_minute = minute;
+        g_alarm_ringing = true;
+        g_alarm_started_ms = now_ms;
+        g_alarm_next_haptic_ms = now_ms + 500;
+        display_wake();
+        display_show_alarm(a->hour, a->minute, a->label);
+        ESP_LOGI(TAG, "alarm %02u:%02u '%s'", a->hour, a->minute, a->label);
+        break;
+    }
+}
+
+/* ─────────────────────────────────────────────────────────────────────── */
 /*  STORAGE (LittleFS / SPIFFS)                                            */
 /* ─────────────────────────────────────────────────────────────────────── */
 
@@ -1036,7 +1227,9 @@ static void task_display(void *arg) {
         uint32_t unix_now = now_unix();
         if (unix_now != 0 && unix_now != last_clock_sec) {
             last_clock_sec = unix_now;
+            g_rtc_epoch = unix_now;
             display_set_time(unix_now + (uint32_t)(g_tz_offset_min * 60));
+            alarm_tick(unix_now, now_ms);
         }
 
         /* Run LVGL timer engine */
@@ -1099,6 +1292,7 @@ static void task_buttons(void *arg) {
     bool crown_down = false;
     bool sos_down = false;
     bool sos_triggered = false;
+    bool crown_stopped_alarm = false;
 
     while (1) {
         uint32_t now_ms = xTaskGetTickCount() * portTICK_PERIOD_MS;
@@ -1108,27 +1302,41 @@ static void task_buttons(void *arg) {
             if (!crown_down) {
                 crown_down = true;
                 crown_press_start = now_ms;
+                crown_stopped_alarm = false;
+                /* Any button stops a ringing alarm instead of changing face.
+                 * The display task owns LVGL, so this task only asks. */
+                if (g_alarm_ringing) {
+                    g_alarm_dismiss_requested = true;
+                    crown_stopped_alarm = true;
+                }
             }
         } else {
             if (crown_down) {
                 uint32_t dur = now_ms - crown_press_start;
                 crown_down = false;
-                if (dur >= 50 && dur < 1500) {
+                if (!crown_stopped_alarm && dur >= 50 && dur < 1500) {
                     /* Short click */
                     if (!g_display_awake) {
                         display_wake();
                     } else {
-                        /* Cycle watchfaces: 5 faces in WATCHFACE_COUNT */
+                        /* Cycle watchfaces: 5 faces in WATCHFACE_COUNT.
+                         * The display task notices the change and loads the
+                         * screen, because only that task may call into LVGL. */
                         g_watch_face = (g_watch_face + 1) % WATCHFACE_COUNT;
-                        display_set_watchface((watchface_id_t)g_watch_face);
                         nvs_set_u8(g_nvs, "face", (uint8_t)g_watch_face);
                         nvs_commit(g_nvs);
-                        drv2605_play(1); /* Click haptic */
+                        if (g_haptic_queue) {
+                            uint8_t fx = 1; /* Click haptic */
+                            xQueueSend(g_haptic_queue, &fx, 0);
+                        }
                         display_wake();
                     }
                 } else if (dur >= 1500) {
                     /* Long press */
-                    drv2605_play(10); /* Double click haptic */
+                    if (g_haptic_queue) {
+                        uint8_t fx = 10; /* Double click haptic */
+                        xQueueSend(g_haptic_queue, &fx, 0);
+                    }
                     display_wake();
                 }
             }
@@ -1140,11 +1348,15 @@ static void task_buttons(void *arg) {
                 sos_down = true;
                 sos_press_start = now_ms;
                 sos_triggered = false;
+                if (g_alarm_ringing) g_alarm_dismiss_requested = true;
             } else if (!sos_triggered && (now_ms - sos_press_start >= 3000)) {
                 /* SOS emergency trigger held for 3 seconds */
                 sos_triggered = true;
                 g_fall = true; /* Flag emergency in BLE telemetry */
-                drv2605_play(47); /* Emergency alert vibration */
+                if (g_haptic_queue) {
+                    uint8_t fx = 47; /* Emergency alert vibration */
+                    xQueueSend(g_haptic_queue, &fx, 0);
+                }
                 fs_log_error("SOS button emergency alarm triggered");
                 display_wake();
             }
@@ -1292,8 +1504,6 @@ static void factory_test(void) {
 /* ─────────────────────────────────────────────────────────────────────── */
 /*  NIMBLE GATT SERVER: SERVICE TABLE, CALLBACKS AND ADVERTISING           */
 /* ─────────────────────────────────────────────────────────────────────── */
-
-static const char *TAG = "VEYRO";
 
 /* One entry per registered characteristic, passed through ble_gatt_chr_def.arg
  * so one access callback can serve all of them. */
@@ -1556,6 +1766,7 @@ static void handle_cmd(const uint8_t *data, size_t len) {
         if (cJSON_IsNumber(unix_item) && unix_item->valuedouble > 0) {
             g_unix_time = (uint32_t)unix_item->valuedouble;
             g_boot_ms = xTaskGetTickCount() * portTICK_PERIOD_MS;
+            g_rtc_epoch = g_unix_time;
             ESP_LOGI(TAG, "clock set to %lu",
                      (unsigned long)g_unix_time);
         }
@@ -1598,6 +1809,12 @@ static void handle_cmd(const uint8_t *data, size_t len) {
         hist_send_line();
     } else if (strcmp(op, "prune") == 0) {
         fs_prune();
+    } else if (strcmp(op, "alarm_clear") == 0) {
+        g_alarm_count = 0;
+    } else if (strcmp(op, "alarm") == 0) {
+        alarm_append(root);
+    } else if (strcmp(op, "alarm_commit") == 0) {
+        alarm_commit();
     } else {
         ESP_LOGI(TAG, "unknown command '%s'", op);
     }
@@ -1780,6 +1997,14 @@ void app_main(void) {
     /* Generate the PIN and serial once, when the board has never had them. */
     if (!g_pin_loaded) generate_pin();
     if (!g_serial_loaded) generate_serial();
+
+    /* A software reset keeps the clock in RTC memory. Power loss does not. */
+    if (g_unix_time == 0 && g_rtc_epoch != 0) {
+        g_unix_time = g_rtc_epoch;
+        ESP_LOGI(TAG, "clock restored from RTC memory: %lu",
+                 (unsigned long)g_unix_time);
+    }
+    alarms_load();
 
     /* Initialise sensors */
     g_boot_ms = xTaskGetTickCount() * portTICK_PERIOD_MS;

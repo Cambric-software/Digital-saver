@@ -630,6 +630,44 @@ void display_set_theme(theme_palette_t theme_id) {
     rebuild_faces();
 }
 
+/* ─────────────────────────────────────────────────────────────────────── */
+/*  ALARM OVERLAY                                                           */
+/* ─────────────────────────────────────────────────────────────────────── */
+
+static lv_obj_t *g_alarm_overlay = NULL;
+
+void display_show_alarm(int hour, int minute, const char *label) {
+    if (!g_ui_ready) return;
+    display_dismiss_alarm();
+    const palette_t *p = &g_palettes[g_current_theme];
+    lv_obj_t *o = lv_obj_create(lv_layer_top());
+    lv_obj_remove_style_all(o);
+    lv_obj_set_size(o, DISP_HOR_RES, DISP_VER_RES);
+    lv_obj_center(o);
+    lv_obj_set_style_bg_color(o, lv_color_hex(p->bg), 0);
+    lv_obj_set_style_bg_opa(o, LV_OPA_COVER, 0);
+    lv_obj_clear_flag(o, LV_OBJ_FLAG_SCROLLABLE);
+
+    char hhmm[8];
+    snprintf(hhmm, sizeof(hhmm), "%02d:%02d", hour, minute);
+    mk_label(o, hhmm, FONT_HERO, lv_color_hex(p->primary),
+             LV_ALIGN_CENTER, 0, SY(-44));
+    mk_label(o, (label != NULL && label[0] != '\0') ? label : "Alarm",
+             FONT_BODY, lv_color_hex(p->text), LV_ALIGN_CENTER, 0, SY(34));
+    mk_label(o, "Press a button to stop", FONT_SMALL,
+             lv_color_hex(p->muted), LV_ALIGN_CENTER, 0, SY(96));
+
+    g_alarm_overlay = o;
+    lv_obj_move_foreground(o);
+}
+
+void display_dismiss_alarm(void) {
+    if (g_alarm_overlay != NULL) {
+        lv_obj_del(g_alarm_overlay);
+        g_alarm_overlay = NULL;
+    }
+}
+
 void display_set_brightness(uint8_t pct) {
     if (pct > 100) pct = 100;
     if (pct < 1) pct = 1;
