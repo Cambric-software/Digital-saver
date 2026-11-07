@@ -55,7 +55,7 @@ records what is open, including the production hardware redesign in item 4.5.
 ```text
 app/                     Flutter companion app
 firmware/esp32/          Veyro prototype (Arduino, PlatformIO, esp32dev)
-firmware/esp32s3/        Veyro production target (ESP-IDF, LVGL) - does not build
+firmware/esp32s3/        Veyro production target (ESP-IDF, LVGL) - builds clean
 docs/                    All documentation, including the roadmap
 ```
 

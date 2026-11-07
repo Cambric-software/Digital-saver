@@ -16,6 +16,7 @@ Read the document that matches what you are doing.
 | Document | Read it when |
 |---|---|
 | [HARDWARE_DESIGN.md](HARDWARE_DESIGN.md) | You are deciding or buying production hardware. It compares compute options, sources the parts, prices 1,000 and 10,000 units, and lists the measurement gates. Start here for the product. |
+| [HARDWARE_DECISION.md](HARDWARE_DECISION.md) | You are approving 4.5b: architecture, screen shape, launch price, channel and the cash needed for a batch. It contains the per-unit profit after VAT, store cut, certification and shipping. |
 | [VEYRO_DEMO_BOM.md](VEYRO_DEMO_BOM.md) | You need the sourced demo-unit BOM (~9,500 EGP). |
 
 ## Firmware

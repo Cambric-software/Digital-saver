@@ -231,8 +231,11 @@ Nothing below this matters if the product tells lies or has dead controls.
       processor plus an ESP32-C6 companion, a 1.43″ 466×466 AMOLED, and a
       1,000/10,000-unit bill of materials. It is a sourced proposal, not a built
       device — nothing has been ordered, measured or certified.
-      4.4 is paused until 4.5b is approved, because the bus question is answered
-      by the new architecture.
+      `docs/HARDWARE_DECISION.md` is the 4.5b recommendation: it keeps the
+      approved feature list but recommends the ESP32-S3 for v1 with a large
+      square AMOLED at 8,900 EGP direct, and defers the RV1106 to v2. 4.4 no
+      longer waits on 4.5b: the S3 build is clean and is the v1 firmware. The
+      square-panel port is part of 4.5c.
   - [x] **4.5a Write the sourced hardware design.** Done 2026-10-21: three
         compute options compared (MCU + RTOS, Linux AP + companion MCU,
         wearable Android SoC), one recommended; every part, price and datasheet
@@ -240,15 +243,21 @@ Nothing below this matters if the product tells lies or has dead controls.
         MUST MEASURE. The three-I2C-bus problem is resolved by design: the
         RV1106 has five I2C masters and the IMU moves to the companion, so no
         mux and no collision. The design does not claim a built device.
-  - [ ] **4.5b Owner approves the architecture and the price.** Choose between
-        Linux at a higher retail price, Option A (RTOS, no Linux) at a lower
-        BOM, and committing to 10,000 units. The arithmetic is in
-        `HARDWARE_DESIGN.md` §9 and `11_PRODUCTION_WATCH_SPEC.md` §2: at 1,000
-        units the present BOM loses 145 EGP gross per watch at 7,500 EGP.
+  - [ ] **4.5b Owner approves the architecture and the price.** The
+        recommendation is in `docs/HARDWARE_DECISION.md`: ESP32-S3 for v1, a
+        large square AMOLED, 8,900 EGP direct, 10,000-unit target, RV1106
+        deferred to v2. It gives the per-unit profit after VAT, store cut,
+        certification and shipping at 1,000 and 10,000 units, and the cash
+        needed for a first batch. At 1,000 units no architecture is profitable
+        at 7,500 EGP; at 10,000 the S3 design contributes 3,168 EGP per watch
+        direct at 8,900. The owner must confirm the architecture, the screen
+        shape, the price and the funding route. This item stays open until that
+        answer is recorded.
   - [ ] **4.5c Build an EVT unit and measure it.** Order the 1,000-piece parts,
-        lay out the board and run the gates in `HARDWARE_DESIGN.md` §10 and
-        `11_PRODUCTION_WATCH_SPEC.md` §6. Until then the power, thermal, optical
-        and ingress figures are MUST MEASURE, not specifications.
+        lay out the board and run the gates in `HARDWARE_DESIGN.md` §10. Until
+        then the power, thermal, optical and ingress figures are MUST MEASURE,
+        not specifications. The firmware's 360×360 round layout must be ported
+        to the chosen square panel before EVT.
 
 ### Phase 5 — Customisation and polish
 

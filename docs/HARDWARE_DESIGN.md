@@ -2,7 +2,7 @@
 
 **Status: proposal for approval (ROADMAP 4.5a).** This document selects a production architecture and prices it from public sources. It is not a built design. No board, case, battery or panel has been ordered, no prototype exists, and no value in this document is a measurement. Every number is either a published figure, arithmetic on published figures, or explicitly marked as an assumption or an allowance.
 
-Read this before buying anything for the production watch. The bench prototype in [HARDWARE.md](HARDWARE.md) is a different device and still the only hardware that exists.
+Read this before buying anything for the production watch. The bench prototype in `firmware/esp32/` is a different device and still the only hardware that exists.
 
 ## 0. How to read this document
 
@@ -589,9 +589,9 @@ All pages fetched on **2026-10-21**. Where an entry says "datasheet", the PDF wa
 
 | Document | Change |
 |---|---|
-| [11_PRODUCTION_WATCH_SPEC.md](11_PRODUCTION_WATCH_SPEC.md) | Its hardware sections are superseded by this document. The 7,500 EGP commercial target and the still-applicable acceptance gates remain. |
-| [HARDWARE.md](HARDWARE.md) §7–§8 | Replaced by a link and a one-paragraph summary. §1–§6 and §9 remain the bench procedures. |
-| [ROADMAP.md](ROADMAP.md) 4.5 | Split into 4.5a (this document, done), 4.5b (owner approval), 4.5c (EVT and measurements). 4.5 stays unchecked. |
-| `firmware/esp32s3` | Unchanged. Its `I2C_NUM_2` bug is not fixed here; the new architecture removes the need for a third controller on the S3. |
+| `11_PRODUCTION_WATCH_SPEC.md` | Deleted in the 4.2 documentation rewrite. Its hardware sections are superseded by this document. The 7,500 EGP commercial target and the still-applicable acceptance gates remain. |
+| `HARDWARE.md` | Deleted in the same rewrite. Its §7–§8 are replaced by this document's §7 and §10; the bench procedures it held are now in §10. |
+| [ROADMAP.md](ROADMAP.md) 4.5 | Split into 4.5a (this document, done), 4.5b (owner approval; recommendation in `HARDWARE_DECISION.md`), 4.5c (EVT and measurements). 4.5 stays unchecked. |
+| `firmware/esp32s3` | The `I2C_NUM_2` bug is fixed by sharing bus B, and the target builds clean as of 2026-11-07. The new architecture still removes the need for a third controller. |
 
 **Do not order production parts from this document.** The only parts that may be ordered are EVT samples, and only after 4.5b. The prices are web prices, the allowances are guesses, and nothing has been measured.
