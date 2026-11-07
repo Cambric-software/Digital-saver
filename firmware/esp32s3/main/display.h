@@ -4,8 +4,16 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+/* Panel resolution. The faces are authored at 360x360 and scale to these
+ * values, so a larger square panel needs no layout rewrite. Keep both equal:
+ * every face assumes a square. A build flag may override them to test a
+ * candidate panel before it is ordered. */
+#ifndef DISP_HOR_RES
 #define DISP_HOR_RES 360
+#endif
+#ifndef DISP_VER_RES
 #define DISP_VER_RES 360
+#endif
 
 typedef enum {
     WATCHFACE_ANALOG_CLASSIC = 0,

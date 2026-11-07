@@ -216,8 +216,9 @@ an investor**. This is the single most important number in the document.
 1. **Architecture:** ESP32-S3 for v1, RV1106 Linux deferred to v2. Say no if
    Linux is a launch requirement; then the price and funding in §9 change.
 2. **Screen:** a large square/rectangular AMOLED in the 1.6–1.8″ class, not the
-   1.43″ round panel. The exact panel is **QUOTE**; the firmware's 360×360
-   round layout must be ported to the chosen resolution before EVT.
+   1.43″ round panel. The exact panel is **QUOTE**. The firmware faces now
+   scale from their 360×360 baseline, so the chosen resolution needs its vendor
+   init table and pin map, not a new layout.
 3. **Price and channel:** 8,900 EGP direct at launch, with 7,500 EGP as a
    limited early-bird. No retail below 9,900 EGP.
 4. **Funding:** do not order a 1,000-unit batch from savings. Build one or two

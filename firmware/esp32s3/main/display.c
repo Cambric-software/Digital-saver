@@ -87,6 +87,44 @@ static uint8_t g_brightness_pct = 60;
 
 #define DISP_CENTER (DISP_HOR_RES / 2)
 
+/* ─────────────────────────────────────────────────────────────────────── */
+/*  LAYOUT SCALE                                                            */
+/* ─────────────────────────────────────────────────────────────────────── */
+
+/* Every face is authored against a 360x360 square. The production panel is a
+ * larger square, and its exact resolution is not chosen yet, so the layout is
+ * expressed in base pixels and scaled at build time. When the panel is picked,
+ * change DISP_HOR_RES / DISP_VER_RES in display.h and the faces follow without
+ * a second layout. Round 360 panels scale by exactly 1. */
+#define DISP_BASE 360
+
+static inline lv_coord_t scale_px(int base, int res) {
+    if (base == 0) return 0;
+    int num = base * res;
+    int half = DISP_BASE / 2;
+    int v = (num > 0) ? (num + half) / DISP_BASE
+                      : -((-num + half) / DISP_BASE);
+    if (base > 0 && v < 1) v = 1;
+    return (lv_coord_t)v;
+}
+
+#define S(v)  scale_px(v, DISP_HOR_RES)
+#define SY(v) scale_px(v, DISP_VER_RES)
+
+/* Font tiers. LVGL fonts are fixed-size bitmaps, so the larger panel gets a
+ * larger tier rather than the same 14 px text in more space. */
+#if DISP_HOR_RES >= 440
+#define FONT_HERO  &lv_font_montserrat_48
+#define FONT_TIME  &lv_font_montserrat_36
+#define FONT_BODY  &lv_font_montserrat_20
+#define FONT_SMALL &lv_font_montserrat_16
+#else
+#define FONT_HERO  &lv_font_montserrat_36
+#define FONT_TIME  &lv_font_montserrat_28
+#define FONT_BODY  &lv_font_montserrat_16
+#define FONT_SMALL &lv_font_montserrat_14
+#endif
+
 static const char *const k_days[7] = {"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
 static const char *const k_months[12] = {"Jan", "Feb", "Mar", "Apr", "May", "Jun",
                                          "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
@@ -182,36 +220,36 @@ static void build_analog(face_ui_t *f, const palette_t *p) {
     static lv_point_t tick_pts[12][2];
     for (int i = 0; i < 12; i++) {
         float rad = (float)i * 30.0f * 3.14159265f / 180.0f;
-        int outer = 158;
-        int inner = (i % 3 == 0) ? 132 : 144;
+        int outer = S(158);
+        int inner = (i % 3 == 0) ? S(132) : S(144);
         tick_pts[i][0].x = DISP_CENTER + (lv_coord_t)(sinf(rad) * inner);
         tick_pts[i][0].y = DISP_CENTER - (lv_coord_t)(cosf(rad) * inner);
         tick_pts[i][1].x = DISP_CENTER + (lv_coord_t)(sinf(rad) * outer);
         tick_pts[i][1].y = DISP_CENTER - (lv_coord_t)(cosf(rad) * outer);
         lv_obj_t *t = mk_line(f->scr, lv_color_hex(i % 3 == 0 ? p->primary : p->muted),
-                              i % 3 == 0 ? 4 : 2, tick_pts[i]);
+                              i % 3 == 0 ? S(4) : S(2), tick_pts[i]);
         (void)t;
     }
 
-    f->hand_h = mk_line(f->scr, lv_color_hex(p->text), 7, f->h_pts);
-    f->hand_m = mk_line(f->scr, lv_color_hex(p->text), 4, f->m_pts);
-    f->hand_s = mk_line(f->scr, lv_color_hex(p->primary), 2, f->s_pts);
+    f->hand_h = mk_line(f->scr, lv_color_hex(p->text), S(7), f->h_pts);
+    f->hand_m = mk_line(f->scr, lv_color_hex(p->text), S(4), f->m_pts);
+    f->hand_s = mk_line(f->scr, lv_color_hex(p->primary), S(2), f->s_pts);
 
     /* Hub. */
-    lv_obj_t *hub = mk_panel(f->scr, 14, 14, LV_RADIUS_CIRCLE,
+    lv_obj_t *hub = mk_panel(f->scr, S(14), S(14), LV_RADIUS_CIRCLE,
                              lv_color_hex(p->primary), LV_ALIGN_CENTER, 0, 0);
     (void)hub;
 
-    f->time = mk_label(f->scr, "--:--", &lv_font_montserrat_16,
-                       lv_color_hex(p->muted), LV_ALIGN_CENTER, 0, 78);
-    f->date = mk_label(f->scr, "", &lv_font_montserrat_14,
-                       lv_color_hex(p->muted), LV_ALIGN_CENTER, 0, 100);
-    f->hr = mk_label(f->scr, "-- bpm", &lv_font_montserrat_14,
-                     lv_color_hex(p->secondary), LV_ALIGN_CENTER, -92, -70);
-    f->steps = mk_label(f->scr, "0", &lv_font_montserrat_14,
-                        lv_color_hex(p->primary), LV_ALIGN_CENTER, 92, -70);
-    f->bat = mk_label(f->scr, "--%", &lv_font_montserrat_14,
-                      lv_color_hex(p->muted), LV_ALIGN_CENTER, 0, -118);
+    f->time = mk_label(f->scr, "--:--", FONT_BODY,
+                       lv_color_hex(p->muted), LV_ALIGN_CENTER, 0, SY(78));
+    f->date = mk_label(f->scr, "", FONT_SMALL,
+                       lv_color_hex(p->muted), LV_ALIGN_CENTER, 0, SY(100));
+    f->hr = mk_label(f->scr, "-- bpm", FONT_SMALL,
+                     lv_color_hex(p->secondary), LV_ALIGN_CENTER, S(-92), SY(-70));
+    f->steps = mk_label(f->scr, "0", FONT_SMALL,
+                        lv_color_hex(p->primary), LV_ALIGN_CENTER, S(92), SY(-70));
+    f->bat = mk_label(f->scr, "--%", FONT_SMALL,
+                      lv_color_hex(p->muted), LV_ALIGN_CENTER, 0, SY(-118));
 }
 
 /* Face 2: Minimal Sport. One large time and a quiet row of numbers. */
@@ -219,21 +257,22 @@ static void build_minimal(face_ui_t *f, const palette_t *p) {
     f->scr = lv_obj_create(NULL);
     lv_obj_set_style_bg_color(f->scr, lv_color_hex(p->bg), 0);
 
-    mk_panel(f->scr, 300, 2, 1, lv_color_hex(p->surface), LV_ALIGN_CENTER, 0, -76);
+    mk_panel(f->scr, S(300), S(2), S(1), lv_color_hex(p->surface),
+             LV_ALIGN_CENTER, 0, SY(-76));
 
-    f->time = mk_label(f->scr, "--:--", &lv_font_montserrat_36,
-                       lv_color_hex(p->text), LV_ALIGN_CENTER, 0, -34);
-    f->date = mk_label(f->scr, "", &lv_font_montserrat_14,
-                       lv_color_hex(p->muted), LV_ALIGN_CENTER, 0, 8);
+    f->time = mk_label(f->scr, "--:--", FONT_HERO,
+                       lv_color_hex(p->text), LV_ALIGN_CENTER, 0, SY(-34));
+    f->date = mk_label(f->scr, "", FONT_SMALL,
+                       lv_color_hex(p->muted), LV_ALIGN_CENTER, 0, SY(8));
 
-    f->hr = mk_label(f->scr, "-- bpm", &lv_font_montserrat_16,
-                     lv_color_hex(p->secondary), LV_ALIGN_CENTER, 0, 58);
-    f->steps = mk_label(f->scr, "0 steps", &lv_font_montserrat_16,
-                        lv_color_hex(p->primary), LV_ALIGN_CENTER, 0, 86);
-    f->spo2 = mk_label(f->scr, "-- %", &lv_font_montserrat_14,
-                       lv_color_hex(p->muted), LV_ALIGN_CENTER, 0, 112);
-    f->bat = mk_label(f->scr, "--%", &lv_font_montserrat_14,
-                      lv_color_hex(p->muted), LV_ALIGN_CENTER, 0, -118);
+    f->hr = mk_label(f->scr, "-- bpm", FONT_BODY,
+                     lv_color_hex(p->secondary), LV_ALIGN_CENTER, 0, SY(58));
+    f->steps = mk_label(f->scr, "0 steps", FONT_BODY,
+                        lv_color_hex(p->primary), LV_ALIGN_CENTER, 0, SY(86));
+    f->spo2 = mk_label(f->scr, "-- %", FONT_SMALL,
+                       lv_color_hex(p->muted), LV_ALIGN_CENTER, 0, SY(112));
+    f->bat = mk_label(f->scr, "--%", FONT_SMALL,
+                      lv_color_hex(p->muted), LV_ALIGN_CENTER, 0, SY(-118));
 }
 
 /* Face 3: Health Rings. Three concentric arcs for steps, HR and SpO2. */
@@ -241,28 +280,28 @@ static void build_fitness(face_ui_t *f, const palette_t *p) {
     f->scr = lv_obj_create(NULL);
     lv_obj_set_style_bg_color(f->scr, lv_color_hex(p->bg), 0);
 
-    f->arc_steps = mk_arc(f->scr, 320, 12, lv_color_hex(p->surface),
+    f->arc_steps = mk_arc(f->scr, S(320), S(12), lv_color_hex(p->surface),
                           lv_color_hex(p->primary), LV_ALIGN_CENTER, 0, 0);
     lv_arc_set_range(f->arc_steps, 0, 10000);
-    f->arc_hr = mk_arc(f->scr, 270, 12, lv_color_hex(p->surface),
+    f->arc_hr = mk_arc(f->scr, S(270), S(12), lv_color_hex(p->surface),
                        lv_color_hex(p->secondary), LV_ALIGN_CENTER, 0, 0);
     lv_arc_set_range(f->arc_hr, 0, 200);
-    f->arc_spo2 = mk_arc(f->scr, 220, 12, lv_color_hex(p->surface),
+    f->arc_spo2 = mk_arc(f->scr, S(220), S(12), lv_color_hex(p->surface),
                          lv_color_hex(p->text), LV_ALIGN_CENTER, 0, 0);
     lv_arc_set_range(f->arc_spo2, 0, 100);
 
-    f->time = mk_label(f->scr, "--:--", &lv_font_montserrat_28,
-                       lv_color_hex(p->text), LV_ALIGN_CENTER, 0, -30);
-    f->date = mk_label(f->scr, "", &lv_font_montserrat_14,
+    f->time = mk_label(f->scr, "--:--", FONT_TIME,
+                       lv_color_hex(p->text), LV_ALIGN_CENTER, 0, SY(-30));
+    f->date = mk_label(f->scr, "", FONT_SMALL,
                        lv_color_hex(p->muted), LV_ALIGN_CENTER, 0, 0);
-    f->hr = mk_label(f->scr, "-- bpm", &lv_font_montserrat_16,
-                     lv_color_hex(p->secondary), LV_ALIGN_CENTER, 0, 34);
-    f->spo2 = mk_label(f->scr, "-- %", &lv_font_montserrat_14,
-                       lv_color_hex(p->text), LV_ALIGN_CENTER, 0, 58);
-    f->steps = mk_label(f->scr, "0 steps", &lv_font_montserrat_14,
-                        lv_color_hex(p->primary), LV_ALIGN_CENTER, 0, 132);
-    f->bat = mk_label(f->scr, "--%", &lv_font_montserrat_14,
-                      lv_color_hex(p->muted), LV_ALIGN_CENTER, 0, -132);
+    f->hr = mk_label(f->scr, "-- bpm", FONT_BODY,
+                     lv_color_hex(p->secondary), LV_ALIGN_CENTER, 0, SY(34));
+    f->spo2 = mk_label(f->scr, "-- %", FONT_SMALL,
+                       lv_color_hex(p->text), LV_ALIGN_CENTER, 0, SY(58));
+    f->steps = mk_label(f->scr, "0 steps", FONT_SMALL,
+                        lv_color_hex(p->primary), LV_ALIGN_CENTER, 0, SY(132));
+    f->bat = mk_label(f->scr, "--%", FONT_SMALL,
+                      lv_color_hex(p->muted), LV_ALIGN_CENTER, 0, SY(-132));
 }
 
 /* Face 4: Cyber Pixel. Grid, blocky panels and a bottom progress bar. */
@@ -272,30 +311,30 @@ static void build_cyber(face_ui_t *f, const palette_t *p) {
 
     /* A coarse grid, drawn as thin panels so it costs no image memory. */
     for (int i = 1; i < 6; i++) {
-        mk_panel(f->scr, 1, 300, 0, lv_color_hex(p->surface),
-                 LV_ALIGN_CENTER, -150 + i * 50, 0);
-        mk_panel(f->scr, 300, 1, 0, lv_color_hex(p->surface),
-                 LV_ALIGN_CENTER, 0, -150 + i * 50);
+        mk_panel(f->scr, S(1), S(300), 0, lv_color_hex(p->surface),
+                 LV_ALIGN_CENTER, S(-150 + i * 50), 0);
+        mk_panel(f->scr, S(300), S(1), 0, lv_color_hex(p->surface),
+                 LV_ALIGN_CENTER, 0, SY(-150 + i * 50));
     }
 
-    f->time = mk_label(f->scr, "--:--", &lv_font_montserrat_36,
-                       lv_color_hex(p->primary), LV_ALIGN_CENTER, 0, -46);
-    f->date = mk_label(f->scr, "", &lv_font_montserrat_14,
-                       lv_color_hex(p->muted), LV_ALIGN_CENTER, 0, -4);
-    f->note = mk_label(f->scr, "SYS.ONLINE", &lv_font_montserrat_14,
-                       lv_color_hex(p->secondary), LV_ALIGN_CENTER, 0, -124);
+    f->time = mk_label(f->scr, "--:--", FONT_HERO,
+                       lv_color_hex(p->primary), LV_ALIGN_CENTER, 0, SY(-46));
+    f->date = mk_label(f->scr, "", FONT_SMALL,
+                       lv_color_hex(p->muted), LV_ALIGN_CENTER, 0, SY(-4));
+    f->note = mk_label(f->scr, "SYS.ONLINE", FONT_SMALL,
+                       lv_color_hex(p->secondary), LV_ALIGN_CENTER, 0, SY(-124));
 
-    f->hr = mk_label(f->scr, "HR --", &lv_font_montserrat_16,
-                     lv_color_hex(p->secondary), LV_ALIGN_CENTER, -78, 58);
-    f->spo2 = mk_label(f->scr, "O2 --", &lv_font_montserrat_16,
-                       lv_color_hex(p->text), LV_ALIGN_CENTER, 78, 58);
-    f->steps = mk_label(f->scr, "STP 0", &lv_font_montserrat_14,
-                        lv_color_hex(p->primary), LV_ALIGN_CENTER, -78, 92);
-    f->bat = mk_label(f->scr, "BAT --", &lv_font_montserrat_14,
-                      lv_color_hex(p->muted), LV_ALIGN_CENTER, 78, 92);
+    f->hr = mk_label(f->scr, "HR --", FONT_BODY,
+                     lv_color_hex(p->secondary), LV_ALIGN_CENTER, S(-78), SY(58));
+    f->spo2 = mk_label(f->scr, "O2 --", FONT_BODY,
+                       lv_color_hex(p->text), LV_ALIGN_CENTER, S(78), SY(58));
+    f->steps = mk_label(f->scr, "STP 0", FONT_SMALL,
+                        lv_color_hex(p->primary), LV_ALIGN_CENTER, S(-78), SY(92));
+    f->bat = mk_label(f->scr, "BAT --", FONT_SMALL,
+                      lv_color_hex(p->muted), LV_ALIGN_CENTER, S(78), SY(92));
 
-    f->bar_steps = mk_bar(f->scr, 260, 8, lv_color_hex(p->surface),
-                          lv_color_hex(p->primary), LV_ALIGN_CENTER, 0, 128);
+    f->bar_steps = mk_bar(f->scr, S(260), S(8), lv_color_hex(p->surface),
+                          lv_color_hex(p->primary), LV_ALIGN_CENTER, 0, SY(128));
 }
 
 /* Face 5: Chrono Dash. Four telemetry tiles and two bars. */
@@ -303,36 +342,36 @@ static void build_chrono(face_ui_t *f, const palette_t *p) {
     f->scr = lv_obj_create(NULL);
     lv_obj_set_style_bg_color(f->scr, lv_color_hex(p->bg), 0);
 
-    f->time = mk_label(f->scr, "--:--", &lv_font_montserrat_28,
-                       lv_color_hex(p->text), LV_ALIGN_CENTER, 0, -132);
-    f->date = mk_label(f->scr, "", &lv_font_montserrat_14,
-                       lv_color_hex(p->muted), LV_ALIGN_CENTER, 0, -104);
+    f->time = mk_label(f->scr, "--:--", FONT_TIME,
+                       lv_color_hex(p->text), LV_ALIGN_CENTER, 0, SY(-132));
+    f->date = mk_label(f->scr, "", FONT_SMALL,
+                       lv_color_hex(p->muted), LV_ALIGN_CENTER, 0, SY(-104));
 
-    lv_obj_t *t1 = mk_panel(f->scr, 140, 76, 12, lv_color_hex(p->surface),
-                            LV_ALIGN_CENTER, -76, -34);
-    lv_obj_t *t2 = mk_panel(f->scr, 140, 76, 12, lv_color_hex(p->surface),
-                            LV_ALIGN_CENTER, 76, -34);
-    lv_obj_t *t3 = mk_panel(f->scr, 140, 76, 12, lv_color_hex(p->surface),
-                            LV_ALIGN_CENTER, -76, 54);
-    lv_obj_t *t4 = mk_panel(f->scr, 140, 76, 12, lv_color_hex(p->surface),
-                            LV_ALIGN_CENTER, 76, 54);
+    lv_obj_t *t1 = mk_panel(f->scr, S(140), S(76), S(12), lv_color_hex(p->surface),
+                            LV_ALIGN_CENTER, S(-76), SY(-34));
+    lv_obj_t *t2 = mk_panel(f->scr, S(140), S(76), S(12), lv_color_hex(p->surface),
+                            LV_ALIGN_CENTER, S(76), SY(-34));
+    lv_obj_t *t3 = mk_panel(f->scr, S(140), S(76), S(12), lv_color_hex(p->surface),
+                            LV_ALIGN_CENTER, S(-76), SY(54));
+    lv_obj_t *t4 = mk_panel(f->scr, S(140), S(76), S(12), lv_color_hex(p->surface),
+                            LV_ALIGN_CENTER, S(76), SY(54));
 
-    f->hr = mk_label(t1, "-- bpm", &lv_font_montserrat_16,
+    f->hr = mk_label(t1, "-- bpm", FONT_BODY,
                      lv_color_hex(p->secondary), LV_ALIGN_CENTER, 0, 0);
-    f->spo2 = mk_label(t2, "-- %", &lv_font_montserrat_16,
+    f->spo2 = mk_label(t2, "-- %", FONT_BODY,
                        lv_color_hex(p->text), LV_ALIGN_CENTER, 0, 0);
-    f->steps = mk_label(t3, "0 steps", &lv_font_montserrat_16,
+    f->steps = mk_label(t3, "0 steps", FONT_BODY,
                         lv_color_hex(p->primary), LV_ALIGN_CENTER, 0, 0);
-    f->bat = mk_label(t4, "--%", &lv_font_montserrat_16,
+    f->bat = mk_label(t4, "--%", FONT_BODY,
                       lv_color_hex(p->muted), LV_ALIGN_CENTER, 0, 0);
 
-    f->bar_steps = mk_bar(f->scr, 130, 8, lv_color_hex(p->surface),
-                          lv_color_hex(p->primary), LV_ALIGN_CENTER, -76, 104);
-    f->bar_bat = mk_bar(f->scr, 130, 8, lv_color_hex(p->surface),
-                        lv_color_hex(p->secondary), LV_ALIGN_CENTER, 76, 104);
+    f->bar_steps = mk_bar(f->scr, S(130), S(8), lv_color_hex(p->surface),
+                          lv_color_hex(p->primary), LV_ALIGN_CENTER, S(-76), SY(104));
+    f->bar_bat = mk_bar(f->scr, S(130), S(8), lv_color_hex(p->surface),
+                        lv_color_hex(p->secondary), LV_ALIGN_CENTER, S(76), SY(104));
 
-    f->note = mk_label(f->scr, "TELEMETRY", &lv_font_montserrat_14,
-                       lv_color_hex(p->muted), LV_ALIGN_CENTER, 0, 142);
+    f->note = mk_label(f->scr, "TELEMETRY", FONT_SMALL,
+                       lv_color_hex(p->muted), LV_ALIGN_CENTER, 0, SY(142));
 }
 
 static void build_face(int index, const palette_t *p) {
@@ -426,7 +465,8 @@ static void disp_flush(lv_disp_drv_t *drv, const lv_area_t *area, lv_color_t *co
 }
 
 void display_init(void) {
-    ESP_LOGI(TAG, "Initializing circular display subsystem...");
+    ESP_LOGI(TAG, "Initializing %dx%d display subsystem...",
+             DISP_HOR_RES, DISP_VER_RES);
 
     gpio_set_direction(PIN_NUM_DC, GPIO_MODE_OUTPUT);
     gpio_set_direction(PIN_NUM_RST, GPIO_MODE_OUTPUT);
@@ -462,6 +502,10 @@ void display_init(void) {
     spi_bus_add_device(SPI2_HOST, &devcfg, &spi);
 
     // Display wake & setup (Sleep out, Display ON)
+    /* This is the whole init sequence the current 360x360 dev panel needs.
+     * A production AMOLED (CO5300 class) needs the vendor's full register
+     * table instead; the part is not chosen yet, so that table is not invented
+     * here. The interface pins above are also the dev board's, not a PCB. */
     lcd_cmd(0x11);
     vTaskDelay(pdMS_TO_TICKS(120));
     lcd_cmd(0x29);
@@ -498,9 +542,9 @@ static void update_hands(face_ui_t *f, const struct tm *tm) {
     float second_deg = (float)tm->tm_sec * 6.0f;
 
     struct { lv_obj_t *line; lv_point_t *pts; float deg; int len; } hands[3] = {
-        {f->hand_h, f->h_pts, hour_deg, 70},
-        {f->hand_m, f->m_pts, minute_deg, 96},
-        {f->hand_s, f->s_pts, second_deg, 112},
+        {f->hand_h, f->h_pts, hour_deg, S(70)},
+        {f->hand_m, f->m_pts, minute_deg, S(96)},
+        {f->hand_s, f->s_pts, second_deg, S(112)},
     };
     for (int i = 0; i < 3; i++) {
         float rad = hands[i].deg * pi / 180.0f;

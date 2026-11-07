@@ -209,7 +209,7 @@ Nothing below this matters if the product tells lies or has dead controls.
       with 0 analyzer errors. The commercial spec's contradictions are removed
       (LVGL 8.3.11, N16R8, VC31B, MCP73831-class charger) and it is marked as an
       input to 4.5. Datasheet and bench facts remain UNKNOWN/MUST MEASURE until
-      the 4.5 part selection chooses parts — see `docs/HARDWARE.md` §7.
+      the 4.5 part selection chooses parts — see `docs/HARDWARE_DESIGN.md` §6.
 - [ ] **4.4 Expand the firmware** to the documented feature set on the decided
       target, and make it build clean. The third-I2C-bus blocker from 4.1 is
       answered in source: bus B is shared (`I2C_NUM_2` → `I2C_NUM_1`), so the
@@ -218,8 +218,9 @@ Nothing below this matters if the product tells lies or has dead controls.
       flash 23.6% of the 4 MB app slot), registers the NimBLE GATT service with
       live, history, info and command characteristics, implements the five faces
       and six themes, and adds backlight, local-time and history-sync commands.
-      Remaining: flash it to a watch and run the bench checks. Do not call the
-      image production-ready until those pass.
+      The faces are authored at 360×360 and scale to a larger square panel; a
+      466×466 build was verified. Remaining: flash it to a watch and run the
+      bench checks. Do not call the image production-ready until those pass.
 - [ ] **4.5 Redesign the hardware system for the 7,500 EGP product.** The
       mission, stated 2026-10-21: a watch that competes on a shelf with the
       Apple Watch and its peers at about 7,500 EGP — touchscreen, a large custom
@@ -256,8 +257,11 @@ Nothing below this matters if the product tells lies or has dead controls.
   - [ ] **4.5c Build an EVT unit and measure it.** Order the 1,000-piece parts,
         lay out the board and run the gates in `HARDWARE_DESIGN.md` §10. Until
         then the power, thermal, optical and ingress figures are MUST MEASURE,
-        not specifications. The firmware's 360×360 round layout must be ported
-        to the chosen square panel before EVT.
+        not specifications. The firmware layout is no longer tied to 360×360:
+        every face is authored at that size and scaled at build time, and a
+        466×466 build was verified. What remains for a square panel is its
+        vendor init table and the PCB pin map, both of which need the chosen
+        part.
 
 ### Phase 5 — Customisation and polish
 
