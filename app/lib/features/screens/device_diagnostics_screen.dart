@@ -159,9 +159,7 @@ class _DeviceDiagnosticsScreenState extends State<DeviceDiagnosticsScreen> {
                 const SizedBox(width: Space.sm),
                 Expanded(
                   child: Text(
-                    connected
-                        ? 'Veyro watch'
-                        : 'No watch is connected',
+                    connected ? 'Veyro watch' : 'No watch is connected',
                     style: theme.textTheme.titleMedium,
                   ),
                 ),

@@ -312,7 +312,8 @@ void main() {
         expect(theme.dimAfterDark, isTrue);
         expect(await StorageService.dimAfterDark(), isTrue);
         expect(
-          find.textContaining('On. The dark theme is used from 20:00 to 07:00.'),
+          find.textContaining(
+              'On. The dark theme is used from 20:00 to 07:00.'),
           findsOneWidget,
         );
 
@@ -367,8 +368,7 @@ void main() {
 
         // Sliders are dragged, not invoked through their callbacks, so the
         // gesture path is the one the person uses.
-        final Finder highHr =
-            find.byKey(const Key('high_hr_threshold_slider'));
+        final Finder highHr = find.byKey(const Key('high_hr_threshold_slider'));
         final Finder lowSpo2 =
             find.byKey(const Key('low_spo2_threshold_slider'));
         await scrollTo(tester, highHr);
@@ -778,8 +778,7 @@ void main() {
         await revealInAiSettings(tester, notes);
         await tester.enterText(notes, 'I have mild asthma.');
 
-        final Finder save =
-            buttonWithText('Save Personality & Instructions');
+        final Finder save = buttonWithText('Save Personality & Instructions');
         await revealInAiSettings(tester, save);
         await tester.tap(save);
         await settleLoads(tester);
@@ -794,7 +793,8 @@ void main() {
         expect(prefs.getString('ai_language'),
             'العربية (Egyptian Arabic / Fusha)');
         expect(prefs.getBool('ai_include_telemetry'), isFalse);
-        expect(prefs.getString('ai_custom_instructions'), 'I have mild asthma.');
+        expect(
+            prefs.getString('ai_custom_instructions'), 'I have mild asthma.');
 
         await pumpScreen(tester, const AIAssistantScreen(), size: size);
         await tester.tap(find.text('AI Personality & Settings'));

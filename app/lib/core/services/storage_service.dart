@@ -82,6 +82,7 @@ abstract final class StorageService {
   static const bool defaultDemoMode = false;
   static const int defaultWatchFace = 0;
   static const int defaultWatchTheme = 0;
+
   /// Matches the firmware's power-on backlight level.
   static const int defaultWatchBrightness = 60;
   static const bool defaultAutoSyncHistory = true;

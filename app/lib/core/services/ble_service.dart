@@ -115,7 +115,8 @@ class BleService extends ChangeNotifier {
     _setState(BleState.scanning);
     try {
       await _perms();
-      if (await FlutterBluePlus.adapterState.first != BluetoothAdapterState.on) {
+      if (await FlutterBluePlus.adapterState.first !=
+          BluetoothAdapterState.on) {
         _errorMessage = 'Turn Bluetooth on';
         _setState(BleState.error);
         return;
@@ -123,21 +124,32 @@ class BleService extends ChangeNotifier {
       await FlutterBluePlus.startScan(timeout: const Duration(seconds: 20));
       _scanSub = FlutterBluePlus.scanResults.listen((results) {
         for (final r in results) {
-          var name = r.device.platformName.isNotEmpty ? r.device.platformName : r.advertisementData.advName;
+          var name = r.device.platformName.isNotEmpty
+              ? r.device.platformName
+              : r.advertisementData.advName;
           if (name.isEmpty) {
-            final idStr = r.device.remoteId.str; name = 'BLE Device (${idStr.length >= 5 ? idStr.substring(0, 5) : idStr})';
+            final idStr = r.device.remoteId.str;
+            name =
+                'BLE Device (${idStr.length >= 5 ? idStr.substring(0, 5) : idStr})';
           }
           final isVeyro = name.toLowerCase().contains('veyro') ||
               r.advertisementData.serviceUuids.any(
-                (u) => u.toString().toLowerCase().contains(VeyroProtocol.serviceUuid.substring(0, 8)),
+                (u) => u
+                    .toString()
+                    .toLowerCase()
+                    .contains(VeyroProtocol.serviceUuid.substring(0, 8)),
               );
           final isStandardWatch = r.advertisementData.serviceUuids.any(
             (u) {
               final s = u.toString().toLowerCase();
-              return s.contains('180d') || s.contains('1809') || s.contains('180f') || s.contains('180a');
+              return s.contains('180d') ||
+                  s.contains('1809') ||
+                  s.contains('180f') ||
+                  s.contains('180a');
             },
           );
-          final i = _discoveredDevices.indexWhere((d) => d.device.remoteId.str == r.device.remoteId.str);
+          final i = _discoveredDevices.indexWhere(
+              (d) => d.device.remoteId.str == r.device.remoteId.str);
           if (i == -1) {
             _discoveredDevices.add(DiscoveredDevice(
               device: r.device,
@@ -187,6 +199,16 @@ class BleService extends ChangeNotifier {
   }
 
   Future<void> _wire(BluetoothDevice device, {String? pin}) async {
+    // The watch's live and history payloads are larger than the 23-byte default
+    // ATT MTU. Android needs an explicit request; iOS negotiates automatically
+    // and does not support this call, so failures are not fatal.
+    if (defaultTargetPlatform == TargetPlatform.android) {
+      try {
+        await device.requestMtu(247);
+      } catch (_) {
+        // Keep going: short reads and commands still work at the default MTU.
+      }
+    }
     final services = await device.discoverServices();
     var foundService = false;
     var foundLive = false;
@@ -203,7 +225,9 @@ class BleService extends ChangeNotifier {
             _liveSub = c.lastValueStream.listen((bytes) {
               if (bytes.isNotEmpty) {
                 final flags = bytes[0];
-                final hr = (flags & 0x01) == 0 ? bytes[1] : (bytes[1] | (bytes[2] << 8));
+                final hr = (flags & 0x01) == 0
+                    ? bytes[1]
+                    : (bytes[1] | (bytes[2] << 8));
                 _heartRate = HeartRateData(bpm: hr);
                 notifyListeners();
               }
@@ -238,7 +262,11 @@ class BleService extends ChangeNotifier {
         }
       }
     }
-    if (!foundService || !foundLive || !foundHistory || !foundInfo || !foundCommand) {
+    if (!foundService ||
+        !foundLive ||
+        !foundHistory ||
+        !foundInfo ||
+        !foundCommand) {
       throw StateError('Incomplete Veyro BLE service');
     }
     final stored = pin ?? await _lock?.watchPin();
@@ -249,10 +277,10 @@ class BleService extends ChangeNotifier {
       if (_watchInfo.paired) {
         await _lock?.saveWatchPin(stored);
         await _sendCmd({
-        'op': 'time',
-        'unix': DateTime.now().toUtc().millisecondsSinceEpoch ~/ 1000,
-        'tz': DateTime.now().timeZoneOffset.inMinutes,
-      });
+          'op': 'time',
+          'unix': DateTime.now().toUtc().millisecondsSinceEpoch ~/ 1000,
+          'tz': DateTime.now().timeZoneOffset.inMinutes,
+        });
         await startMemorySync();
       }
     }
@@ -302,9 +330,7 @@ class BleService extends ChangeNotifier {
   }
 
   Future<void> setWatchFace(int face) async {
-    if (!isConnected ||
-        face < 0 ||
-        face >= VeyroProtocol.watchFaceCount) {
+    if (!isConnected || face < 0 || face >= VeyroProtocol.watchFaceCount) {
       return;
     }
     await _sendCmd({'op': 'face', 'face': face});
@@ -368,12 +394,15 @@ class BleService extends ChangeNotifier {
         hrv: (m['hrv'] as num?)?.toInt() ?? 0,
         confidence: 60,
       );
-      _oxygen = OxygenData(spO2: (m['spo2'] as num?)?.toInt() ?? 0, confidence: 50);
+      _oxygen =
+          OxygenData(spO2: (m['spo2'] as num?)?.toInt() ?? 0, confidence: 50);
       _bloodPressure = BloodPressureData(
         systolic: (m['bps'] as num?)?.toInt() ?? 0,
         diastolic: (m['bpd'] as num?)?.toInt() ?? 0,
       );
-      _activity = ActivityData(steps: (m['steps'] as num?)?.toInt() ?? 0, hourlySteps: List.filled(24, 0));
+      _activity = ActivityData(
+          steps: (m['steps'] as num?)?.toInt() ?? 0,
+          hourlySteps: List.filled(24, 0));
       _accel = AccelData(fallDetected: m['fall'] == 1);
       _batteryLevel = (m['bat'] as num?)?.toInt() ?? _batteryLevel;
       // Feed real HR into tracker so screens get true session min/max.
@@ -444,7 +473,8 @@ class BleService extends ChangeNotifier {
     _batteryLevel = 76;
     _demoTimer?.cancel();
     _demoTimer = Timer.periodic(const Duration(seconds: 2), (_) {
-      _heartRate = HeartRateData(bpm: 68 + DateTime.now().second % 8, hrv: 42, confidence: 80);
+      _heartRate = HeartRateData(
+          bpm: 68 + DateTime.now().second % 8, hrv: 42, confidence: 80);
       _oxygen = OxygenData(spO2: 97, confidence: 70);
       notifyListeners();
     });
