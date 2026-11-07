@@ -28,6 +28,7 @@
 #include "freertos/timers.h"
 #include "esp_log.h"
 #include "esp_system.h"
+#include "esp_mac.h"
 #include "esp_random.h"
 #include "esp_efuse.h"
 #include "nvs_flash.h"
@@ -216,7 +217,9 @@ static volatile int     g_tz_offset_min = 0;
 static volatile uint32_t g_saved_steps = 0;  /* last value written to NVS */
 static volatile int     g_wrong_pin_count = 0;
 static char             g_pin_code[7] = "000000";
+static bool             g_pin_loaded = false;
 static char             g_serial[16]  = "VY00000000000";
+static bool             g_serial_loaded = false;
 
 /* RR interval buffer for HRV */
 static uint16_t g_rr_buf[8] = {0};
@@ -511,7 +514,10 @@ static nvs_handle_t g_nvs;
 /** Load persistent settings from NVS on boot. */
 static void nvs_load_all(void) {
     size_t len = sizeof(g_pin_code);
-    nvs_get_str(g_nvs, "pin", g_pin_code, &len);
+    if (nvs_get_str(g_nvs, "pin", g_pin_code, &len) == ESP_OK &&
+        strlen(g_pin_code) == 6) {
+        g_pin_loaded = true;
+    }
     nvs_get_u32(g_nvs, "steps", (uint32_t *)&g_steps);
     g_saved_steps = g_steps;
     uint8_t face;
@@ -528,7 +534,24 @@ static void nvs_load_all(void) {
         g_tz_offset_min = (int)tz;
     }
     len = sizeof(g_serial);
-    nvs_get_str(g_nvs, "serial", g_serial, &len);
+    if (nvs_get_str(g_nvs, "serial", g_serial, &len) == ESP_OK &&
+        strlen(g_serial) >= 4) {
+        g_serial_loaded = true;
+    }
+}
+
+/** Derive a stable serial from the factory MAC when NVS has none.
+ *
+ *  Every board used to ship the same placeholder serial, so every watch
+ *  advertised the same name. The MAC is unique per part and survives reflashes.
+ */
+static void generate_serial(void) {
+    uint8_t mac[6] = {0};
+    if (esp_read_mac(mac, ESP_MAC_WIFI_STA) != ESP_OK) return;
+    snprintf(g_serial, sizeof(g_serial), "VY%02X%02X%02X%02X%02X%02X",
+             mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+    nvs_set_str(g_nvs, "serial", g_serial);
+    nvs_commit(g_nvs);
 }
 
 /** Generate a random 6-digit PIN and save to NVS. */
@@ -1754,8 +1777,9 @@ void app_main(void) {
     /* Load NVS settings */
     nvs_load_all();
 
-    /* Generate PIN if not set */
-    if (strlen(g_pin_code) != 6) generate_pin();
+    /* Generate the PIN and serial once, when the board has never had them. */
+    if (!g_pin_loaded) generate_pin();
+    if (!g_serial_loaded) generate_serial();
 
     /* Initialise sensors */
     g_boot_ms = xTaskGetTickCount() * portTICK_PERIOD_MS;
