@@ -155,15 +155,18 @@ void main() {
   testWidgets('changing each threshold persists', (WidgetTester tester) async {
     await pumpSettings(tester, const Size(390, 844));
 
-    expect(find.byType(Slider), findsNWidgets(2));
+    final Finder highHr = find.byKey(const Key('high_hr_threshold_slider'));
+    final Finder lowSpo2 = find.byKey(const Key('low_spo2_threshold_slider'));
+    expect(highHr, findsOneWidget);
+    expect(lowSpo2, findsOneWidget);
 
     // High heart rate.
-    await tester.ensureVisible(find.byType(Slider).first);
+    await tester.ensureVisible(highHr);
     await tester.pumpAndSettle();
-    Slider slider = tester.widget<Slider>(find.byType(Slider).first);
+    Slider slider = tester.widget<Slider>(highHr);
     slider.onChanged!(130);
     await tester.pump();
-    slider = tester.widget<Slider>(find.byType(Slider).first);
+    slider = tester.widget<Slider>(highHr);
     slider.onChangeEnd!(130);
     await tester.pump();
     await tester.pump();
@@ -172,10 +175,12 @@ void main() {
     expect(find.text('Saved at 130 BPM or above.'), findsOneWidget);
 
     // Low oxygen.
-    Slider oxygen = tester.widget<Slider>(find.byType(Slider).at(1));
+    await tester.ensureVisible(lowSpo2);
+    await tester.pumpAndSettle();
+    Slider oxygen = tester.widget<Slider>(lowSpo2);
     oxygen.onChanged!(88);
     await tester.pump();
-    oxygen = tester.widget<Slider>(find.byType(Slider).at(1));
+    oxygen = tester.widget<Slider>(lowSpo2);
     oxygen.onChangeEnd!(88);
     await tester.pump();
     await tester.pump();

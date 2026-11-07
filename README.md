@@ -4,17 +4,18 @@ Digital Saver is a Flutter companion app for a health-tracking watch. Veyro is
 the watch. Two firmware targets exist in this repository, and they are at very
 different stages.
 
-| Part | Where | State on 2026-11-06 |
+| Part | Where | State on 2026-11-07 |
 |---|---|---|
 | Companion app | `app/` | Flutter; 420 tests pass, analyzer reports no errors |
 | Veyro prototype | `firmware/esp32/` | Builds (Flash 62.0%, RAM 12.6% as of 2026-10-21); not hardware-tested in this repository |
-| Veyro production target | `firmware/esp32s3/` | ESP-IDF source. The third-I2C-bus conflict is fixed by sharing bus B; a clean build has not been verified here, and the target has no GATT service yet |
+| Veyro production target | `firmware/esp32s3/` | ESP-IDF source. Builds clean on 2026-11-07 (RAM 28.8%, flash 23.6% of the 4 MB app slot on a 16 MB part), with the NimBLE GATT service, five faces and six themes. Not hardware-tested in this repository |
 | Documentation | `docs/` | Start at [docs/README.md](docs/README.md) |
 
 The production watch is a design goal, not a shipped product. The app talks to
-the ESP32 prototype over Bluetooth. The ESP32-S3 target still has no GATT
-service, so it cannot be paired with. [docs/ROADMAP.md](docs/ROADMAP.md) records
-what is open, including the production hardware redesign in item 4.5.
+the ESP32 prototype over Bluetooth, and the ESP32-S3 target now exposes the same
+service and characteristics so the app can pair with it as well. The S3 image
+has not been run on a watch in this repository. [docs/ROADMAP.md](docs/ROADMAP.md)
+records what is open, including the production hardware redesign in item 4.5.
 
 ## What the app does
 

@@ -25,8 +25,11 @@ apps. For a sellable 7,500 EGP product, RV1106 is the right base.
 
 ## Current assets
 
-- ESP32-S3 demo firmware exists in `firmware/esp32s3` and can be used for
-  early demos while RV1106 hardware is sourced.
+- ESP32-S3 demo firmware exists in `firmware/esp32s3`. As of 2026-11-07 it
+  builds clean with PlatformIO (RAM 28.8%, flash 23.6% of the 4 MB app slot),
+  exposes the same BLE service the app already knows, and implements five faces
+  and six themes. It can be used for early demos while RV1106 hardware is
+  sourced, but it has not been run on a watch in this repository.
 - Digital Saver app (Flutter) is the phone companion.
 
 ## Next steps

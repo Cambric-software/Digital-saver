@@ -51,11 +51,21 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   static const List<String> _watchFaces = <String>[
-    'Face 1: Minimal Sport',
-    'Face 2: Health Rings',
-    'Face 3: Cyberpunk Pixel',
-    'Face 4: Classic Analog Dial',
+    'Face 1: Classic Analog Dial',
+    'Face 2: Minimal Sport',
+    'Face 3: Health Rings',
+    'Face 4: Cyberpunk Pixel',
     'Face 5: Detailed Telemetry',
+  ];
+
+  /// Same order as THEME_* in firmware/esp32s3/main/display.h.
+  static const List<String> _watchThemes = <String>[
+    'Cambric Amber',
+    'Cyber Cyan',
+    'Emerald Green',
+    'Crimson Red',
+    'Neo Violet',
+    'Monochrome',
   ];
 
   static const List<String> _complicationChoices = <String>[
@@ -90,6 +100,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   bool _demoMode = StorageService.defaultDemoMode;
   int _watchFace = StorageService.defaultWatchFace;
+  int _watchTheme = StorageService.defaultWatchTheme;
+  int _watchBrightness = StorageService.defaultWatchBrightness;
   bool _autoSync = StorageService.defaultAutoSyncHistory;
   double _highHr = StorageService.defaultHighHrThreshold;
   double _lowSpo2 = StorageService.defaultLowSpo2Threshold;
@@ -124,6 +136,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
       final List<EmergencyContact> contacts = await LocalStore.loadContacts();
       final bool demoMode = await StorageService.demoMode();
       final int watchFace = await StorageService.watchFace();
+      final int watchTheme = await StorageService.watchTheme();
+      final int watchBrightness = await StorageService.watchBrightness();
       final bool autoSync = await StorageService.autoSyncHistory();
       final double highHr = await StorageService.highHrThreshold();
       final double lowSpo2 = await StorageService.lowSpo2Threshold();
@@ -145,6 +159,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
         _watchFace = watchFace >= 0 && watchFace < _watchFaces.length
             ? watchFace
             : StorageService.defaultWatchFace;
+        _watchTheme = watchTheme >= 0 && watchTheme < _watchThemes.length
+            ? watchTheme
+            : StorageService.defaultWatchTheme;
+        _watchBrightness = watchBrightness >= 1 && watchBrightness <= 100
+            ? watchBrightness
+            : StorageService.defaultWatchBrightness;
         _autoSync = autoSync;
         _highHr = highHr;
         _lowSpo2 = lowSpo2;
@@ -227,6 +247,45 @@ class _SettingsScreenState extends State<SettingsScreen> {
     try {
       await ble.setWatchFace(value);
       _snack('Face ${value + 1} saved and sent to the watch.');
+    } catch (error) {
+      _snack('The choice was saved, but the watch did not accept it: $error');
+    }
+  }
+
+  Future<void> _setWatchTheme(int value, BleService ble) async {
+    final int previous = _watchTheme;
+    setState(() => _watchTheme = value);
+    try {
+      await StorageService.setWatchTheme(value);
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => _watchTheme = previous);
+      _snack('The watch theme could not be saved: $error');
+      return;
+    }
+
+    if (!ble.isConnected) return;
+    try {
+      await ble.setWatchTheme(value);
+      _snack('${_watchThemes[value]} saved and sent to the watch.');
+    } catch (error) {
+      _snack('The choice was saved, but the watch did not accept it: $error');
+    }
+  }
+
+  Future<void> _setWatchBrightness(int value, BleService ble) async {
+    setState(() => _watchBrightness = value);
+    try {
+      await StorageService.setWatchBrightness(value);
+    } catch (error) {
+      if (!mounted) return;
+      _snack('The watch brightness could not be saved: $error');
+      return;
+    }
+
+    if (!ble.isConnected) return;
+    try {
+      await ble.setWatchBrightness(value);
     } catch (error) {
       _snack('The choice was saved, but the watch did not accept it: $error');
     }
@@ -872,6 +931,50 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                   Divider(color: theme.colorScheme.outlineVariant),
                   const SizedBox(height: Space.md),
+                  DropdownButtonFormField<int>(
+                    initialValue: _watchTheme,
+                    isExpanded: true,
+                    decoration: _fieldDecoration('Watch theme'),
+                    items: <DropdownMenuItem<int>>[
+                      for (int i = 0; i < _watchThemes.length; i++)
+                        DropdownMenuItem<int>(
+                          value: i,
+                          child: Text(
+                            _watchThemes[i],
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                    ],
+                    onChanged: (int? value) {
+                      if (value == null) return;
+                      _setWatchTheme(value, ble);
+                    },
+                  ),
+                  const SizedBox(height: Space.md),
+                  Text(
+                    'Backlight: $_watchBrightness%',
+                    style: theme.textTheme.titleSmall,
+                  ),
+                  Slider(
+                    key: const Key('watch_brightness_slider'),
+                    value: _watchBrightness.toDouble(),
+                    min: 10,
+                    max: 100,
+                    divisions: 18,
+                    label: '$_watchBrightness%',
+                    onChanged: (double value) =>
+                        setState(() => _watchBrightness = value.round()),
+                    onChangeEnd: (double value) =>
+                        _setWatchBrightness(value.round(), ble),
+                  ),
+                  Text(
+                    'Theme and backlight are saved on this phone and sent to a '
+                    'connected watch immediately. The watch keeps them after '
+                    'it restarts.',
+                    style: theme.textTheme.bodySmall,
+                  ),
+                  Divider(color: theme.colorScheme.outlineVariant),
+                  const SizedBox(height: Space.md),
                   Text('Complication slots', style: theme.textTheme.titleSmall),
                   const SizedBox(height: Space.xs),
                   Text(
@@ -941,6 +1044,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     style: theme.textTheme.bodySmall,
                   ),
                   Slider(
+                    key: const Key('high_hr_threshold_slider'),
                     value: _highHr,
                     min: 80,
                     max: 180,
@@ -961,6 +1065,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     style: theme.textTheme.bodySmall,
                   ),
                   Slider(
+                    key: const Key('low_spo2_threshold_slider'),
                     value: _lowSpo2,
                     min: 80,
                     max: 95,

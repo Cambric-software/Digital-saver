@@ -248,7 +248,11 @@ class BleService extends ChangeNotifier {
       await _readInfo();
       if (_watchInfo.paired) {
         await _lock?.saveWatchPin(stored);
-        await _sendCmd({'op': 'time', 'unix': DateTime.now().toUtc().millisecondsSinceEpoch ~/ 1000});
+        await _sendCmd({
+        'op': 'time',
+        'unix': DateTime.now().toUtc().millisecondsSinceEpoch ~/ 1000,
+        'tz': DateTime.now().timeZoneOffset.inMinutes,
+      });
         await startMemorySync();
       }
     }
@@ -277,7 +281,11 @@ class BleService extends ChangeNotifier {
     await _readInfo();
     if (_watchInfo.paired) {
       await _lock?.saveWatchPin(pin);
-      await _sendCmd({'op': 'time', 'unix': DateTime.now().toUtc().millisecondsSinceEpoch ~/ 1000});
+      await _sendCmd({
+        'op': 'time',
+        'unix': DateTime.now().toUtc().millisecondsSinceEpoch ~/ 1000,
+        'tz': DateTime.now().timeZoneOffset.inMinutes,
+      });
       await startMemorySync();
     } else {
       _errorMessage = 'Wrong PIN. Read the 6 digits on the watch face.';
@@ -294,8 +302,24 @@ class BleService extends ChangeNotifier {
   }
 
   Future<void> setWatchFace(int face) async {
-    if (!isConnected || face < 0 || face > 7) return;
+    if (!isConnected ||
+        face < 0 ||
+        face >= VeyroProtocol.watchFaceCount) {
+      return;
+    }
     await _sendCmd({'op': 'face', 'face': face});
+  }
+
+  /// Apply one of the firmware's built-in colour themes.
+  Future<void> setWatchTheme(int theme) async {
+    if (!isConnected || theme < 0 || theme >= VeyroProtocol.themeCount) return;
+    await _sendCmd({'op': 'theme', 'theme': theme});
+  }
+
+  /// Set the watch backlight, 1-100 percent.
+  Future<void> setWatchBrightness(int pct) async {
+    if (!isConnected || pct < 1 || pct > 100) return;
+    await _sendCmd({'op': 'brightness', 'pct': pct});
   }
 
   Future<void> _sendCmd(Map<String, dynamic> body) async {

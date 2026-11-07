@@ -201,12 +201,12 @@ void main() {
         // Firmware, samples, free space and battery have not been read.
         expect(find.text('--'), findsNWidgets(4));
 
-        final Finder faceEight = find.text('8');
-        await scrollTo(tester, faceEight);
-        await tester.tap(faceEight);
+        final Finder faceFive = find.text('5');
+        await scrollTo(tester, faceFive);
+        await tester.tap(faceFive);
         await tester.pump();
 
-        final Finder send = buttonWithText('Send face 8');
+        final Finder send = buttonWithText('Send face 5');
         expect(
           tester.widget<FilledButton>(send).onPressed,
           isNull,
@@ -232,15 +232,15 @@ void main() {
         await settleLoads(tester);
 
         expect(
-          find.text('Face 8 saved and sent to the watch.'),
+          find.text('Face 5 saved and sent to the watch.'),
           findsOneWidget,
         );
-        expect(await StorageService.watchFace(), 7);
+        expect(await StorageService.watchFace(), 4);
 
         // The face index is read back from storage on the next open, even
         // though the watch is gone.
         await pumpScreen(tester, const DeviceDiagnosticsScreen(), size: size);
-        expect(buttonWithText('Send face 8'), findsOneWidget);
+        expect(buttonWithText('Send face 5'), findsOneWidget);
         expect(find.text('No watch is connected'), findsOneWidget);
 
         await stopDemoAndDispose(tester);
@@ -352,10 +352,10 @@ void main() {
         await chooseFromDropdown(
           tester,
           'Active watch face',
-          'Face 3: Cyberpunk Pixel',
+          'Face 4: Cyberpunk Pixel',
         );
         await tester.pump(const Duration(milliseconds: 200));
-        expect(await StorageService.watchFace(), 2);
+        expect(await StorageService.watchFace(), 3);
 
         await chooseFromDropdown(tester, 'Top slot', 'Battery Level');
         await tester.pump(const Duration(milliseconds: 200));
@@ -367,15 +367,19 @@ void main() {
 
         // Sliders are dragged, not invoked through their callbacks, so the
         // gesture path is the one the person uses.
-        await scrollTo(tester, find.byType(Slider).first);
-        await tester.drag(find.byType(Slider).first, const Offset(2000, 0));
+        final Finder highHr =
+            find.byKey(const Key('high_hr_threshold_slider'));
+        final Finder lowSpo2 =
+            find.byKey(const Key('low_spo2_threshold_slider'));
+        await scrollTo(tester, highHr);
+        await tester.drag(highHr, const Offset(2000, 0));
         await tester.pump();
         expect(find.text('Saved at 180 BPM or above.'), findsOneWidget);
         await tester.pump(const Duration(milliseconds: 200));
         expect(await StorageService.highHrThreshold(), 180);
 
-        await scrollTo(tester, find.byType(Slider).at(1));
-        await tester.drag(find.byType(Slider).at(1), const Offset(-2000, 0));
+        await scrollTo(tester, lowSpo2);
+        await tester.drag(lowSpo2, const Offset(-2000, 0));
         await tester.pump();
         expect(find.text('Saved at 80% or below.'), findsOneWidget);
         await tester.pump(const Duration(milliseconds: 200));
@@ -385,10 +389,10 @@ void main() {
 
         expect(find.text('Saved at 180 BPM or above.'), findsOneWidget);
         expect(find.text('Saved at 80% or below.'), findsOneWidget);
-        expect(find.text('Face 3: Cyberpunk Pixel'), findsOneWidget);
+        expect(find.text('Face 4: Cyberpunk Pixel'), findsOneWidget);
         expect(find.text('Battery Level'), findsOneWidget);
         expect(find.text('None'), findsOneWidget);
-        expect(await StorageService.watchFace(), 2);
+        expect(await StorageService.watchFace(), 3);
         expect(await StorageService.highHrThreshold(), 180);
         expect(await StorageService.lowSpo2Threshold(), 80);
       });

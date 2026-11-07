@@ -61,6 +61,8 @@ abstract final class StorageService {
 
   static const String _keyDemoMode = 'demo_mode';
   static const String _keyWatchFace = 'selected_watch_face';
+  static const String _keyWatchTheme = 'selected_watch_theme';
+  static const String _keyWatchBrightness = 'watch_brightness_pct';
   static const String _keyAutoSync = 'auto_sync_history';
   static const String _keyHighHr = 'high_hr_threshold';
   static const String _keyLowSpo2 = 'low_spo2_threshold';
@@ -79,6 +81,9 @@ abstract final class StorageService {
   /// The defaults, in one place, so load and save cannot disagree.
   static const bool defaultDemoMode = false;
   static const int defaultWatchFace = 0;
+  static const int defaultWatchTheme = 0;
+  /// Matches the firmware's power-on backlight level.
+  static const int defaultWatchBrightness = 60;
   static const bool defaultAutoSyncHistory = true;
   static const double defaultHighHrThreshold = 120;
   static const double defaultLowSpo2Threshold = 90;
@@ -135,6 +140,22 @@ abstract final class StorageService {
   /// Store the chosen watch face.
   static Future<void> setWatchFace(int value) async =>
       (await _prefs).setInt(_keyWatchFace, value);
+
+  /// The watch colour theme index currently chosen.
+  static Future<int> watchTheme() async =>
+      (await _prefs).getInt(_keyWatchTheme) ?? defaultWatchTheme;
+
+  /// Store the chosen watch colour theme.
+  static Future<void> setWatchTheme(int value) async =>
+      (await _prefs).setInt(_keyWatchTheme, value);
+
+  /// The watch backlight percentage currently chosen (1-100).
+  static Future<int> watchBrightness() async =>
+      (await _prefs).getInt(_keyWatchBrightness) ?? defaultWatchBrightness;
+
+  /// Store the chosen watch backlight percentage.
+  static Future<void> setWatchBrightness(int value) async =>
+      (await _prefs).setInt(_keyWatchBrightness, value);
 
   /// Whether history syncs on connect.
   static Future<bool> autoSyncHistory() async =>
@@ -412,6 +433,8 @@ abstract final class StorageService {
     for (final String key in <String>[
       _keyDemoMode,
       _keyWatchFace,
+      _keyWatchTheme,
+      _keyWatchBrightness,
       _keyAutoSync,
       _keyHighHr,
       _keyLowSpo2,

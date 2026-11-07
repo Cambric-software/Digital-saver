@@ -186,12 +186,13 @@ Nothing below this matters if the product tells lies or has dead controls.
       **builds** — Flash 62.0%, RAM 12.6% — and did not before, because
       `max()` mixed `uint32_t` with `unsigned long`; its BLE `face` command also
       wrapped at 4 of the 8 screens, so the app could not select screens 4–7.
-      The ESP32-S3 target (`firmware/esp32s3`, v5.0.0) **does not build**: it
-      declares three I2C buses on a chip with two (`I2C_NUM_2`), registers no
-      GATT service (the UUIDs were declared and unused), and leaves
+      The ESP32-S3 target (`firmware/esp32s3`, v5.0.0) **did not build** at that
+      point: it declared three I2C buses on a chip with two (`I2C_NUM_2`),
+      registered no GATT service (the UUIDs were declared and unused), and left
       `display_set_watchface`/`display_set_theme` as stubs. Its committed
       sdkconfig had Bluetooth off and 2 MB flash; it was replaced with
-      `sdkconfig.defaults`. Both targets are real; only one runs.
+      `sdkconfig.defaults`. All three are fixed as of 2026-11-07; see 4.4. Both
+      targets are real; only the prototype has run on hardware.
 - [x] **4.2 Rewrite `docs/`.** Done 2026-10-21. All ten numbered documents are
       deleted (9,435 lines, ~1.2 MB, 92–95% of each file a repeated checklist).
       The surviving set — `README`, `HARDWARE`, `SYSTEM`, `APP_GUIDE`,
@@ -213,10 +214,12 @@ Nothing below this matters if the product tells lies or has dead controls.
       target, and make it build clean. The third-I2C-bus blocker from 4.1 is
       answered in source: bus B is shared (`I2C_NUM_2` → `I2C_NUM_1`), so the
       PMIC and the other bus-B devices no longer claim a master the chip does
-      not have. What remains is to write the NimBLE GATT service table so the
-      app can read anything, implement the five faces and six themes, get a
-      clean build, then hardware-test the result. Do not flash the S3 image
-      until the build and the bench checks pass.
+      not have. Done 2026-11-07: the target builds clean (`pio run`, RAM 28.8%,
+      flash 23.6% of the 4 MB app slot), registers the NimBLE GATT service with
+      live, history, info and command characteristics, implements the five faces
+      and six themes, and adds backlight, local-time and history-sync commands.
+      Remaining: flash it to a watch and run the bench checks. Do not call the
+      image production-ready until those pass.
 - [ ] **4.5 Redesign the hardware system for the 7,500 EGP product.** The
       mission, stated 2026-10-21: a watch that competes on a shelf with the
       Apple Watch and its peers at about 7,500 EGP — touchscreen, a large custom

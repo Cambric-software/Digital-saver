@@ -26,6 +26,7 @@ import 'package:provider/provider.dart';
 
 import '../../../core/services/ble_service.dart';
 import '../../../core/services/storage_service.dart';
+import '../../../core/services/veyro_protocol.dart';
 import 'package:cambric_design/cambric_design.dart';
 
 /// The watch as the app can actually see it.
@@ -39,8 +40,10 @@ class DeviceDiagnosticsScreen extends StatefulWidget {
 }
 
 class _DeviceDiagnosticsScreenState extends State<DeviceDiagnosticsScreen> {
-  /// The watch accepts face indices 0 to 7.
-  static const int _faceCount = 8;
+  /// The production ESP32-S3 firmware builds five faces (display.h
+  /// WATCHFACE_COUNT). The older ESP32 prototype also had eight, but it is not
+  /// the shipping target.
+  static const int _faceCount = VeyroProtocol.watchFaceCount;
 
   int _face = StorageService.defaultWatchFace;
   bool _sendingFace = false;
@@ -362,7 +365,7 @@ class _DeviceDiagnosticsScreenState extends State<DeviceDiagnosticsScreen> {
                 'Read firmware, sample count, free space and battery from the '
                     'info characteristic.',
                 'Start a memory sync and store the rows the watch sends.',
-                'Set one of eight watch face indices.',
+                'Set one of five watch face indices.',
                 'Write a raw packet to the command characteristic; pairing, '
                     'time, face and sync are the only uses the app makes of '
                     'that path.',

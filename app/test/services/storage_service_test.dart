@@ -18,6 +18,14 @@ void main() {
     expect(await StorageService.demoMode(), StorageService.defaultDemoMode);
     expect(await StorageService.watchFace(), StorageService.defaultWatchFace);
     expect(
+      await StorageService.watchTheme(),
+      StorageService.defaultWatchTheme,
+    );
+    expect(
+      await StorageService.watchBrightness(),
+      StorageService.defaultWatchBrightness,
+    );
+    expect(
       await StorageService.autoSyncHistory(),
       StorageService.defaultAutoSyncHistory,
     );
@@ -59,6 +67,8 @@ void main() {
   test('each setting round-trips', () async {
     await StorageService.setDemoMode(true);
     await StorageService.setWatchFace(3);
+    await StorageService.setWatchTheme(4);
+    await StorageService.setWatchBrightness(35);
     await StorageService.setAutoSyncHistory(false);
     await StorageService.setHighHrThreshold(135.5);
     await StorageService.setLowSpo2Threshold(88.5);
@@ -69,6 +79,8 @@ void main() {
 
     expect(await StorageService.demoMode(), isTrue);
     expect(await StorageService.watchFace(), 3);
+    expect(await StorageService.watchTheme(), 4);
+    expect(await StorageService.watchBrightness(), 35);
     expect(await StorageService.autoSyncHistory(), isFalse);
     expect(await StorageService.highHrThreshold(), 135.5);
     expect(await StorageService.lowSpo2Threshold(), 88.5);
@@ -215,6 +227,8 @@ void main() {
 
   test('clear forgets what this service owns', () async {
     await StorageService.setDemoMode(true);
+    await StorageService.setWatchTheme(5);
+    await StorageService.setWatchBrightness(20);
     await StorageService.saveReflection('note');
     await StorageService.recordBreathHold(60);
     await StorageService.setMedications(const <Medication>[
@@ -237,6 +251,14 @@ void main() {
     await StorageService.clear();
 
     expect(await StorageService.demoMode(), StorageService.defaultDemoMode);
+    expect(
+      await StorageService.watchTheme(),
+      StorageService.defaultWatchTheme,
+    );
+    expect(
+      await StorageService.watchBrightness(),
+      StorageService.defaultWatchBrightness,
+    );
     expect(await StorageService.reflections(), isEmpty);
     expect(await StorageService.breathHoldBest(),
         StorageService.defaultBreathHoldBest);

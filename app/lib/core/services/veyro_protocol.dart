@@ -4,6 +4,11 @@ class VeyroProtocol {
   static const String deviceName = 'Veyro';
   static const int retainDays = 60;
 
+  /// Number of watch faces and themes the ESP32-S3 firmware builds.
+  /// Kept in step with WATCHFACE_COUNT / THEME_COUNT in display.h.
+  static const int watchFaceCount = 5;
+  static const int themeCount = 6;
+
   static const String serviceUuid = '4fafc201-1fb5-459e-8fcc-c5c9c331914b';
   static const String liveUuid = 'beb5483e-36e1-4688-b7f5-ea07361b26a8';
   static const String cmdUuid = 'beb5483e-36e1-4688-b7f5-ea07361b26f0';
