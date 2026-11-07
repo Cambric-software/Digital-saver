@@ -14,8 +14,10 @@ library;
 import 'package:flutter/material.dart';
 
 import 'package:cambric_design/cambric_design.dart';
+import 'package:provider/provider.dart';
 
 import '../../../core/models/reminder.dart';
+import '../../../core/services/ble_service.dart';
 import '../../../core/services/notification_service.dart';
 import '../../../core/services/storage_service.dart';
 
@@ -128,10 +130,12 @@ class _RemindersScreenState extends State<RemindersScreen> {
   }
 
   Future<void> _store(List<Reminder> next) async {
+    final BleService ble = context.read<BleService>();
     await StorageService.setReminders(next);
     if (!mounted) return;
     setState(() => _reminders = List<Reminder>.unmodifiable(next));
     await _sync(quiet: true);
+    if (ble.isConnected) await ble.syncWatchAlarms(next);
   }
 
   Future<void> _addPreset(Reminder preset) async {
@@ -265,6 +269,28 @@ class _RemindersScreenState extends State<RemindersScreen> {
           onRequest: _requestPermission,
           onTest: _testNotification,
           onSync: () => _sync(),
+        ),
+        const SizedBox(height: Space.lg),
+        DsCard(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Icon(
+                Icons.watch_outlined,
+                size: 20,
+                color: theme.colorScheme.primary,
+              ),
+              const SizedBox(width: Space.sm),
+              Expanded(
+                child: Text(
+                  'Repeating reminders are copied to a connected watch, which '
+                  'vibrates at that time even when the phone is away. One-off '
+                  'reminders stay on the phone.',
+                  style: theme.textTheme.bodySmall,
+                ),
+              ),
+            ],
+          ),
         ),
         const SizedBox(height: Space.xl),
         DsSection(

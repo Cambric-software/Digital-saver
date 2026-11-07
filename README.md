@@ -6,9 +6,9 @@ different stages.
 
 | Part | Where | State on 2026-11-07 |
 |---|---|---|
-| Companion app | `app/` | Flutter; 420 tests pass, analyzer reports no errors |
+| Companion app | `app/` | Flutter; 426 tests pass, analyzer reports no errors |
 | Veyro prototype | `firmware/esp32/` | Builds (Flash 62.0%, RAM 12.6% as of 2026-10-21); not hardware-tested in this repository |
-| Veyro production target | `firmware/esp32s3/` | ESP-IDF source. Builds clean on 2026-11-07 (RAM 28.8%, flash 23.6% of the 4 MB app slot on a 16 MB part), with the NimBLE GATT service, five faces and six themes. Not hardware-tested in this repository |
+| Veyro production target | `firmware/esp32s3/` | ESP-IDF source. Builds clean on 2026-11-07 (RAM 28.9%, flash 24.0% of the 4 MB app slot on a 16 MB part), with the NimBLE GATT service, five faces and six themes. Not hardware-tested in this repository |
 | Documentation | `docs/` | Start at [docs/README.md](docs/README.md) |
 
 The production watch is a design goal, not a shipped product. The app talks to
@@ -28,10 +28,11 @@ records what is open, including the production hardware redesign in item 4.5.
   zones, workout timer, RPE), lifestyle (fasting timer, mood, movement breaks, a
   BMR estimate) and device diagnostics.
 - Schedules alarms, reminders and medication times with the phone's own
-  notification system, and shows today's doses. Android may deliver a reminder a
-  few minutes late because the app asks for battery-friendly scheduling rather
-  than the restricted exact-alarm permission; a desktop build saves the schedule
-  but cannot alert.
+  notification system, and shows today's doses. Repeating reminders are also
+  copied to a connected watch, which rings them without the phone. Android may
+  deliver a reminder a few minutes late because the app asks for battery-friendly
+  scheduling rather than the restricted exact-alarm permission; a desktop build
+  saves the schedule but cannot alert.
 - Includes guided breathing with box, 4-7-8, coherent and calm rhythms that
   count the real phase and record the seconds practised today.
 - Includes an app lock, an emergency contact card, a daily reflection log and a

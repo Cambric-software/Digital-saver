@@ -6,10 +6,13 @@ import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 import '../../../core/models/health_models.dart';
+import '../../../core/models/reminder.dart';
 import 'app_lock.dart';
 import 'local_store.dart';
 import 'heart_rate_tracker.dart';
+import 'storage_service.dart';
 import 'veyro_protocol.dart';
+import 'watch_alarm.dart';
 
 enum BleState { disconnected, scanning, connecting, connected, error }
 
@@ -282,6 +285,7 @@ class BleService extends ChangeNotifier {
           'tz': DateTime.now().timeZoneOffset.inMinutes,
         });
         await startMemorySync();
+        await syncWatchAlarmsFromStorage();
       }
     }
   }
@@ -315,6 +319,7 @@ class BleService extends ChangeNotifier {
         'tz': DateTime.now().timeZoneOffset.inMinutes,
       });
       await startMemorySync();
+      await syncWatchAlarmsFromStorage();
     } else {
       _errorMessage = 'Wrong PIN. Read the 6 digits on the watch face.';
       notifyListeners();
@@ -346,6 +351,32 @@ class BleService extends ChangeNotifier {
   Future<void> setWatchBrightness(int pct) async {
     if (!isConnected || pct < 1 || pct > 100) return;
     await _sendCmd({'op': 'brightness', 'pct': pct});
+  }
+
+  /// Copy the repeating reminders to the watch as its own weekly alarms.
+  ///
+  /// Returns how many alarms the watch accepted, or 0 when there is nothing
+  /// to send or no command characteristic. The watch rings them without the
+  /// phone, which is the point: the phone's notification schedule cannot run
+  /// when it is out of range or asleep.
+  Future<int> syncWatchAlarms(List<Reminder> reminders) async {
+    if (!canSendRawCommand) return 0;
+    final List<Map<String, Object>> commands = watchAlarmCommands(reminders);
+    try {
+      for (final Map<String, Object> command in commands) {
+        await _sendCmd(command);
+      }
+    } catch (_) {
+      return 0;
+    }
+    return commands.length - 2;
+  }
+
+  /// Read the stored reminders and mirror them onto a connected watch.
+  Future<int> syncWatchAlarmsFromStorage() async {
+    if (!canSendRawCommand) return 0;
+    final List<Reminder> reminders = await StorageService.reminders();
+    return syncWatchAlarms(reminders);
   }
 
   Future<void> _sendCmd(Map<String, dynamic> body) async {

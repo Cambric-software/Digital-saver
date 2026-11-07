@@ -176,7 +176,7 @@ Nothing below this matters if the product tells lies or has dead controls.
       reboot keeps the schedule. The screens state the limits: reminders can
       arrive a few minutes late, a desktop build saves the schedule but cannot
       alert, and the medication list is the person's own, not a prescription.
-      Verified: 420 tests pass, `flutter analyze` reports no issues, and the UI
+      Verified: 426 tests pass, `flutter analyze` reports no issues, and the UI
       capture harness renders all three screens at 390px and 1440px.
 
 ### Phase 4 — Veyro product
@@ -214,11 +214,14 @@ Nothing below this matters if the product tells lies or has dead controls.
       target, and make it build clean. The third-I2C-bus blocker from 4.1 is
       answered in source: bus B is shared (`I2C_NUM_2` → `I2C_NUM_1`), so the
       PMIC and the other bus-B devices no longer claim a master the chip does
-      not have. Done 2026-11-07: the target builds clean (`pio run`, RAM 28.8%,
-      flash 23.6% of the 4 MB app slot), registers the NimBLE GATT service with
+      not have. Done 2026-11-07: the target builds clean (`pio run`, RAM 28.9%,
+      flash 24.0% of the 4 MB app slot), registers the NimBLE GATT service with
       live, history, info and command characteristics, implements the five faces
       and six themes, and adds backlight, local-time and history-sync commands.
-      The faces are authored at 360×360 and scale to a larger square panel; a
+      It stores up to eight weekly alarms, rings them with the haptic motor and
+      a full-screen overlay, and keeps the clock in RTC memory across a software
+      reset; the app replaces the alarm set from the repeating reminders. The
+      faces are authored at 360×360 and scale to a larger square panel; a
       466×466 build was verified. Remaining: flash it to a watch and run the
       bench checks. Do not call the image production-ready until those pass.
 - [ ] **4.5 Redesign the hardware system for the 7,500 EGP product.** The
