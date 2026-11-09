@@ -10,6 +10,13 @@ permissions:
   pages: write
   id-token: write
 
+# GitHub Pages accepts one deployment at a time. Two pushes landing close
+# together used to start two deploys in the same minute and the second one
+# failed inside actions/deploy-pages. Queue them instead of racing.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
