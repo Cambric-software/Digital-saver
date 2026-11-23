@@ -31,7 +31,7 @@ jobs:
           # hardcoded to 3.27.0, which is far older than the rest of the
           # project and could not build this code, so the Pages deploy failed
           # while desktop and mobile builds were fine.
-          channel: stable
+          flutter-version: '3.47.2'
       - run: cd app && flutter pub get
       - run: cd app && flutter build web
       - uses: actions/upload-pages-artifact@v3
