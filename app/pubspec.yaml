@@ -9,6 +9,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_localizations:
+    sdk: flutter
   cambric_design:
     git:
       url: https://github.com/Cambric-software/app-template.git

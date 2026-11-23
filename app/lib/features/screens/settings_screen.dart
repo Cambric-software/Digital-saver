@@ -30,12 +30,12 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/models/health_models.dart';
+import '../../../core/localization/app_strings.dart';
 import '../../../core/services/app_lock.dart';
 import '../../../core/services/auto_update_service.dart';
 import '../../../core/services/ble_service.dart';
 import '../../../core/services/dynamic_theme_service.dart';
 import '../../../core/services/local_store.dart';
-import '../../../core/services/locale_service.dart';
 import '../../../core/services/storage_service.dart';
 import '../../../core/services/theme_service.dart';
 import 'package:cambric_design/cambric_design.dart';
@@ -76,8 +76,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     'Distance (km)',
     'None',
   ];
-
-  static const List<String> _languages = <String>['English', 'العربية'];
 
   bool _loading = true;
   String? _loadError;
@@ -205,6 +203,96 @@ class _SettingsScreenState extends State<SettingsScreen> {
     ScaffoldMessenger.maybeOf(context)?.showSnackBar(
       SnackBar(content: Text(message)),
     );
+  }
+
+  // ── People ──────────────────────────────────────────────────────────
+
+  Future<void> _addPerson(ThemeService themeService, AppStrings s) async {
+    final String? name = await showDialog<String>(
+      context: context,
+      builder: (BuildContext ctx) => _TextPromptDialog(
+        title: s.text('settings.add_person_title'),
+        hint: s.text('settings.person_hint'),
+        confirmLabel: s.text('common.add'),
+        fieldLabel: s.text('settings.person_name_label'),
+      ),
+    );
+    if (name == null || name.trim().isEmpty) return;
+    await themeService.addProfile(name);
+  }
+
+  Future<void> _renamePerson(
+    ThemeService themeService,
+    AppStrings s,
+    PersonProfile profile,
+  ) async {
+    final String? name = await showDialog<String>(
+      context: context,
+      builder: (BuildContext ctx) => _TextPromptDialog(
+        title: s.text('settings.rename_person_title'),
+        hint: profile.name,
+        confirmLabel: s.text('common.save'),
+        fieldLabel: s.text('settings.person_name_label'),
+      ),
+    );
+    if (name == null || name.trim().isEmpty) return;
+    await themeService.renameProfile(profile.id, name);
+  }
+
+  Future<void> _deletePerson(
+    ThemeService themeService,
+    AppStrings s,
+    PersonProfile profile,
+  ) async {
+    if (themeService.profiles.length <= 1) {
+      _snack(s.text('settings.keep_one_person'));
+      return;
+    }
+    final bool? confirmed = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext ctx) => AlertDialog(
+        title: Text(s.text('settings.delete_person_title')),
+        content: Text(s.text('settings.delete_person_body')),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text(s.text('common.cancel')),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text(s.text('common.delete')),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    await themeService.deleteProfile(profile.id);
+  }
+
+  Future<void> _restoreAppearance(
+    ThemeService themeService,
+    AppStrings s,
+  ) async {
+    final bool? confirmed = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext ctx) => AlertDialog(
+        title: Text(s.text('settings.restore_dialog_title')),
+        content: Text(s.text('settings.restore_dialog_body')),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text(s.text('common.cancel')),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text(s.text('common.restore')),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    await themeService.restoreDefaults();
+    _snack(s.text('settings.restore_done'));
   }
 
   // ── Stored settings ─────────────────────────────────────────────────
@@ -662,18 +750,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
     final ThemeData theme = Theme.of(context);
     final ThemeService themeService = context.watch<ThemeService>();
-    final LocaleService locale = context.watch<LocaleService>();
     final BleService ble = context.watch<BleService>();
     final AutoUpdateService updates = context.watch<AutoUpdateService>();
     final AppLock lock = context.watch<AppLock>();
+    final AppStrings s = AppStrings.forLanguage(themeService.languageCode);
 
     final bool dark = themeService.themeModeType == AppThemeMode.dark;
-    final String language = _languages.contains(locale.currentLanguage)
-        ? locale.currentLanguage
-        : 'English';
+    final String language = themeService.isArabic ? 'العربية' : 'English';
+    const String dimStart = '${DynamicThemeService.dimStartHour}:00';
+    final String dimEnd =
+        '${DynamicThemeService.dimEndHour.toString().padLeft(2, '0')}:00';
 
     return DsPage(
-      title: 'Settings',
+      title: s.text('settings.title'),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
@@ -700,10 +789,73 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           const SizedBox(height: Space.xxl),
           DsSection(
-            title: 'Appearance & language',
-            subtitle: 'How the app looks and which language it asks for',
+            title: s.text('settings.people_title'),
+            subtitle: s.text('settings.people_body'),
             child: DsCard(
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: <Widget>[
+                  for (final PersonProfile profile in themeService.profiles)
+                    Material(
+                      type: MaterialType.transparency,
+                      child: ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: Icon(
+                          profile.id == themeService.activeProfileId
+                              ? Icons.person_rounded
+                              : Icons.person_outline_rounded,
+                          color: profile.id == themeService.activeProfileId
+                              ? theme.colorScheme.primary
+                              : null,
+                        ),
+                        title: Text(profile.name),
+                        subtitle: profile.id == themeService.activeProfileId
+                            ? Text(s.text('settings.active'))
+                            : null,
+                        selected: profile.id == themeService.activeProfileId,
+                        onTap: () => themeService.selectProfile(profile.id),
+                        trailing: Wrap(
+                          spacing: Space.xs,
+                          children: <Widget>[
+                            IconButton(
+                              tooltip: s.text('common.rename'),
+                              icon: const Icon(Icons.edit_outlined, size: 18),
+                              onPressed: () =>
+                                  _renamePerson(themeService, s, profile),
+                            ),
+                            if (themeService.profiles.length > 1)
+                              IconButton(
+                                tooltip: s.text('common.delete'),
+                                icon: const Icon(Icons.delete_outline, size: 18),
+                                onPressed: () =>
+                                    _deletePerson(themeService, s, profile),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  Align(
+                    alignment: AlignmentDirectional.centerStart,
+                    child: TextButton.icon(
+                      onPressed: () => _addPerson(themeService, s),
+                      icon: const Icon(
+                        Icons.person_add_alt_1_outlined,
+                        size: 18,
+                      ),
+                      label: Text(s.text('settings.add_person')),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: Space.xxl),
+          DsSection(
+            title: s.text('settings.appearance_title'),
+            subtitle: s.text('settings.appearance_body'),
+            child: DsCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
                   Material(
                     type: MaterialType.transparency,
@@ -714,16 +866,103 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             ? Icons.dark_mode_outlined
                             : Icons.light_mode_outlined,
                       ),
-                      title: const Text('Dark theme'),
+                      title: Text(s.text('settings.dark_theme_title')),
                       subtitle: Text(
                         dark
-                            ? 'Dark surfaces and lifted text colours.'
-                            : 'Light surfaces for daytime use.',
+                            ? s.text('settings.dark_theme_on')
+                            : s.text('settings.dark_theme_off'),
                       ),
                       value: dark,
                       onChanged: (bool value) => themeService.setTheme(
                         value ? AppThemeMode.dark : AppThemeMode.light,
                       ),
+                    ),
+                  ),
+                  Divider(color: theme.colorScheme.outlineVariant),
+                  const SizedBox(height: Space.md),
+                  Text(
+                    s.text('settings.accent_title'),
+                    style: theme.textTheme.titleSmall,
+                  ),
+                  const SizedBox(height: Space.sm),
+                  Wrap(
+                    spacing: Space.sm,
+                    runSpacing: Space.sm,
+                    children: <Widget>[
+                      for (final AppAccent accent in AppAccent.values)
+                        ChoiceChip(
+                          label: Text(s.text(accent.labelKey)),
+                          selected: themeService.accent == accent,
+                          onSelected: (_) => themeService.setAccent(accent),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: Space.sm),
+                  Text(
+                    s.text('settings.accent_help'),
+                    style: theme.textTheme.bodySmall,
+                  ),
+                  Divider(color: theme.colorScheme.outlineVariant),
+                  const SizedBox(height: Space.md),
+                  Text(
+                    s.text('settings.text_size_title'),
+                    style: theme.textTheme.titleSmall,
+                  ),
+                  const SizedBox(height: Space.xs),
+                  Text(
+                    s.text('settings.text_size_help'),
+                    style: theme.textTheme.bodySmall,
+                  ),
+                  Slider(
+                    value: themeService.textScale,
+                    min: ThemeService.minTextScale,
+                    max: ThemeService.maxTextScale,
+                    divisions: ((ThemeService.maxTextScale -
+                                ThemeService.minTextScale) *
+                            100)
+                        .round(),
+                    label: s.withValues(
+                      'settings.text_size_value',
+                      <String, String>{
+                        'percent': '${(themeService.textScale * 100).round()}',
+                      },
+                    ),
+                    onChanged: (double value) =>
+                        themeService.setTextScale(value),
+                  ),
+                  Wrap(
+                    spacing: Space.md,
+                    runSpacing: Space.xs,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: <Widget>[
+                      Text(
+                        s.withValues(
+                          'settings.text_size_value',
+                          <String, String>{
+                            'percent':
+                                '${(themeService.textScale * 100).round()}',
+                          },
+                        ),
+                        style: theme.textTheme.bodySmall,
+                      ),
+                      Text(
+                        s.text('settings.text_size_preview'),
+                        style: theme.textTheme.bodyMedium,
+                      ),
+                    ],
+                  ),
+                  Divider(color: theme.colorScheme.outlineVariant),
+                  Material(
+                    type: MaterialType.transparency,
+                    child: SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      secondary: const Icon(Icons.contrast_rounded),
+                      title: Text(s.text('settings.high_contrast_title')),
+                      subtitle:
+                          Text(s.text('settings.high_contrast_subtitle')),
+                      value: themeService.highContrast,
+                      onChanged: (bool value) =>
+                          themeService.setHighContrast(value),
                     ),
                   ),
                   Divider(color: theme.colorScheme.outlineVariant),
@@ -736,17 +975,26 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             ? Icons.nights_stay_outlined
                             : Icons.brightness_4_outlined,
                       ),
-                      title: const Text('Dim after dark'),
+                      title: Text(s.text('settings.dim_after_dark_title')),
                       subtitle: Text(
                         themeService.dimAfterDark
-                            ? 'On. The dark theme is used from '
-                                '${DynamicThemeService.dimStartHour}:00 to '
-                                '${DynamicThemeService.dimEndHour.toString().padLeft(2, '0')}:00. '
-                                '${themeService.isDimmed ? 'It is after dark now, so the dark theme is active.' : 'It is daytime now, so the theme you picked is used.'}'
-                            : 'Off. The theme you picked is used all day. When '
-                                'on, the dark theme is used from '
-                                '${DynamicThemeService.dimStartHour}:00 to '
-                                '${DynamicThemeService.dimEndHour.toString().padLeft(2, '0')}:00.',
+                            ? s.withValues(
+                                'settings.dim_on',
+                                <String, String>{
+                                  'start': dimStart,
+                                  'end': dimEnd,
+                                  'state': themeService.isDimmed
+                                      ? s.text('settings.dim_state_now')
+                                      : s.text('settings.dim_state_day'),
+                                },
+                              )
+                            : s.withValues(
+                                'settings.dim_off',
+                                <String, String>{
+                                  'start': dimStart,
+                                  'end': dimEnd,
+                                },
+                              ),
                       ),
                       value: themeService.dimAfterDark,
                       onChanged: (bool value) =>
@@ -756,34 +1004,52 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   Divider(color: theme.colorScheme.outlineVariant),
                   const SizedBox(height: Space.md),
                   DropdownButtonFormField<String>(
+                    key: ValueKey<String>('language-$language'),
                     initialValue: language,
                     isExpanded: true,
-                    decoration: _fieldDecoration('App language'),
+                    decoration:
+                        _fieldDecoration(s.text('settings.language_title')),
                     items: <DropdownMenuItem<String>>[
-                      for (final String option in _languages)
-                        DropdownMenuItem<String>(
-                          value: option,
-                          child: Text(
-                            option == 'English'
-                                ? 'English (US / UK)'
-                                : 'العربية (مصر / الفصحى)',
-                            overflow: TextOverflow.ellipsis,
-                          ),
+                      DropdownMenuItem<String>(
+                        value: 'English',
+                        child: Text(
+                          s.text('settings.language_english'),
+                          overflow: TextOverflow.ellipsis,
                         ),
+                      ),
+                      DropdownMenuItem<String>(
+                        value: 'العربية',
+                        child: Text(
+                          s.text('settings.language_arabic'),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
                     ],
                     onChanged: (String? value) async {
                       if (value == null) return;
-                      await locale.setLanguage(value);
+                      await themeService.setLanguage(
+                        value == 'العربية' ? 'ar' : 'en',
+                      );
                     },
                   ),
                   const SizedBox(height: Space.sm),
+                  Text(
+                    s.text('settings.language_note'),
+                    style: theme.textTheme.bodySmall,
+                  ),
+                  const SizedBox(height: Space.md),
                   Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      'The language choice is stored by LocaleService and '
-                      'survives a restart.',
-                      style: theme.textTheme.bodySmall,
+                    alignment: AlignmentDirectional.centerStart,
+                    child: OutlinedButton.icon(
+                      onPressed: () => _restoreAppearance(themeService, s),
+                      icon: const Icon(Icons.restart_alt_rounded, size: 18),
+                      label: Text(s.text('settings.restore_title')),
                     ),
+                  ),
+                  const SizedBox(height: Space.xs),
+                  Text(
+                    s.text('settings.restore_subtitle'),
+                    style: theme.textTheme.bodySmall,
                   ),
                 ],
               ),

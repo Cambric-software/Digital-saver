@@ -8,7 +8,6 @@ import 'package:digital_saver/core/services/app_lock.dart';
 import 'package:digital_saver/core/services/auto_update_service.dart';
 import 'package:digital_saver/core/services/ble_service.dart';
 import 'package:digital_saver/core/services/heart_rate_tracker.dart';
-import 'package:digital_saver/core/services/locale_service.dart';
 import 'package:digital_saver/core/services/storage_service.dart';
 import 'package:digital_saver/core/services/theme_service.dart';
 import 'package:cambric_design/cambric_design.dart';
@@ -29,7 +28,6 @@ Widget harness(Widget child) {
           create: (_) => HeartRateTracker()),
       ChangeNotifierProvider<AppLock>(create: (_) => AppLock()),
       ChangeNotifierProvider<ThemeService>(create: (_) => ThemeService()),
-      ChangeNotifierProvider<LocaleService>(create: (_) => LocaleService()),
       ChangeNotifierProvider<AutoUpdateService>(
         create: (_) => AutoUpdateService(),
       ),

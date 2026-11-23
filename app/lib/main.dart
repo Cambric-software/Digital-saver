@@ -3,12 +3,13 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/services.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'core/services/ble_service.dart';
 import 'core/services/app_lock.dart';
+import 'core/services/app_theme_builder.dart';
 import 'core/services/theme_service.dart';
-import 'core/services/locale_service.dart';
 import 'core/services/auto_update_service.dart';
 import 'core/services/heart_rate_tracker.dart';
 import 'core/services/notification_service.dart';
@@ -35,13 +36,18 @@ void main() async {
     ),
   );
 
+  // Read the person's stored appearance and language before the first frame,
+  // so the app opens in the theme and language they chose instead of flashing
+  // the defaults first.
+  final themeService = ThemeService();
+  await themeService.ready;
+
   runApp(
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => BleService()),
         ChangeNotifierProvider.value(value: appLock),
-        ChangeNotifierProvider(create: (_) => ThemeService()),
-        ChangeNotifierProvider(create: (_) => LocaleService()),
+        ChangeNotifierProvider.value(value: themeService),
         ChangeNotifierProvider(create: (_) => AutoUpdateService()),
         ChangeNotifierProvider(create: (_) => HeartRateTracker()),
       ],
@@ -100,21 +106,50 @@ class _DigitalSaverAppState extends State<DigitalSaverApp>
   @override
   Widget build(BuildContext context) {
     final themeService = context.watch<ThemeService>();
-    final localeService = context.watch<LocaleService>();
     final updateService = context.watch<AutoUpdateService>();
 
     return MaterialApp(
       title: 'Digital Saver',
       debugShowCheckedModeBanner: false,
       navigatorKey: _navigatorKey,
-      theme: themeService.getLightTheme(),
-      darkTheme: themeService.getDarkTheme(),
-      themeMode: themeService.themeMode,
-      locale: localeService.currentLocale,
-      builder: (context, child) => Directionality(
-        textDirection: localeService.textDirection,
-        child: child ?? const SizedBox(),
+      theme: buildAppTheme(
+        brightness: Brightness.light,
+        accent: themeService.accent,
+        highContrast: themeService.highContrast,
       ),
+      darkTheme: buildAppTheme(
+        brightness: Brightness.dark,
+        accent: themeService.accent,
+        highContrast: themeService.highContrast,
+      ),
+      themeMode: themeService.themeMode,
+      locale: themeService.currentLocale,
+      supportedLocales: const <Locale>[
+        Locale('en'),
+        Locale('ar'),
+      ],
+      localizationsDelegates: const <LocalizationsDelegate<dynamic>>[
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      // The person's text size multiplies the system scale rather than
+      // replacing it, so an OS-wide preference is not silently undone. Arabic
+      // needs a right-to-left tree; English stays left-to-right.
+      builder: (BuildContext context, Widget? child) {
+        final MediaQueryData media = MediaQuery.of(context);
+        return MediaQuery(
+          data: media.copyWith(
+            textScaler: TextScaler.linear(
+              effectiveTextScale(media.textScaler.scale(1.0), themeService.textScale),
+            ),
+          ),
+          child: Directionality(
+            textDirection: themeService.textDirection,
+            child: child ?? const SizedBox(),
+          ),
+        );
+      },
       home: kIsWeb
           ? const WebLandingPage()
           : LockGate(

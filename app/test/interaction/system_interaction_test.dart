@@ -15,7 +15,6 @@ import 'package:digital_saver/features/screens/settings_screen.dart';
 import 'package:digital_saver/features/screens/watch_simulator_screen.dart';
 import 'package:digital_saver/core/services/app_lock.dart';
 import 'package:digital_saver/core/services/ble_service.dart';
-import 'package:digital_saver/core/services/locale_service.dart';
 import 'package:digital_saver/core/services/local_store.dart';
 import 'package:digital_saver/core/services/storage_service.dart';
 import 'package:digital_saver/core/services/theme_service.dart';
@@ -327,7 +326,7 @@ void main() {
           'App language',
           'العربية (مصر / الفصحى)',
         );
-        expect(serviceOf<LocaleService>(tester).currentLanguage, 'العربية');
+        expect(theme.languageCode, 'ar');
 
         final Finder autoSync =
             find.widgetWithText(SwitchListTile, 'Remember auto-sync choice');

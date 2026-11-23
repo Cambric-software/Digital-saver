@@ -16,6 +16,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../../core/localization/app_strings.dart';
 import '../../../core/services/ble_service.dart';
 import 'package:cambric_design/cambric_design.dart';
 import '../../../features/screens/dashboard_screen.dart';
@@ -59,6 +60,19 @@ enum DsDestination {
 
   /// Icon when selected.
   final IconData selectedIcon;
+
+  /// The destination's label in the language the app is rendering.
+  String localizedLabel(AppStrings strings) {
+    return switch (this) {
+      DsDestination.dashboard => strings.text('nav.today'),
+      DsDestination.vitals => strings.text('nav.vitals'),
+      DsDestination.insights => strings.text('nav.insights'),
+      DsDestination.coach => strings.text('nav.coach'),
+      DsDestination.hub => strings.text('nav.hub'),
+      DsDestination.watch => strings.text('nav.watch'),
+      DsDestination.settings => strings.text('nav.settings'),
+    };
+  }
 }
 
 /// Hosts the primary destinations and keeps device state visible.
@@ -142,7 +156,10 @@ class _DsShellState extends State<DsShell> {
                   Space.lg,
                   Space.sm,
                 ),
-                child: Text('More', style: theme.textTheme.titleMedium),
+                child: Text(
+                  AppStrings.of(sheetContext).text('nav.more'),
+                  style: theme.textTheme.titleMedium,
+                ),
               ),
               for (final DsDestination destination in _overflowDestinations)
                 ListTile(
@@ -154,7 +171,9 @@ class _DsShellState extends State<DsShell> {
                         ? theme.colorScheme.primary
                         : null,
                   ),
-                  title: Text(destination.label),
+                  title: Text(
+                    destination.localizedLabel(AppStrings.of(sheetContext)),
+                  ),
                   selected: destination == _current,
                   onTap: () => Navigator.of(sheetContext).pop(destination),
                 ),
@@ -210,11 +229,13 @@ class _DsShellState extends State<DsShell> {
                   NavigationDestination(
                     icon: Icon(destination.icon),
                     selectedIcon: Icon(destination.selectedIcon),
-                    label: destination.label,
+                    label: destination.localizedLabel(
+                      AppStrings.of(context),
+                    ),
                   ),
-                const NavigationDestination(
-                  icon: Icon(Icons.more_horiz_rounded),
-                  label: 'More',
+                NavigationDestination(
+                  icon: const Icon(Icons.more_horiz_rounded),
+                  label: AppStrings.of(context).text('nav.more'),
                 ),
               ],
             ),
@@ -289,7 +310,7 @@ class _Rail extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                         ),
                         Text(
-                          'Health companion',
+                          AppStrings.of(context).text('nav.tagline'),
                           style: theme.textTheme.bodySmall,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -360,7 +381,7 @@ class _RailItem extends StatelessWidget {
                   ),
                   const SizedBox(width: Space.md),
                   Text(
-                    destination.label,
+                    destination.localizedLabel(AppStrings.of(context)),
                     style: theme.textTheme.labelLarge?.copyWith(
                       color: selected
                           ? theme.colorScheme.primary
@@ -390,6 +411,7 @@ class _DeviceStatusBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final AppStrings s = AppStrings.of(context);
 
     if (ble.isConnected) {
       return _Bar(
@@ -397,14 +419,17 @@ class _DeviceStatusBar extends StatelessWidget {
         child: Row(
           children: <Widget>[
             DsStatusPill(
-              label: 'Watch connected',
+              label: s.text('nav.watch_connected'),
               icon: Icons.bluetooth_connected_rounded,
               color: theme.colorScheme.secondary,
             ),
             const SizedBox(width: Space.md),
             if (ble.batteryLevel > 0)
               Text(
-                '${ble.batteryLevel}% battery',
+                s.withValues(
+                  'nav.battery',
+                  <String, String>{'percent': '${ble.batteryLevel}'},
+                ),
                 style: theme.textTheme.bodySmall,
               ),
           ],
@@ -423,7 +448,10 @@ class _DeviceStatusBar extends StatelessWidget {
               child: CircularProgressIndicator(strokeWidth: 2),
             ),
             const SizedBox(width: Space.sm),
-            Text('Searching for a watch...', style: theme.textTheme.bodySmall),
+            Text(
+              s.text('nav.searching'),
+              style: theme.textTheme.bodySmall,
+            ),
           ],
         ),
       );
@@ -434,14 +462,14 @@ class _DeviceStatusBar extends StatelessWidget {
       child: Row(
         children: <Widget>[
           DsStatusPill(
-            label: 'No watch connected',
+            label: s.text('nav.no_watch'),
             icon: Icons.bluetooth_disabled_rounded,
             color: theme.colorScheme.onSurfaceVariant,
           ),
           const SizedBox(width: Space.md),
           Expanded(
             child: Text(
-              'Readings are unavailable until a watch connects.',
+              s.text('nav.readings_unavailable'),
               style: theme.textTheme.bodySmall,
               overflow: TextOverflow.ellipsis,
             ),

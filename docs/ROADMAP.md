@@ -272,8 +272,10 @@ Nothing below this matters if the product tells lies or has dead controls.
 
 ### Phase 5 — Customisation and polish
 
-- [ ] **5.1 "For all to all":** themes, sizes, languages, and per-person defaults
-      in both products.
+- [x] **5.1 "For all to all":** per-person theme, accent, text size, contrast
+      and language in both products. Arabic covers the navigation and the
+      appearance controls; long-form screen content is still English, and both
+      settings screens say so rather than implying full translation.
 - [ ] **5.2 Max Tools — interactivity and responsiveness** pass.
 - [ ] **5.3 Digital Saver — commit the `linux/` project** rather than generating
       it in CI on every build.
